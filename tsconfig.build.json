@@ -6,7 +6,10 @@
     "emitDeclarationOnly": true,
     "types": ["node"],
     "outDir": "dist",
-    "outFile": "dist/skadi-chart"
+    "outFile": "dist/skadi-chart",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
   },
   "files": ["src/skadi-chart.ts"]
 }
