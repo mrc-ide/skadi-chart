@@ -1,6 +1,12 @@
 import { Scales } from "@/Chart";
 import * as d3 from "@/d3";
 
+/*
+  These are the various different types of layer types
+  that we can have, some are optional layers (created
+  if the user wishes) and some are core layers that are
+  created in the initialiser of the Chart class
+*/
 export enum LayerType {
   Svg = "svg",
   ClipPath = "clipPath",
@@ -11,6 +17,12 @@ export enum LayerType {
   Tooltip = "tooltip"
 }
 
+/*
+  We need some custom events so that layers can listen
+  to events (such as turning off tooltips when brushing).
+  To keep it simple, all these events will be
+  dispatched on the svg element
+*/
 export enum CustomEvents {
   BrushStart = "brushstart",
   BrushEnd = "brushend",
@@ -22,6 +34,9 @@ export type XY<T> = { x: T, y: T }
 
 export type Point = XY<number>
 
+/*
+  These are bounds of the svg element
+*/
 export type Bounds = {
   width: number,
   height: number,
@@ -35,6 +50,11 @@ export type D3Selection<Element extends d3.BaseType> = d3.Selection<Element, Poi
 
 export type AllOptionalLayers = OptionalLayer<any>;
 
+/*
+  LayerArgs are passed into each Layer in the draw
+  function. This happens at the last step when users
+  append the svg to a base element
+*/
 export type LayerArgs = {
   // TODO chart id instead
   id: string,
@@ -66,5 +86,5 @@ export abstract class OptionalLayer<Properties = null> {
 
   abstract draw(layerArgs: LayerArgs): void;
 
-  doZoom(zoomExtents: ZoomExtents) {};
+  doZoom(_zoomExtents: ZoomExtents) {};
 };
