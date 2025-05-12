@@ -47,7 +47,6 @@ const getData = async () => {
   const raw = await fetch("./data.json");
   const rawJson = await raw.json() as DataJson;
   data.value = transformRawData(rawJson);
-  console.log(data.value);
 };
 
 const tooltipHtmlCallback = (point: {x: number, y: number}) => {
