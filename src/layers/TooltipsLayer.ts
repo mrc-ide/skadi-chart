@@ -11,7 +11,7 @@ export class TooltipsLayer extends OptionalLayer {
     super();
   };
 
-  // straight line distance
+  // straight line distance squared
   private l22 = (coord1: Point, coord2: Point) => {
     const diffX = coord1.x - coord2.x;
     const diffY = coord1.y - coord2.y;
