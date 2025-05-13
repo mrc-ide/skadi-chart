@@ -24,10 +24,8 @@ export enum LayerType {
   dispatched on the svg element
 */
 export enum CustomEvents {
-  BrushStart = "brushstart",
-  BrushEnd = "brushend",
-  AnimationStart = "animationstart",
-  AnimationEnd = "animationend",
+  ZoomStart = "zoomstart",
+  ZoomEnd = "zoomend",
 }
 
 export type XY<T> = { x: T, y: T }
