@@ -34,6 +34,10 @@ export class AxesLayer extends OptionalLayer {
       .attr("vector-effect", "non-scaling-stroke")
       .call(axisY);
 
+    // The zoom layer (if added) will update the scaleX and scaleY
+    // so axisY and axisX, which are constructed from these will
+    // also update. This function just specifies a smooth transition
+    // between the old and new values of the scales
     this.doZoom = () => {
       const { animationDuration } = layerArgs.globals;
 
