@@ -29,7 +29,7 @@ export class AxesLayer extends OptionalLayer {
     if (height < 200) defaultTicksY = 3;
     const axisY = d3.axisLeft(scaleY).ticks(defaultTicksY);
     const axisLayerY = svgLayer.append("g")
-      .attr("id", `${getHtmlId(LayerType.Axes)}-x`)
+      .attr("id", `${getHtmlId(LayerType.Axes)}-y`)
       .attr("transform", `translate(${margin.left},0)`)
       .attr("vector-effect", "non-scaling-stroke")
       .call(axisY);
