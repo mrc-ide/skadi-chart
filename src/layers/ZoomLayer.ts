@@ -10,6 +10,8 @@ export class ZoomLayer extends OptionalLayer {
 
   private handleZoom = (zoomExtents: ZoomExtents, layerArgs: LayerArgs) => {
     const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
+    // updates the scales which are implicitly used by a lot of other
+    // components
     if (zoomExtents.x) scaleX.domain(zoomExtents.x);
     if (zoomExtents.y) scaleY.domain(zoomExtents.y);
 
@@ -41,6 +43,8 @@ export class ZoomLayer extends OptionalLayer {
   draw = (layerArgs: LayerArgs) => {
     const { width, height, margin } = layerArgs.bounds;
     
+    // brushX allows the user to click and draw a rectangle that will
+    // select a particular x interval and it will then fire an end event
     const d3Brush = d3.brushX<Point>()
       .extent([[margin.left, margin.top], [width - margin.right, height - margin.bottom]]);
     const brushLayer = layerArgs.coreLayers[LayerType.BaseLayer].append("g")
