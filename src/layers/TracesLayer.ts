@@ -22,6 +22,10 @@ export class TracesLayer extends OptionalLayer {
         .attr("d", linePath);
     });
 
+    // The zoom layer updates scaleX and scaleY and the lineGen
+    // function is constructed from the scales so this function
+    // when called will do a smoooth transition between the new
+    // lines and the old ones
     this.doZoom = () => {
       this.lines.forEach((l, index) => {
         const linePath = layerArgs.scaleConfig.lineGen(l.points);
