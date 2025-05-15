@@ -8,18 +8,19 @@ export class ZoomLayer extends OptionalLayer {
     super();
   };
 
-  private handleZoom = (zoomExtents: ZoomExtents, layerArgs: LayerArgs) => {
+  private handleZoom = async (zoomExtents: ZoomExtents, layerArgs: LayerArgs) => {
     const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
+
+    layerArgs.optionalLayers.forEach(layer => layer.beforeZoom(zoomExtents));
+
     if (zoomExtents.x) scaleX.domain(zoomExtents.x);
     if (zoomExtents.y) scaleY.domain(zoomExtents.y);
 
-    layerArgs.optionalLayers.forEach(layer => {
-      if (layer.type === LayerType.Brush) return;
-      layer.doZoom(zoomExtents);
-    });
-    setTimeout(() => {
-      layerArgs.coreLayers[LayerType.Svg].dispatch(CustomEvents.ZoomEnd);
-    }, layerArgs.globals.animationDuration);
+    const promises: Promise<void>[] = [];
+    layerArgs.optionalLayers.forEach(layer => promises.push(layer.zoom(zoomExtents)));
+    await Promise.all(promises);
+
+    layerArgs.coreLayers[LayerType.Svg].dispatch(CustomEvents.ZoomEnd);
   };
 
   private handleBrushEnd = (event: d3.D3BrushEvent<Point>, brushLayer: D3Selection<SVGGElement>, layerArgs: LayerArgs) => {
@@ -33,7 +34,10 @@ export class ZoomLayer extends OptionalLayer {
     const lExtent = scaleX.invert(extent[0]);
     const rExtent = scaleX.invert(extent[1]);
 
-    if (Math.abs(lExtent - rExtent) < 5) {
+    const domain = scaleX.domain();
+
+    // if it is more than a 500x zoom we don't zoom
+    if (Math.abs(lExtent - rExtent) < (domain[1] - domain[0]) / 500) {
       layerArgs.coreLayers[LayerType.Svg].dispatch(CustomEvents.ZoomEnd);
       return;
     };

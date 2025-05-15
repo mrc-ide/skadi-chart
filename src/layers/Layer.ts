@@ -84,5 +84,7 @@ export abstract class OptionalLayer<Properties = null> {
 
   abstract draw(layerArgs: LayerArgs): void;
 
-  doZoom(_zoomExtents: ZoomExtents) {};
+  // zoom lifecycle hooks
+  beforeZoom(_zoomExtents: ZoomExtents) {};
+  async zoom(_zoomExtents: ZoomExtents) {};
 };
