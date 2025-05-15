@@ -52,8 +52,8 @@ export class ZoomLayer extends OptionalLayer {
     const brushLayer = layerArgs.coreLayers[LayerType.BaseLayer].append("g")
       .attr("id", layerArgs.getHtmlId(LayerType.Brush))
       .call(d3Brush);
-    d3Brush.on("end", e => this.handleBrushEnd(e, brushLayer, layerArgs));
     d3Brush.on("start", () => layerArgs.coreLayers[LayerType.Svg].dispatch(CustomEvents.ZoomStart));
+    d3Brush.on("end", e => this.handleBrushEnd(e, brushLayer, layerArgs));
 
     const { x } = layerArgs.scaleConfig.scaleExtents;
     layerArgs.coreLayers[LayerType.Svg].on("dblclick",() => this.handleZoom({ x: [x.start, x.end] }, layerArgs));
