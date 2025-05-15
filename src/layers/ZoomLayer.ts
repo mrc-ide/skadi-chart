@@ -56,6 +56,7 @@ export class ZoomLayer extends OptionalLayer {
     });
     d3Brush.on("start", () => layerArgs.coreLayers[LayerType.Svg].dispatch(CustomEvents.BrushStart));
 
+    // Respond to double click event by fully zooming out
     const { x } = layerArgs.scaleConfig.scaleExtents;
     layerArgs.coreLayers[LayerType.Svg].on("dblclick",() => this.handleZoom({ x: [x.start, x.end] }, layerArgs));
   };
