@@ -34,7 +34,7 @@ export class AxesLayer extends OptionalLayer {
       .attr("vector-effect", "non-scaling-stroke")
       .call(axisY);
 
-    this.zoom = () => {
+    this.zoom = async () => {
       const { animationDuration } = layerArgs.globals;
 
       axisLayerX.transition()
