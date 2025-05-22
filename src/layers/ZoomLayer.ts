@@ -2,7 +2,7 @@ import * as d3 from "@/d3";
 import { D3Selection, LayerArgs, LayerType, OptionalLayer, Point, ZoomExtents, CustomEvents } from "./Layer";
 
 export class ZoomLayer extends OptionalLayer {
-  type = LayerType.Brush;
+  type = LayerType.Zoom;
 
   constructor() {
     super();
@@ -17,7 +17,7 @@ export class ZoomLayer extends OptionalLayer {
 
     layerArgs.coreLayers[LayerType.Svg].dispatch(CustomEvents.AnimationStart);
     layerArgs.optionalLayers.forEach(layer => {
-      if (layer.type === LayerType.Brush) return;
+      if (layer.type === LayerType.Zoom) return;
       layer.doZoom(zoomExtents);
     });
     setTimeout(() => {
@@ -48,7 +48,7 @@ export class ZoomLayer extends OptionalLayer {
     const d3Brush = d3.brushX<Point>()
       .extent([[margin.left, margin.top], [width - margin.right, height - margin.bottom]]);
     const brushLayer = layerArgs.coreLayers[LayerType.BaseLayer].append("g")
-      .attr("id", layerArgs.getHtmlId(LayerType.Brush))
+      .attr("id", layerArgs.getHtmlId(LayerType.Zoom))
       .call(d3Brush);
     d3Brush.on("end", e => {
       this.handleBrushEnd(e, brushLayer, layerArgs);
