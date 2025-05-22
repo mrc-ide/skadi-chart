@@ -12,7 +12,7 @@ export enum LayerType {
   ClipPath = "clipPath",
   BaseLayer = "baseLayer",
   Axes = "axes",
-  Brush = "brush",
+  Zoom = "zoom",
   Trace = "trace",
   Tooltip = "tooltip"
 }
