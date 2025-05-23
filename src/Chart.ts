@@ -1,21 +1,10 @@
 import * as d3 from "./d3";
-import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, LayerType, Point, XY } from "./layers/Layer";
 import { AxesLayer } from "./layers/AxesLayer";
 import { TracesLayer } from "./layers/TracesLayer";
 import { ZoomLayer } from "./layers/ZoomLayer";
 import { TooltipHtmlCallback, TooltipsLayer } from "./layers/TooltipsLayer";
-
-export type Scales = XY<{ start: number, end: number }>
-
-type LineConfig = {
-  points: Point[],
-  style: {
-    color?: string,
-    opacity?: number,
-    strokeWidth?: number
-  }
-}
-export type Lines = LineConfig[]
+import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, Point, Scales } from "./types";
+import { LayerType } from "./layers/Layer";
 
 export class Chart {
   id: string;
@@ -65,14 +54,12 @@ export class Chart {
       .attr("width", "100%")
       .attr("height", "100%")
       .attr("viewBox", `0 0 ${width} ${height}`)
-      .attr("preserveAspectRatio", "xMinYMin")
-      .attr("vector-effect", "non-scaling-stroke") as any as D3Selection<SVGSVGElement>;
+      .attr("preserveAspectRatio", "xMinYMin") as any as D3Selection<SVGSVGElement>;
 
     const clipPath = svg.append("defs")
       .append("svg:clipPath")
       .attr("id", getHtmlId(LayerType.ClipPath)) as any as D3Selection<SVGClipPathElement>;
     clipPath.append("svg:rect")
-      .attr("vector-effect", "non-scaling-stroke")
       .attr("width", width - margin.right - margin.left)
       .attr("height", height - margin.bottom - margin.top)
       .attr("x", margin.left)
@@ -80,7 +67,6 @@ export class Chart {
 
     const baseLayer = svg.append('g')
       .attr("id", getHtmlId(LayerType.BaseLayer))
-      .attr("vector-effect", "non-scaling-stroke")
       .attr("clip-path", `url(#${getHtmlId(LayerType.ClipPath)})`);
 
     const { x, y } = this.scales;
@@ -113,6 +99,7 @@ export class Chart {
       optionalLayers: []
     };
 
+    // Clear any existing content in the element
     baseElement.childNodes.forEach(n => n.remove());
 
     this.optionalLayers.forEach(l => {
@@ -134,11 +121,16 @@ export class Chart {
     drawWithBounds(width, height);
 
     if (this.isResponsive) {
+      // watch for changes in baseElement
       const resizeObserver = new ResizeObserver(entries => {
         const { blockSize: height, inlineSize: width } = entries[0].borderBoxSize[0];
         drawWithBounds(width, height);
       });
       resizeObserver.observe(baseElement);
+
+      // above resizeObserver was not triggering when maximising
+      // browser window for example so this event listener watches
+      // for changes to the window itself
       window.addEventListener("resize", e => {
         if (!e.view) return;
         const { innerHeight: height, innerWidth: width } = e.view;
