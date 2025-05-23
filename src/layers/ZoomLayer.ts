@@ -1,5 +1,6 @@
 import * as d3 from "@/d3";
-import { D3Selection, LayerArgs, LayerType, OptionalLayer, Point, ZoomExtents, CustomEvents } from "./Layer";
+import { LayerType, OptionalLayer, CustomEvents } from "./Layer";
+import { D3Selection, LayerArgs, Point, ZoomExtents } from "@/types";
 
 export class ZoomLayer extends OptionalLayer {
   type = LayerType.Zoom;

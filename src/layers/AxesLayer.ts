@@ -1,5 +1,6 @@
 import * as d3 from "@/d3";
-import { LayerArgs, LayerType, OptionalLayer } from "./Layer";
+import { LayerType, OptionalLayer } from "./Layer";
+import { LayerArgs } from "@/types";
 
 export class AxesLayer extends OptionalLayer {
   type = LayerType.Axes;
@@ -21,7 +22,6 @@ export class AxesLayer extends OptionalLayer {
     const axisLayerX = svgLayer.append("g")
       .attr("id", `${getHtmlId(LayerType.Axes)}-x`)
       .attr("transform", `translate(0,${height - margin.bottom})`)
-      .attr("vector-effect", "non-scaling-stroke")
       .call(axisX);
 
     let defaultTicksY = 10;
@@ -31,7 +31,6 @@ export class AxesLayer extends OptionalLayer {
     const axisLayerY = svgLayer.append("g")
       .attr("id", `${getHtmlId(LayerType.Axes)}-y`)
       .attr("transform", `translate(${margin.left},0)`)
-      .attr("vector-effect", "non-scaling-stroke")
       .call(axisY);
 
     // The zoom layer (if added) will update the scaleX and scaleY
