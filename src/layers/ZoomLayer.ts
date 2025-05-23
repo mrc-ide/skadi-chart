@@ -1,8 +1,9 @@
 import * as d3 from "@/d3";
-import { D3Selection, LayerArgs, LayerType, OptionalLayer, Point, ZoomExtents, CustomEvents } from "./Layer";
+import { LayerType, OptionalLayer, CustomEvents } from "./Layer";
+import { D3Selection, LayerArgs, Point, ZoomExtents } from "@/types";
 
 export class ZoomLayer extends OptionalLayer {
-  type = LayerType.Brush;
+  type = LayerType.Zoom;
 
   constructor() {
     super();
@@ -10,11 +11,13 @@ export class ZoomLayer extends OptionalLayer {
 
   private handleZoom = (zoomExtents: ZoomExtents, layerArgs: LayerArgs) => {
     const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
+    // updates the scales which are implicitly used by a lot of other
+    // components
     if (zoomExtents.x) scaleX.domain(zoomExtents.x);
     if (zoomExtents.y) scaleY.domain(zoomExtents.y);
 
     layerArgs.optionalLayers.forEach(layer => {
-      if (layer.type === LayerType.Brush) return;
+      if (layer.type === LayerType.Zoom) return;
       layer.doZoom(zoomExtents);
     });
     setTimeout(() => {
@@ -43,14 +46,17 @@ export class ZoomLayer extends OptionalLayer {
   draw = (layerArgs: LayerArgs) => {
     const { width, height, margin } = layerArgs.bounds;
     
+    // brushX allows the user to click and draw a rectangle that will
+    // select a particular x interval and it will then fire an end event
     const d3Brush = d3.brushX<Point>()
       .extent([[margin.left, margin.top], [width - margin.right, height - margin.bottom]]);
     const brushLayer = layerArgs.coreLayers[LayerType.BaseLayer].append("g")
-      .attr("id", layerArgs.getHtmlId(LayerType.Brush))
+      .attr("id", layerArgs.getHtmlId(LayerType.Zoom))
       .call(d3Brush);
     d3Brush.on("end", e => this.handleBrushEnd(e, brushLayer, layerArgs));
     d3Brush.on("start", () => layerArgs.coreLayers[LayerType.Svg].dispatch(CustomEvents.ZoomStart));
 
+    // Respond to double click event by fully zooming out
     const { x } = layerArgs.scaleConfig.scaleExtents;
     layerArgs.coreLayers[LayerType.Svg].on("dblclick",() => this.handleZoom({ x: [x.start, x.end] }, layerArgs));
   };
