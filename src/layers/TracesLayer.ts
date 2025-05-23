@@ -1,5 +1,5 @@
-import { Lines } from "@/Chart";
-import { D3Selection, LayerArgs, LayerType, OptionalLayer, Point, ZoomExtents } from "./Layer";
+import { D3Selection, LayerArgs, Lines, Point, ZoomExtents } from "@/types";
+import { LayerType, OptionalLayer } from "./Layer";
 
 // see https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line#Line_defined_by_two_points
 const fastPerpendicularDistance = (
@@ -133,7 +133,6 @@ export class TracesLayer extends OptionalLayer {
       return layerArgs.coreLayers[LayerType.BaseLayer].append("path")
         .attr("id", `${layerArgs.getHtmlId(LayerType.Trace)}-${index}`)
         .attr("pointer-events", "none")
-        .attr("vector-effect", "non-scaling-stroke")
         .attr("fill", "none")
         .attr("stroke", l.style.color || "black")
         .attr("opacity", l.style.opacity || 1)
@@ -158,6 +157,10 @@ export class TracesLayer extends OptionalLayer {
       this.getNewPoint = (x, t) => x * (t * scaleRelative + 1) - t * offset;
     };
 
+    // The zoom layer updates scaleX and scaleY and the lineGen
+    // function is constructed from the scales so this function
+    // when called will do a smoooth transition between the new
+    // lines and the old ones
     this.zoom = async () => {
       const promises: Promise<void>[] = [];
       for (let index = 0; index < this.lines.length; index++) {
