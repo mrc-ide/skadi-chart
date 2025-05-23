@@ -17,7 +17,9 @@ Some layers in this project deal with multiple coordinate systems and the code g
 
 Each coordinate system has its origin highlighted with the circle, and x and y axes shown. Details for each color:
 
-* Red: These are the client coordinates that keep track of where elements in the DOM are relative to the red origin in the top left hand corner of the webpage. Variables in this coordinate system will be suffixed with `CC` (client coordinates).
-* Green: The svg we generate has a view box equal to the width and height of the svg element, which means we have a 1 to 1 mapping of svg coordinates and client pixels (see [this](https://developer.mozilla.org/en-US/docs/Web/SVG/Tutorials/SVG_from_scratch/Positions) for more details). The green axes then represent the position of elements of the svg relative to its top left corner. Variables in this coordinate system will be suffixed with `SC` (svg coordinates).
-* Blue: We draw axes on the svg itself that represent the data coordinates of the traces the user puts in. Variables in this coordinate system will be suffixed with `DC` (data coordinates).
+* Red: These are the client coordinates that keep track of where elements in the DOM are relative to the red origin in the top left hand corner of the webpage. These coordinates are measured in pixels. Variables in this coordinate system will be suffixed with `CC` (client coordinates).
+
+* Green: The svg we generate has a view box equal to the width and height of the svg element, which means we have a 1 to 1 mapping of svg coordinates and client pixels (see [this](https://developer.mozilla.org/en-US/docs/Web/SVG/Tutorials/SVG_from_scratch/Positions) for more details). The green axes then represent the position of elements of the svg relative to its top left corner. These are also measured in pixels. Variables in this coordinate system will be suffixed with `SC` (svg coordinates).
+
+* Blue: We draw axes on the svg itself that represent the data coordinates of the traces the user puts in. These are measured with units equal to the user data which is not the same as pixels. Variables in this coordinate system will be suffixed with `DC` (data coordinates).
 
