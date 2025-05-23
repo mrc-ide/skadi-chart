@@ -99,6 +99,7 @@ export class Chart {
       optionalLayers: []
     };
 
+    // Clear any existing content in the element
     baseElement.childNodes.forEach(n => n.remove());
 
     this.optionalLayers.forEach(l => {
