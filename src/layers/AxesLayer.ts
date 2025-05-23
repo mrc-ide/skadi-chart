@@ -40,13 +40,17 @@ export class AxesLayer extends OptionalLayer {
     this.zoom = async () => {
       const { animationDuration } = layerArgs.globals;
 
-      axisLayerX.transition()
+      const promiseX = axisLayerX.transition()
         .duration(animationDuration)
-        .call(axisX);
+        .call(axisX)
+        .end();
 
-      axisLayerY.transition()
+      const promiseY = axisLayerY.transition()
         .duration(animationDuration)
-        .call(axisY);
+        .call(axisY)
+        .end();
+
+      await Promise.all([promiseX, promiseY]);
     };
   };
 }
