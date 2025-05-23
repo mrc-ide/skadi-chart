@@ -65,9 +65,10 @@ export class TooltipsLayer extends OptionalLayer {
     // NOTE: minDistanceSC is not the actual SC distance, we use a crude way
     // to calculate it quickly, it is going to be off by a scale factor. If
     // we wanted to calculate the actual SC distance we would first need to
-    // DC to SC by using the scaleX and scaleY d3 functions however these are
-    // slow so we use our getFastDistanceSC function to quickly conpute a
-    // proportional distance since we only care about the minimum value
+    // convert DC to SC by using the scaleX and scaleY d3 functions however
+    // these are slow so we use our getFastDistanceSC function to quickly
+    // compute a proportional distance since we only care about the minimum
+    // point
     let fastMinDistanceSC = Infinity;
     const minPointDC = flatPointsDC.reduce((minPDC, pDC) => {
       const distanceSC = this.getFastDistanceSC(coordsDC, pDC, rangeDC);
