@@ -1,6 +1,7 @@
 import * as d3 from "@/d3";
-import { D3Selection, LayerArgs, LayerType, OptionalLayer, Point, XY, CustomEvents } from "./Layer";
+import { LayerType, OptionalLayer, CustomEvents } from "./Layer";
 import { TracesLayer } from "./TracesLayer";
+import { D3Selection, LayerArgs, Point, XY } from "@/types";
 
 export type TooltipHtmlCallback = (point: Point) => string
 
