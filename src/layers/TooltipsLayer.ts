@@ -5,6 +5,10 @@ import { D3Selection, LayerArgs, Point, XY } from "@/types";
 
 export type TooltipHtmlCallback = (point: Point) => string
 
+// this file uses variable naming conventions that follow the coordinate systems
+// section outlined in the README. If DC, SC and CC don't make sense to you please
+// read that section first
+
 export class TooltipsLayer extends OptionalLayer {
   type = LayerType.Tooltip;
 
@@ -12,64 +16,100 @@ export class TooltipsLayer extends OptionalLayer {
     super();
   };
 
-  // straight line distance squared
-  private l22 = (coord1: Point, coord2: Point) => {
+  // this function returns the straight line distance squared between two points
+  // and doesn't care about coordinates since it is just distance so you can give
+  // it DC, SC or CC
+  private getDistance = (coord1: Point, coord2: Point) => {
     const diffX = coord1.x - coord2.x;
     const diffY = coord1.y - coord2.y;
     return diffX * diffX + diffY * diffY;
   };
 
-  private l22Svg = (svgCoord1: Point, svgCoord2: Point, range: XY<number>) => {
-    // we want the closest point based on pixels (how it looks on the user's screen)
-    // however if we just calculated the straight line distance between two points
-    // without scaling the coords then we would get the closest point if the axes were
-    // to scale (i.e. if x axis is [0, 100] and y axis is [0, 700] then the y axis
-    // would be 7 times bigger than the x axis).
-    //
-    // This is not the case as axes may be squished so we need to scale our coordinates
-    // to work out a distance that reflect pixel distance between mouse and a point in
-    // the data
-    const scaledCoord1: Point = { x: svgCoord1.x / range.x, y: svgCoord1.y / range.y };
-    const scaledCoord2: Point = { x: svgCoord2.x / range.x, y: svgCoord2.y / range.y };
+  private getFastDistanceSC = (coord1DC: Point, coord2DC: Point, rangeDC: XY<number>) => {
+    // we want the closest point based on pixels (SC) however if we just calculated
+    // the straight line distance between two points (DC) without scaling the coords
+    // then we would get the closest point if the axes were to scale. However if the
+    // svg was square and x axis extent was [0, 100], while y axis was [0, 1000], then
+    // one vertial pixel (SC) will account for 10 times the data distance (DC) as one
+    // horizontal pixel so we must scale by the range to get an accurate SC distance
+    // representation
+    const coord1SC = { x: coord1DC.x / rangeDC.x, y: coord1DC.y / rangeDC.y };
+    const coord2SC = { x: coord2DC.x / rangeDC.x, y: coord2DC.y / rangeDC.y };
 
-    return this.l22(scaledCoord1, scaledCoord2);
+    return this.getDistance(coord1SC, coord2SC);
   };
 
-  private handleMouseMove = (event: d3.ClientPointEvent, layerArgs: LayerArgs, tooltip: D3Selection<HTMLDivElement>, allPoints: Point[], range: XY<number>) => {
-    const [ clientX, clientY ] = d3.pointer(event);
+  private handleMouseMove = (
+    eventCC: d3.ClientPointEvent,
+    layerArgs: LayerArgs,
+    tooltip: D3Selection<HTMLDivElement>,
+    flatPointsDC: Point[],
+    rangeDC: XY<number>
+  ) => {
+    // d3.pointer converts coords from CC to SC
+    const [ clientXSC, clientYSC ] = d3.pointer(eventCC);
     const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
-    // convert point from pixel position of mouse to coordinates of the axes
-    // in the plot
-    const coords: Point = { x: scaleX.invert(clientX), y: scaleY.invert(clientY) };
 
-    let minDistance = Infinity;
-    const minPoint: Point = allPoints.reduce((minP, p) => {
-      const distance = this.l22Svg(coords, p, range);
-      if (distance >= minDistance) return minP;
-      minDistance = distance;
-      return p;
+    // scale.invert functions convert SC to DC, applying just scale converts from
+    // DC to SC
+    const coordsDC = { x: scaleX.invert(clientXSC), y: scaleY.invert(clientYSC) };
+
+    // notice that the min point we want is DC because data points are always
+    // going to use data coordinates but the minimum distance that we compare
+    // is in SC because svg coordinates is what the user sees so you want to
+    // pick out the minimum point based on visual distance from the cursor
+    // rather than data distance (which can be very different from visual
+    // distance if the axes are not the same aspect ratio as the height and
+    // width of the svg)
+    //
+    // NOTE: minDistanceSC is not the actual SC distance, we use a crude way
+    // to calculate it quickly, it is going to be off by a scale factor. If
+    // we wanted to calculate the actual SC distance we would first need to
+    // DC to SC by using the scaleX and scaleY d3 functions however these are
+    // slow so we use our getFastDistanceSC function to quickly conpute a
+    // proportional distance since we only care about the minimum value
+    let fastMinDistanceSC = Infinity;
+    const minPointDC = flatPointsDC.reduce((minPDC, pDC) => {
+      const distanceSC = this.getFastDistanceSC(coordsDC, pDC, rangeDC);
+      if (distanceSC >= fastMinDistanceSC) return minPDC;
+      fastMinDistanceSC = distanceSC;
+      return pDC;
     }, { x: 0, y: 0 });
 
-    // The minimum point we have calculated is relative to the coordinate system
-    // of the svg, however we need absolute coordinates on the page to calculate
-    // the actual pixel distance so this matrix transformation does that.
-    const matrix = layerArgs.coreLayers[LayerType.Svg].node()!.getScreenCTM()!;
-    const minPointClientCoords = {
-      x: (matrix.a * scaleX(minPoint.x)) + (matrix.c * scaleY(minPoint.y)) + matrix.e,
-      y: (matrix.b * scaleX(minPoint.x)) + (matrix.d * scaleY(minPoint.y)) + matrix.f
-    };
+    // SC distance will be the same as pixel distance
+    const minPointSC = { x: scaleX(minPointDC.x), y: scaleY(minPointDC.y) };
+    const minDistanceSC = this.getDistance({ x: clientXSC, y: clientYSC }, minPointSC);
 
-    const clientDistance = this.l22({ x: clientX, y: clientY }, minPointClientCoords);
-
-    // the actual straight line distance involves a square root but we don't
-    // do a square root for performance reasons so this 700 threshold actually
-    // refers to a Math.sqrt(700) pixel threshold which is about 26.5px
-    if (clientDistance > 700) {
+    // if client pointer is more than 25 pixels away from the closest point
+    const tooltipRadius = 25;
+    if (minDistanceSC > tooltipRadius * tooltipRadius) {
       tooltip.style("opacity", 0);
     } else {
-      tooltip.html(this.tooltipHtmlCallback(minPoint))
-        .style("left", `${minPointClientCoords.x}px`)
-        .style("top", `${minPointClientCoords.y}px`)
+      const funcSCtoCC = layerArgs.coreLayers[LayerType.Svg].node()!.getScreenCTM()!;
+      // these equations represent a matrix multiplication + offset vector
+      // 
+      // [ a, c ][ x ]  +  [ e ]
+      // [ b, d ][ y ]     [ f ]
+      const {
+        a, c,
+        b, d
+      } = funcSCtoCC;
+      const {
+        e,
+        f
+      } = funcSCtoCC;
+      const minPointCC = {
+        x: (a * minPointSC.x) + (c * minPointSC.y) + e,
+        y: (b * minPointSC.x) + (d * minPointSC.y) + f
+      };
+
+      // the tooltip html callback receives the actual data coordinates so the
+      // tooltips can be accurate to the user data and we translate the tooltip
+      // so it is on top of the closest data point for which we need client
+      // coordinates of the point (absolute position of the min point)
+      tooltip.html(this.tooltipHtmlCallback(minPointDC))
+        .style("left", `${minPointCC.x}px`)
+        .style("top", `${minPointCC.y}px`)
         .style("opacity", 1)
     }
   }
@@ -82,21 +122,21 @@ export class TooltipsLayer extends OptionalLayer {
       .style("position", "fixed")
       .style("pointer-events", "none") as any as D3Selection<HTMLDivElement>;
     
-    const allPoints = traceLayers.reduce((points, layer) => {
+    const flatPointsDC = traceLayers.reduce((points, layer) => {
       return [...layer.lines.map(l => l.points).flat(), ...points];
     }, [] as Point[]);
 
     const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
-    const rangeX = scaleX.domain()[1] - scaleX.domain()[0];
-    const rangeY = scaleY.domain()[1] - scaleY.domain()[0];
-    const range = { x: rangeX, y: rangeY };
+    const rangeXDC = scaleX.domain()[1] - scaleX.domain()[0];
+    const rangeYDC = scaleY.domain()[1] - scaleY.domain()[0];
+    const rangeDC = { x: rangeXDC, y: rangeYDC };
 
     const svg = layerArgs.coreLayers[LayerType.Svg];
     let timerFlag: NodeJS.Timeout | undefined = undefined;
     let hideTooltip = false;
     svg.on("mousemove", e => {
       if (timerFlag === undefined && !hideTooltip) {
-        this.handleMouseMove(e, layerArgs, tooltip, allPoints, range);
+        this.handleMouseMove(e, layerArgs, tooltip, flatPointsDC, rangeDC);
         timerFlag = setTimeout(() => {
           timerFlag = undefined;
         }, 25);
