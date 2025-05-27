@@ -4,12 +4,16 @@ import { D3Selection, LayerArgs, Point, ZoomExtents } from "@/types";
 
 export class ZoomLayer extends OptionalLayer {
   type = LayerType.Zoom;
+  zooming = false;
 
   constructor() {
     super();
   };
 
   private handleZoom = async (zoomExtents: ZoomExtents, layerArgs: LayerArgs) => {
+    if (this.zooming) return;
+    this.zooming = true;
+
     const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
 
     layerArgs.optionalLayers.forEach(layer => layer.beforeZoom(zoomExtents));
@@ -24,6 +28,7 @@ export class ZoomLayer extends OptionalLayer {
     await Promise.all(promises);
 
     layerArgs.coreLayers[LayerType.Svg].dispatch(CustomEvents.ZoomEnd);
+    this.zooming = false;
   };
 
   private handleBrushEnd = (event: d3.D3BrushEvent<Point>, brushLayer: D3Selection<SVGGElement>, layerArgs: LayerArgs) => {
