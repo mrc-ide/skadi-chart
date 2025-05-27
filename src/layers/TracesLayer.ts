@@ -191,6 +191,9 @@ export class TracesLayer extends OptionalLayer {
       // after zoom animation, calculate appropriate resolution lines again and replace
       // without the user knowing
       this.updateLowResLinesSC(layerArgs);
+      this.traces.forEach((t, index) => {
+        t.attr("d", this.customLineGen(this.lowResLinesSC[index]))
+      });
     };
   };
 }
