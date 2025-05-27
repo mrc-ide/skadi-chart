@@ -2,10 +2,20 @@ import { D3Selection, LayerArgs, Lines, Point, ZoomExtents } from "@/types";
 import { LayerType, OptionalLayer } from "./Layer";
 
 // see https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line#Line_defined_by_two_points
+// we compute the expression without denominator because it is faster and still proportional
+// NOTE: this is independent of coordinate system
 const fastPerpendicularDistance = (
-  coeff1: number, coeff2: number, coeff3: number, coeff4: number, point: Point
+  rangeY: number, rangeX: number, crossProduct: number, point: Point
 ) => {
-  return coeff1 * point.x - coeff2 * point.y + coeff3 - coeff4;
+  return rangeY * point.x - rangeX * point.y + crossProduct;
+};
+
+// we round each point because we only care about precision up to one pixel, any more is
+// irrelevant for svg rasterisation
+const roundPoint = (point: Point) => {
+  const xRounded = Math.round(point.x);
+  const yRounded = Math.round(point.y);
+  return { x: xRounded, y: yRounded };
 };
 
 /*
@@ -25,111 +35,112 @@ const fastPerpendicularDistance = (
   This is a safe way to lower resolution of a line without losing the important detail
 */
 const doRDP = (
-  sliceStart: number, sliceEnd: number, points: Point[], scaledPoints: Point[], epsilon: number
+  pointsSC: Point[], slice: [number, number], epsilon: number
 ): Point[] => {
-  // raw data points, these coordinates map to the axis coordinates
-  const start = points[sliceStart];
-  const end = points[sliceEnd];
-  
-  // these coordinates map to svg coordinates not data coordinates
-  const startScaled = scaledPoints[sliceStart];
-  const endScaled = scaledPoints[sliceEnd];
+  const startSC = pointsSC[slice[0]];
+  const endSC = pointsSC[slice[1]];
 
   // pre-compute coeficients that'll be used in the for loop for perpendicular
-  // distanec calculations
-  const coeff1 = endScaled.y - startScaled.y;
-  const coeff2 = endScaled.x - startScaled.x;
-  const coeff3 = endScaled.x * startScaled.y;
-  const coeff4 = endScaled.y * startScaled.x;
+  // distance calculations
+  const rangeYSC = endSC.y - startSC.y;
+  const rangeXSC = endSC.x - startSC.x;
+  const crossProductSC = endSC.x * startSC.y - endSC.y * startSC.x;
   
-  // find the point with the maximum distance
-  let dMax = 0;
+  // we are applying this algorthim in svg coordinates as we want to lower resolution of lines based on
+  // visual distance instead of data coordinates (DC)
+  //
+  // start by finding the point with the maximum svg coordinate distance (proportional to pixel distance)
+  let dMaxFastSC = 0;
   let index = 0;
   const abs = Math.abs;
-  for (let i = sliceStart + 1; i < sliceEnd - 1; i++) {
-    const d = abs(fastPerpendicularDistance(coeff1, coeff2, coeff3, coeff4, scaledPoints[i]));
-    if (d > dMax) {
-      dMax = d;
+  for (let i = slice[0] + 1; i < slice[1] - 1; i++) {
+    const dSC = abs(fastPerpendicularDistance(rangeYSC, rangeXSC, crossProductSC, pointsSC[i]));
+    if (dSC > dMaxFastSC) {
+      dMaxFastSC = dSC;
       index = i;
     }
   }
 
   // compute denominator once from https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line#Line_defined_by_two_points
-  const dMaxScaled = dMax / Math.sqrt(coeff1 * coeff1 + coeff2 * coeff2);
+  const dMaxSC = dMaxFastSC / Math.sqrt(rangeYSC * rangeYSC + rangeXSC * rangeXSC);
 
   // if there is point outside epsilon band repeat, else delete points in a straight line
-  if (dMaxScaled > epsilon) {
-    const res1 = doRDP(sliceStart, index, points, scaledPoints, epsilon);
-    const res2 = doRDP(index, sliceEnd, points, scaledPoints, epsilon);
+  if (dMaxSC > epsilon) {
+    const slice1 = [slice[0], index] as [number, number];
+    const res1 = doRDP(pointsSC, slice1, epsilon);
+
+    const slice2 = [index, slice[1]] as [number, number];
+    const res2 = doRDP(pointsSC, slice2, epsilon);
+
     return [...res1, ...res2];
   } else {
-    return [start, end];
+    const startRoundedSC = roundPoint(pointsSC[slice[0]]);
+    const endRoundedSC = roundPoint(pointsSC[slice[1]]);
+    return [startRoundedSC, endRoundedSC];
   }
 };
 
-const RDPAlgorithm = (lines: Lines, scaledLines: Point[][], epsilon: number) => {
-  return lines.map((l, index) => {
-    return doRDP(0, l.points.length - 1, l.points, scaledLines[index], epsilon);
+const RDPAlgorithm = (linesSC: Point[][], epsilon: number) => {
+  return linesSC.map(l => {
+    const slice = [0, l.length - 1] as [number, number];
+    return doRDP(l, slice, epsilon);
   });
 };
 
 export class TracesLayer extends OptionalLayer {
   type = LayerType.Trace;
   private traces: D3Selection<SVGPathElement>[] = [];
-  private scaledLines: Point[][] = [];
-  private lowerResolutionLines: Point[][] = [];
-  private parsedDAttribute: (number | string)[][] = [];
+  private lowResLinesSC: Point[][] = [];
   private getNewPoint: null | ((x: number, t: number) => number) = null;
 
-  constructor(public lines: Lines) {
+  constructor(public linesDC: Lines) {
     super();
   };
 
-  private parseDAttributes = () => {
-    for (let index = 0; index < this.lines.length; index++) {
-      const originalPath = this.traces[index].attr("d").slice(1);
-      this.parsedDAttribute[index] = originalPath.split(/L|,/);
-      for (let i = 0; i < this.parsedDAttribute[index].length - 1; i += 2) {
-        this.parsedDAttribute[index][i] = parseFloat(this.parsedDAttribute[index][i] as string).toFixed(3);
-      }
-    }
-  };
-
   // d3 feeds the function we return from this function with t, which goes from
-  // 0 to 1 with different jumps based on your ease
+  // 0 to 1 with different jumps based on your ease, t = 0 is the start state of
+  // your animation, t = 1 is the end state of your animation
   private customTween = (index: number) => {
-    const getNewPointFunc = this.getNewPoint!;
+    const currLineSC = this.lowResLinesSC[index];
     return (t: number) => {
-      let retStr = "M";
-      const newPoint = getNewPointFunc(this.parsedDAttribute[index][0] as number, t);
-      retStr += newPoint + "," + this.parsedDAttribute[index][1];
-
-      for (let i = 2; i < this.parsedDAttribute[index].length - 1; i += 2) {
-        const newPoint = getNewPointFunc(this.parsedDAttribute[index][i] as number, t);
-        retStr += "L";
-        retStr += newPoint;
-        retStr += ",";
-        retStr += this.parsedDAttribute[index][i + 1];
-      }
-
-      return retStr;
+      const intermediateLineSC = currLineSC.map(({x, y}) => {
+        return { x: this.getNewPoint!(x, t), y };
+      });
+      return this.customLineGen(intermediateLineSC);
     };
   };
 
-  draw = (layerArgs: LayerArgs) => {
-    // using scaleX to compute the svg coordinates from data coordinates is
-    // expensive so do it once at the beginning
-    if (this.scaledLines.length === 0) {
-      const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
-      this.scaledLines = this.lines.map(l => {
-        return l.points.map(p => ({ x: scaleX(p.x), y: scaleY(p.y) }));
-      });
+  private customLineGen = (lineSC: Point[]) => {
+    let retStr = "M";
+    const { x, y } = lineSC[0];
+    retStr += x;
+    retStr += ",";
+    retStr += y;
+
+    for (let i = 2; i < lineSC.length - 1; i++) {
+      const { x, y } = lineSC[i];
+      retStr += "L";
+      retStr += x;
+      retStr += ",";
+      retStr += y;
     }
 
-    this.lowerResolutionLines = RDPAlgorithm(this.lines, this.scaledLines, 1);
-    
-    this.traces = this.lines.map((l, index) => {
-      const linePath = layerArgs.scaleConfig.lineGen(this.lowerResolutionLines[index]);
+    return retStr;
+  };
+
+  private updateLowResLinesSC = (layerArgs: LayerArgs) => {
+    const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
+    const linesSC = this.linesDC.map(l => {
+      return l.points.map(p => ({ x: scaleX(p.x), y: scaleY(p.y) }));
+    });
+    this.lowResLinesSC = RDPAlgorithm(linesSC, 1);
+  };
+
+  draw = (layerArgs: LayerArgs) => {
+    this.updateLowResLinesSC(layerArgs);
+
+    this.traces = this.linesDC.map((l, index) => {
+      const linePathSC = this.customLineGen(this.lowResLinesSC[index]);
       return layerArgs.coreLayers[LayerType.BaseLayer].append("path")
         .attr("id", `${layerArgs.getHtmlId(LayerType.Trace)}-${index}`)
         .attr("pointer-events", "none")
@@ -137,24 +148,30 @@ export class TracesLayer extends OptionalLayer {
         .attr("stroke", l.style.color || "black")
         .attr("opacity", l.style.opacity || 1)
         .attr("stroke-width", l.style.strokeWidth || 0.5)
-        .attr("d", linePath);
+        .attr("d", linePathSC);
     });
 
-    // for performance we manually implement x axis zoom and to do so we have
-    // to parse the d attribute of the path element and convert the string to
-    // float, however parse float is expensive so do it upfront rather than
-    // during the animation
-    this.parseDAttributes();
-
-    this.beforeZoom = (zoomExtents: ZoomExtents) => {
-      const newExtentX = zoomExtents.x!;
+    this.beforeZoom = (zoomExtentsDC: ZoomExtents) => {
+      const newExtentXDC = zoomExtentsDC.x!;
       const { x: scaleX } = layerArgs.scaleConfig.linearScales;
-      const oldExtentX = scaleX.domain();
+      const oldExtentXDC = scaleX.domain();
 
-      const scale = (oldExtentX[1] - oldExtentX[0]) / (newExtentX[1] - newExtentX[0]);
-      const offset = scale * scaleX(newExtentX[0]) - scaleX(oldExtentX[0]);
+      // how much we have to zoom is the same in DC and SC since they are proportional to
+      // each other. scale is therefore a variable that isn't in SC or DC, it is coordinate
+      // independent
+      const scale = (oldExtentXDC[1] - oldExtentXDC[0]) / (newExtentXDC[1] - newExtentXDC[0]);
+
+      // translation to make sure the start of the zoomed in graph is the start of the user
+      // brush selection
+      const offsetSC = scale * scaleX(newExtentXDC[0]) - scaleX(oldExtentXDC[0]);
+      
+      // useful to precompute
       const scaleRelative = scale - 1;
-      this.getNewPoint = (x, t) => x * (t * scaleRelative + 1) - t * offset;
+
+      // this function gives us the x coordinate at any point t (between 0 and 1) of the
+      // animation, t = 0 gives the x points of the original traces, t = 1 gives the zoomed
+      // in line x coordinates
+      this.getNewPoint = (x, t) => x * (t * scaleRelative + 1) - t * offsetSC;
     };
 
     // The zoom layer updates scaleX and scaleY and the lineGen
@@ -163,26 +180,21 @@ export class TracesLayer extends OptionalLayer {
     // lines and the old ones
     this.zoom = async () => {
       const promises: Promise<void>[] = [];
-      for (let index = 0; index < this.lines.length; index++) {
-        const promise = this.traces[index]
+      for (let i = 0; i < this.linesDC.length; i++) {
+        const promise = this.traces[i]
           .transition()
           .duration(layerArgs.globals.animationDuration)
           // we do a custom animation because it is faster than d3's
           // default
-          .attrTween("d", () => this.customTween(index))
+          .attrTween("d", () => this.customTween(i))
           .end();
         promises.push(promise);
       };
       await Promise.all(promises);
 
-      this.lowerResolutionLines = RDPAlgorithm(this.lines, this.scaledLines, 1);
-      this.lines.forEach((_l, index) => {
-        const newLinePath = layerArgs.scaleConfig.lineGen(this.lowerResolutionLines[index]);
-        this.traces[index]
-          .attr("d", newLinePath);
-      });
-
-      this.parseDAttributes();
+      // after zoom animation, calculate appropriate resolution lines again and replace
+      // without the user knowing
+      this.updateLowResLinesSC(layerArgs);
     };
   };
 }

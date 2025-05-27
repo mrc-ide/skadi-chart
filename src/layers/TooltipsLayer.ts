@@ -128,7 +128,7 @@ export class TooltipsLayer extends OptionalLayer {
       .style("pointer-events", "none") as any as D3Selection<HTMLDivElement>;
     
     const flatPointsDC = traceLayers.reduce((points, layer) => {
-      return [...layer.lines.map(l => l.points).flat(), ...points];
+      return [...layer.linesDC.map(l => l.points).flat(), ...points];
     }, [] as Point[]);
 
     const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
