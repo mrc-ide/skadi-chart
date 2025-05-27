@@ -174,18 +174,14 @@ export class TracesLayer extends OptionalLayer {
       this.getNewPoint = (x, t) => x * (t * scaleRelative + 1) - t * offsetSC;
     };
 
-    // The zoom layer updates scaleX and scaleY and the lineGen
-    // function is constructed from the scales so this function
-    // when called will do a smoooth transition between the new
-    // lines and the old ones
+    // the zoom layer updates scaleX and scaleY which change our customLineGen function
     this.zoom = async () => {
       const promises: Promise<void>[] = [];
       for (let i = 0; i < this.linesDC.length; i++) {
         const promise = this.traces[i]
           .transition()
           .duration(layerArgs.globals.animationDuration)
-          // we do a custom animation because it is faster than d3's
-          // default
+          // we do a custom animation because it is faster than d3's default
           .attrTween("d", () => this.customTween(i))
           .end();
         promises.push(promise);
