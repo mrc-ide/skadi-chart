@@ -117,7 +117,7 @@ export class TracesLayer extends OptionalLayer {
     retStr += ",";
     retStr += y;
 
-    for (let i = 2; i < lineSC.length - 1; i++) {
+    for (let i = 2; i < lineSC.length; i++) {
       const { x, y } = lineSC[i];
       retStr += "L";
       retStr += x;
