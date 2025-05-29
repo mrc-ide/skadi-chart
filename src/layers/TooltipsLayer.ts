@@ -11,6 +11,7 @@ export type TooltipHtmlCallback = (point: Point) => string
 
 export class TooltipsLayer extends OptionalLayer {
   type = LayerType.Tooltip;
+  tooltipRadiusSq = 25 * 25;
 
   constructor(public tooltipHtmlCallback: TooltipHtmlCallback) {
     super();
@@ -19,13 +20,13 @@ export class TooltipsLayer extends OptionalLayer {
   // this function returns the straight line distance squared between two points
   // and doesn't care about coordinates since it is just distance so you can give
   // it DC, SC or CC
-  private getDistance = (coord1: Point, coord2: Point) => {
+  private getDistanceSq = (coord1: Point, coord2: Point) => {
     const diffX = coord1.x - coord2.x;
     const diffY = coord1.y - coord2.y;
     return diffX * diffX + diffY * diffY;
   };
 
-  private getFastDistanceSC = (coord1DC: Point, coord2DC: Point, rangeDC: XY<number>) => {
+  private getFastDistanceSqSC = (coord1DC: Point, coord2DC: Point, rangeDC: XY<number>) => {
     // we want the closest point based on pixels (SC) however if we just calculated
     // the straight line distance between two points (DC) without scaling the coords
     // then we would get the closest point if the axes were to scale. However if the
@@ -36,7 +37,27 @@ export class TooltipsLayer extends OptionalLayer {
     const coord1SC = { x: coord1DC.x / rangeDC.x, y: coord1DC.y / rangeDC.y };
     const coord2SC = { x: coord2DC.x / rangeDC.x, y: coord2DC.y / rangeDC.y };
 
-    return this.getDistance(coord1SC, coord2SC);
+    return this.getDistanceSq(coord1SC, coord2SC);
+  };
+
+  private convertSCPointToCC = (pointSC: Point, layerArgs: LayerArgs) => {
+      const funcSCtoCC = layerArgs.coreLayers[LayerType.Svg].node()!.getScreenCTM()!;
+      // these equations represent a matrix multiplication + offset vector
+      // 
+      // [ a, c ][ x ]  +  [ e ]
+      // [ b, d ][ y ]     [ f ]
+      const {
+        a, c,
+        b, d
+      } = funcSCtoCC;
+      const {
+        e,
+        f
+      } = funcSCtoCC;
+      return {
+        x: (a * pointSC.x) + (c * pointSC.y) + e,
+        y: (b * pointSC.x) + (d * pointSC.y) + f
+      };
   };
 
   private handleMouseMove = (
@@ -62,16 +83,16 @@ export class TooltipsLayer extends OptionalLayer {
     // distance if the axes are not the same aspect ratio as the height and
     // width of the svg)
     //
-    // NOTE: minDistanceSC is not the actual SC distance, we use a crude way
+    // NOTE: fastMinDistanceSC is not the actual SC distance, we use a crude way
     // to calculate it quickly, it is going to be off by a scale factor. If
     // we wanted to calculate the actual SC distance we would first need to
     // convert DC to SC by using the scaleX and scaleY d3 functions however
-    // these are slow so we use our getFastDistanceSC function to quickly
+    // these are slow so we use our getFastDistanceSqSC function to quickly
     // compute a proportional distance since we only care about the minimum
     // point
     let fastMinDistanceSC = Infinity;
     const minPointDC = flatPointsDC.reduce((minPDC, pDC) => {
-      const distanceSC = this.getFastDistanceSC(coordsDC, pDC, rangeDC);
+      const distanceSC = this.getFastDistanceSqSC(coordsDC, pDC, rangeDC);
       if (distanceSC >= fastMinDistanceSC) return minPDC;
       fastMinDistanceSC = distanceSC;
       return pDC;
@@ -79,30 +100,16 @@ export class TooltipsLayer extends OptionalLayer {
 
     // SC distance will be the same as pixel distance
     const minPointSC = { x: scaleX(minPointDC.x), y: scaleY(minPointDC.y) };
-    const minDistanceSC = this.getDistance({ x: clientXSC, y: clientYSC }, minPointSC);
+    // Having found closest SC point, get its accurate distance to client point
+    // to decide if tooltip should be shown
+    const minDistanceSC = this.getDistanceSq({ x: clientXSC, y: clientYSC }, minPointSC);
 
-    // if client pointer is more than 25 pixels away from the closest point
-    const tooltipRadius = 25;
-    if (minDistanceSC > tooltipRadius * tooltipRadius) {
+    // if client pointer is more than tooltip radius pixels away from the closest point
+    // NOTE: we compare the squares of the distance and tooltip radius
+    if (minDistanceSC > this.tooltipRadiusSq) {
       tooltip.style("opacity", 0);
     } else {
-      const funcSCtoCC = layerArgs.coreLayers[LayerType.Svg].node()!.getScreenCTM()!;
-      // these equations represent a matrix multiplication + offset vector
-      // 
-      // [ a, c ][ x ]  +  [ e ]
-      // [ b, d ][ y ]     [ f ]
-      const {
-        a, c,
-        b, d
-      } = funcSCtoCC;
-      const {
-        e,
-        f
-      } = funcSCtoCC;
-      const minPointCC = {
-        x: (a * minPointSC.x) + (c * minPointSC.y) + e,
-        y: (b * minPointSC.x) + (d * minPointSC.y) + f
-      };
+      const minPointCC = this.convertSCPointToCC(minPointSC, layerArgs);
 
       // the tooltip html callback receives the actual data coordinates so the
       // tooltips can be accurate to the user data and we translate the tooltip
