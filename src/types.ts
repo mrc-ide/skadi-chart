@@ -5,6 +5,8 @@ export type XY<T> = { x: T, y: T }
 
 export type Point = XY<number>
 
+export type XYLabel = Partial<XY<string>>
+
 /*
   These are bounds of the svg element
 */
@@ -32,7 +34,8 @@ export type LayerArgs = {
   getHtmlId: (layer: LayerType) => string,
   bounds: Bounds,
   globals: {
-    animationDuration: number
+    animationDuration: number,
+    ticks: XY<number>
   },
   scaleConfig: {
     linearScales: XY<d3.ScaleLinear<number, number, never>>,

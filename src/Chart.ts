@@ -3,16 +3,19 @@ import { AxesLayer } from "./layers/AxesLayer";
 import { TracesLayer } from "./layers/TracesLayer";
 import { ZoomLayer } from "./layers/ZoomLayer";
 import { TooltipHtmlCallback, TooltipsLayer } from "./layers/TooltipsLayer";
-import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, Point, Scales } from "./types";
+import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, Point, Scales, XYLabel } from "./types";
 import { LayerType } from "./layers/Layer";
+import { GridLayer } from "./layers/GridLayer";
 
 export class Chart {
   id: string;
   optionalLayers: AllOptionalLayers[] = [];
   isResponsive: boolean = false;
   globals = {
-    animationDuration: 350
+    animationDuration: 350,
+    ticks: { x: 0, y: 0 }
   };
+  defaultMargin = { top: 20, bottom: 35, left: 35, right: 20 };
 
   constructor(public scales: Scales) {
     this.id = Math.random().toString(26).substring(2, 10);
@@ -20,8 +23,17 @@ export class Chart {
     return this;
   };
 
-  addAxes = () => {
-    this.optionalLayers.push(new AxesLayer());
+  addAxes = (labels?: XYLabel) => {
+    if (labels) {
+      if (labels.x) this.defaultMargin.bottom = 60;
+      if (labels.y) this.defaultMargin.left = 60;
+    }
+    this.optionalLayers.push(new AxesLayer(labels || {}));
+    return this;
+  };
+
+  addGridLines = () => {
+    this.optionalLayers.push(new GridLayer());
     return this;
   };
 
@@ -81,6 +93,15 @@ export class Chart {
       .x(d => scaleX(d.x))
       .y(d => scaleY(d.y));
 
+    let ticksX = 10;
+    if (width < 500) ticksX = 6;
+    if (width < 300) ticksX = 3;
+    let ticksY = 10;
+    if (height < 400) ticksY = 6;
+    if (height < 200) ticksY = 3;
+
+    this.globals.ticks = { x: ticksX, y: ticksY };
+
     const layerArgs: LayerArgs = {
       id: this.id,
       getHtmlId,
@@ -96,24 +117,20 @@ export class Chart {
         [LayerType.ClipPath]: clipPath,
         [LayerType.BaseLayer]: baseLayer
       },
-      optionalLayers: []
+      optionalLayers: this.optionalLayers
     };
 
     // Clear any existing content in the element
     baseElement.childNodes.forEach(n => n.remove());
 
-    this.optionalLayers.forEach(l => {
-      l.draw(layerArgs);
-      layerArgs.optionalLayers.push(l);
-    });
+    this.optionalLayers.forEach(l => l.draw(layerArgs));
 
     baseElement.append(layerArgs.coreLayers[LayerType.Svg].node()!);
   };
 
   appendTo = (baseElement: HTMLDivElement) => {
-    const defaultMargin = { top: 20, bottom: 20, left: 40, right: 40 };
     const drawWithBounds = (width: number, height: number) => {
-      const bounds = { width, height, margin: defaultMargin };
+      const bounds = { width, height, margin: this.defaultMargin };
       this.draw(baseElement, bounds);
     };
 
@@ -137,5 +154,6 @@ export class Chart {
         drawWithBounds(width, height);
       });
     }
+    return this;
   };
 };
