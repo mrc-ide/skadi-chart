@@ -1,28 +1,28 @@
 <template>
   <h1>Basic traces (spark lines)</h1>
-  <div class="chart" ref="chartSparkLines"></div>
+  <div class="chart" ref="chartSparkLines" id="chartSparkLines"></div>
 
   <h1>Chart with axes</h1>
-  <div class="chart" ref="chartOnlyAxes"></div>
+  <div class="chart" ref="chartOnlyAxes" id="chartOnlyAxes"></div>
 
   <h1>Axes and gridlines</h1>
-  <div class="chart" ref="chartAxesAndGrid"></div>
+  <div class="chart" ref="chartAxesAndGrid" id="chartAxesAndGrid"></div>
 
   <h1>Axes, labels and gridlines</h1>
-  <div class="chart" ref="chartAxesLabelsAndGrid"></div>
+  <div class="chart" ref="chartAxesLabelsAndGrid" id="chartAxesLabelsAndGrid"></div>
 
   <h1>Traces, gridlines, axes, labels and zoom</h1>
-  <div class="chart" ref="chartAxesLabelGridAndZoom"></div>
+  <div class="chart" ref="chartAxesLabelGridAndZoom" id="chartAxesLabelGridAndZoom"></div>
 
   <h1>Chart with tooltips</h1>
-  <div class="chart" ref="chartTooltips"></div>
+  <div class="chart" ref="chartTooltips" id="chartTooltips"></div>
 
   <h1>Responsive chart</h1>
-  <div class="chart-responsive" ref="chartResponsive"></div>
+  <div class="chart-responsive" ref="chartResponsive" id="chartResponsive"></div>
 
   <h1>Stress test: 1000 traces</h1>
   <button @click="drawStressChart">Draw</button>
-  <div class="chart" ref="chartStress"></div>
+  <div class="chart" ref="chartStress" id="chartStress"></div>
 </template>
 
 <style>
@@ -138,11 +138,11 @@ const curvesAxesLabelsAndGrid = makeRandomCurves(propsBasic);
 const curvesAxesLabelGridAndZoom = makeRandomCurves(propsBasic);
 const curvesTooltips = makeRandomCurves(propsBasic);
 const curvesResponsive = makeRandomCurves(propsBasic);
-const curvesStress = makeRandomCurves(propsStress);
 
 const scales: Scales = { x: {start: 0, end: 1}, y: {start: -10, end: 10} };
 
 const drawStressChart = () => {
+  const curvesStress = makeRandomCurves(propsStress);
   new Chart(scales)
     .addZoom()
     .addTraces(curvesStress)
