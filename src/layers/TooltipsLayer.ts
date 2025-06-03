@@ -124,7 +124,10 @@ export class TooltipsLayer extends OptionalLayer {
 
   draw = (layerArgs: LayerArgs) => {
     const traceLayers = layerArgs.optionalLayers.filter(l => l.type === LayerType.Trace) as TracesLayer[];
-    if (traceLayers.length === 0) return;
+    if (traceLayers.length === 0) {
+      console.warn("Tooltip Layer was added without a Traces Layer.");
+      return;
+    };
 
     const tooltip = d3.create("div")
       .style("position", "fixed")
@@ -159,10 +162,8 @@ export class TooltipsLayer extends OptionalLayer {
       hideTooltip = false;
     };
 
-    svg.on(CustomEvents.BrushStart, hideTooltipCallback);
-    svg.on(CustomEvents.AnimationStart, hideTooltipCallback);
-    svg.on(CustomEvents.BrushEnd, showTooltipCallback);
-    svg.on(CustomEvents.AnimationEnd, showTooltipCallback);
+    svg.on(CustomEvents.ZoomStart, hideTooltipCallback);
+    svg.on(CustomEvents.ZoomEnd, showTooltipCallback);
     svg.on("mouseleave", () => tooltip.remove());
     svg.on("mouseenter", () => document.body.append(tooltip.node()!));
   };

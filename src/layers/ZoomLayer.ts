@@ -16,13 +16,12 @@ export class ZoomLayer extends OptionalLayer {
     if (zoomExtents.x) scaleX.domain(zoomExtents.x);
     if (zoomExtents.y) scaleY.domain(zoomExtents.y);
 
-    layerArgs.coreLayers[LayerType.Svg].dispatch(CustomEvents.AnimationStart);
     layerArgs.optionalLayers.forEach(layer => {
       if (layer.type === LayerType.Zoom) return;
       layer.doZoom(zoomExtents);
     });
     setTimeout(() => {
-      layerArgs.coreLayers[LayerType.Svg].dispatch(CustomEvents.AnimationEnd);
+      layerArgs.coreLayers[LayerType.Svg].dispatch(CustomEvents.ZoomEnd);
     }, layerArgs.globals.animationDuration);
   };
 
@@ -37,7 +36,10 @@ export class ZoomLayer extends OptionalLayer {
     const lExtent = scaleX.invert(extent[0]);
     const rExtent = scaleX.invert(extent[1]);
 
-    if (Math.abs(lExtent - rExtent) < 5) return;
+    if (Math.abs(lExtent - rExtent) < 5) {
+      layerArgs.coreLayers[LayerType.Svg].dispatch(CustomEvents.ZoomEnd);
+      return;
+    };
     this.handleZoom({ x: [lExtent, rExtent] }, layerArgs);
   };
 
@@ -51,11 +53,8 @@ export class ZoomLayer extends OptionalLayer {
     const brushLayer = layerArgs.coreLayers[LayerType.BaseLayer].append("g")
       .attr("id", layerArgs.getHtmlId(LayerType.Zoom))
       .call(d3Brush);
-    d3Brush.on("end", e => {
-      this.handleBrushEnd(e, brushLayer, layerArgs);
-      layerArgs.coreLayers[LayerType.Svg].dispatch(CustomEvents.BrushEnd);
-    });
-    d3Brush.on("start", () => layerArgs.coreLayers[LayerType.Svg].dispatch(CustomEvents.BrushStart));
+    d3Brush.on("end", e => this.handleBrushEnd(e, brushLayer, layerArgs));
+    d3Brush.on("start", () => layerArgs.coreLayers[LayerType.Svg].dispatch(CustomEvents.ZoomStart));
 
     // Respond to double click event by fully zooming out
     const { x } = layerArgs.scaleConfig.scaleExtents;
