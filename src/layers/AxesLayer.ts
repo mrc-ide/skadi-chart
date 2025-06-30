@@ -30,6 +30,7 @@ export class AxesLayer extends OptionalLayer {
 
     if (this.labels.y) {
       layerArgs.coreLayers[LayerType.Svg].append("text")
+        .attr("id", `${getHtmlId(LayerType.Axes)}-labely`)
         .attr("text-anchor", "middle")
         .attr("x", - (height - margin.top - margin.bottom) / 2 - margin.top)
         .attr("y", margin.left / 2)
@@ -39,6 +40,7 @@ export class AxesLayer extends OptionalLayer {
 
     if (this.labels.x) {
       layerArgs.coreLayers[LayerType.Svg].append("text")
+        .attr("id", `${getHtmlId(LayerType.Axes)}-labelx`)
         .attr("text-anchor", "middle")
         .attr("x", (width - margin.left - margin.right) / 2 + margin.left)
         .attr("y", layerArgs.bounds.height - margin.bottom / 3)

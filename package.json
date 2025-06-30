@@ -21,6 +21,7 @@
     "dev": "vite serve src/demo/",
     "build": "vite build && vue-tsc -p tsconfig.build.json",
     "test:unit": "vitest",
+    "test:e2e": "playwright test",
     "coverage": "vitest run --coverage"
   },
   "dependencies": {
