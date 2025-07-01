@@ -6,108 +6,85 @@ test.beforeEach(async ({ page }) => {
   await page.goto("http://localhost:5173");
 });
 
-const layerToElement: Partial<Record<LayerType, string>> = {
-  [LayerType.Axes]: "g",
-  [LayerType.Zoom]: "g",
-  [LayerType.Trace]: "path",
-  [LayerType.Grid]: "g",
-  [LayerType.Tooltip]: "div",
-};
-
-type LocatorAndId = { locator: Locator, id: string };
-type Selector = (
-  layerType: LayerType,
-  selector?: string,
-  baseElement?: Locator | Page
-) => Promise<LocatorAndId[]>;
-
 class SkadiChartTest {
-  selector: Selector;
-  checks: Promise<void>[] = [];
+  selector: (layerType: LayerType, extra?: string) => Promise<Locator[]>;
+  tests: Promise<void>[] = [];
 
-  constructor(chartDivId: string, public page: Page) {
+  constructor(public page: Page, chartDivId: string) {
     const chartDiv = page.locator(`#${chartDivId}`);
 
-    this.selector = async (
-      layerType: LayerType,
-      selector: string = layerToElement[layerType],
-      baseElement: Locator | Page = chartDiv
-    ) => {
-      const locators = await baseElement.locator(`${selector}`).all();
-      const promises: Promise<string>[] = [];
-      locators.map(l => {
-        promises.push(l.getAttribute("id"));
-      });
-      const ids = await Promise.all(promises);
-
-      const locatorsAndIds: { locator: Locator, id: string }[] = [];
-      for (let i = 0; i < ids.length; i++) {
-        const id = ids[i];
-        if (id === null || !id.includes(layerType)) continue;
-        locatorsAndIds.push({ locator: locators[i], id });
-      }
-
-      return locatorsAndIds;
+    // The ids we use for elements are of the form
+    // `<layerType>-<randomId>(-<extra>)` where -<extra> is
+    // optional. We know what layerType we are querying for but
+    // getting the randomId is a little trickier, here we just
+    // parse the `svg-<randomId>` id of the svg element to
+    // obtain the randomId
+    this.selector = async (layerType: LayerType, extra?: string) => {
+      const svgId = await chartDiv.locator("svg").getAttribute("id");
+      const [, randomId] = svgId.split("-");
+      const id = extra ? `${layerType}-${randomId}-${extra}` : `${layerType}-${randomId}`;
+      // this returns any element that partially matches the id
+      // and is useful for cases like traces where we have to
+      // match `trace-<randomId>-0`, `trace-<randomId>-1`, ...
+      // with just `trace-<randomId>`
+      return await page.locator(`*[id*="${id}"]`).all();
     };
 
+    return this;
+  };
+
+  private addTest = (callback: () => Promise<void>) => {
+    this.tests.push(callback());
     return this;
   };
 
   expectNTraces = (n: number) => {
-    const promise = this.selector(LayerType.Trace).then(traces => {
-      expect(traces.length).toBe(n);
+    return this.addTest(async () => {
+      const traces = await this.selector(LayerType.Trace);
+      expect(traces).toHaveLength(n);
     });
-    this.checks.push(promise);
-    return this;
   };
 
   expectAxes = () => {
-    const promise = this.selector(LayerType.Axes).then(axes => {
-      const isX = !!axes.find(a => a.id.includes("-x"));
-      const isY = !!axes.find(a => a.id.includes("-y"));
-      expect(isX && isY).toBe(true);
+    return this.addTest(async () => {
+      const xAxis = await this.selector(LayerType.Axes, "x");
+      expect(xAxis).toHaveLength(1);
+      const yAxis = await this.selector(LayerType.Axes, "y");
+      expect(yAxis).toHaveLength(1);
     });
-    this.checks.push(promise);
-    return this;
   };
 
   expectGridlines = () => {
-    const promise = this.selector(LayerType.Grid).then(gridlines => {
-      const isX = !!gridlines.find(a => a.id.includes("-x"));
-      const isY = !!gridlines.find(a => a.id.includes("-y"));
-      expect(isX && isY).toBe(true);
+    return this.addTest(async () => {
+      const xGrid = await this.selector(LayerType.Grid, "x");
+      expect(xGrid).toHaveLength(1);
+      const yGrid = await this.selector(LayerType.Grid, "y");
+      expect(yGrid).toHaveLength(1);
     });
-    this.checks.push(promise);
-    return this;
   };
 
   expectLabels = (labels: Partial<XY<string>>) => {
-    const promiseFunc = async () => {
-      const axes = await this.selector(LayerType.Axes, "text");
+    return this.addTest(async () => {
       if (labels.x) {
-        const label = axes.find(a => a.id.includes("-labelx")).locator;
-        await expect(label).toHaveText(labels.x);
+        const xLabel = await this.selector(LayerType.Axes, "labelx");
+        await expect(xLabel[0]).toHaveText(labels.x);
       }
       if (labels.y) {
-        const label = axes.find(a => a.id.includes("-labely")).locator;
-        await expect(label).toHaveText(labels.y);
+        const yLabel = await this.selector(LayerType.Axes, "labely");
+        await expect(yLabel[0]).toHaveText(labels.y);
       }
-    };
-    const promise = promiseFunc();
-    this.checks.push(promise);
-    return this;
+    });
   };
 
   expectZoom = () => {
-    const promise = this.selector(LayerType.Zoom).then(zoom => {
-      expect(zoom.length).toBe(1);
+    return this.addTest(async () => {
+      const zoom = await this.selector(LayerType.Zoom);
+      expect(zoom).toHaveLength(1);
     });
-    this.checks.push(promise);
-    return this;
   };
 
   expectTooltip = () => {
-    const promiseFunc = async () => {
+    return this.addTest(async () => {
       const traces = await this.selector(LayerType.Trace);
       // This fails without force because playwright cannot hover
       // over the trace without the svg intercepting the hover. In
@@ -115,38 +92,35 @@ class SkadiChartTest {
       // however to test the tooltips, we need to guarantee we are
       // over a trace so we force a hover on the trace even though it
       // doesn't trigger any events on it.
-      await traces[0].locator.hover({ force: true });
-      const tooltip = await this.selector(LayerType.Tooltip, layerToElement[LayerType.Tooltip], this.page);
-      expect(tooltip.length).toBe(1);
-    };
-    const promise = promiseFunc();
-    this.checks.push(promise);
-    return this;
+      await traces[0].hover({ force: true });
+      const tooltip = await this.selector(LayerType.Tooltip);
+      expect(tooltip).toHaveLength(1);
+    });
   };
 
   end = async () => {
-    for (let i = 0; i < this.checks.length; i++) {
-      await this.checks[i];
+    for (let i = 0; i < this.tests.length; i++) {
+      await this.tests[i];
     }
   };
 };
 
 
 test("basic traces", async ({ page }) => {
-  await new SkadiChartTest("chartSparkLines", page)
+  await new SkadiChartTest(page, "chartSparkLines")
     .expectNTraces(10)
     .end()
 });
 
 test("basic traces and axes", async ({ page }) => {
-  await new SkadiChartTest("chartOnlyAxes", page)
+  await new SkadiChartTest(page, "chartOnlyAxes")
     .expectNTraces(10)
     .expectAxes()
     .end()
 });
 
 test("basic traces and axes and grid", async ({ page }) => {
-  await new SkadiChartTest("chartAxesAndGrid", page)
+  await new SkadiChartTest(page, "chartAxesAndGrid")
     .expectNTraces(10)
     .expectAxes()
     .expectGridlines()
@@ -154,7 +128,7 @@ test("basic traces and axes and grid", async ({ page }) => {
 });
 
 test("basic traces and axes and grid and labels", async ({ page }) => {
-  await new SkadiChartTest("chartAxesLabelsAndGrid", page)
+  await new SkadiChartTest(page, "chartAxesLabelsAndGrid")
     .expectNTraces(10)
     .expectAxes()
     .expectGridlines()
@@ -163,7 +137,7 @@ test("basic traces and axes and grid and labels", async ({ page }) => {
 });
 
 test("basic traces and axes and grid and labels and zoom", async ({ page }) => {
-  await new SkadiChartTest("chartAxesLabelGridAndZoom", page)
+  await new SkadiChartTest(page, "chartAxesLabelGridAndZoom")
     .expectNTraces(10)
     .expectAxes()
     .expectGridlines()
@@ -173,7 +147,7 @@ test("basic traces and axes and grid and labels and zoom", async ({ page }) => {
 });
 
 test("basic traces and tooltips", async ({ page }) => {
-  await new SkadiChartTest("chartTooltips", page)
+  await new SkadiChartTest(page, "chartTooltips")
     .expectNTraces(10)
     .expectTooltip()
     .end()
