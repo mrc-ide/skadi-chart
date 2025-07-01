@@ -1,5 +1,5 @@
 {
-  "include": ["tests/unit/**/*"],
+  "include": ["tests/**/*"],
   "compilerOptions": {
     "noEmit": true,
     "module": "ESNext",
