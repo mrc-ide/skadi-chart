@@ -35,7 +35,7 @@ export class AxesLayer extends OptionalLayer {
         .attr("id", `${getHtmlId(LayerType.Axes)}-labely`)
         .attr("text-anchor", "middle")
         .attr("x", - (height - margin.top - margin.bottom) / 2 - margin.top)
-        .attr("y", margin.left / 4)
+        .attr("y", margin.left / 3)
         .attr("transform", "rotate(-90)")
         .text(this.labels.y)
     }

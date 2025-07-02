@@ -15,7 +15,7 @@ export class Chart {
     animationDuration: 350,
     ticks: { x: 0, y: 0 }
   };
-  defaultMargin = { top: 20, bottom: 35, left: 35, right: 20 };
+  defaultMargin = { top: 20, bottom: 35, left: 50, right: 20 };
 
   constructor(public scales: Scales) {
     this.id = Math.random().toString(26).substring(2, 10);
@@ -26,7 +26,7 @@ export class Chart {
   addAxes = (labels?: XYLabel) => {
     if (labels) {
       if (labels.x) this.defaultMargin.bottom = 60;
-      if (labels.y) this.defaultMargin.left = 60;
+      if (labels.y) this.defaultMargin.left = 80;
     }
     this.optionalLayers.push(new AxesLayer(labels || {}));
     return this;
