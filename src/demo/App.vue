@@ -53,7 +53,7 @@ const chartStress = ref<HTMLDivElement | null>(null);
 const propsBasic = {
   nX: 1000,
   nL: 10,
-  ampScaling: 3,
+  ampScaling: 1e6,
   freqRange: 0.1,
   freqOffset: 0.95,
   phaseRange: 0.5,
@@ -67,7 +67,7 @@ const propsBasic = {
 const propsStress = {
   nX: 1000,
   nL: 800,
-  ampScaling: 3,
+  ampScaling: 1e6,
   freqRange: 0.1,
   freqOffset: 0.95,
   phaseRange: 0.5,
@@ -139,7 +139,7 @@ const curvesAxesLabelGridAndZoom = makeRandomCurves(propsBasic);
 const curvesTooltips = makeRandomCurves(propsBasic);
 const curvesResponsive = makeRandomCurves(propsBasic);
 
-const scales: Scales = { x: {start: 0, end: 1}, y: {start: -10, end: 10} };
+const scales: Scales = { x: {start: 0, end: 1}, y: {start: -3e6, end: 3e6} };
 
 const drawStressChart = () => {
   const curvesStress = makeRandomCurves(propsStress);
