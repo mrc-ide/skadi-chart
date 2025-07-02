@@ -1,5 +1,5 @@
 import * as d3 from "@/d3";
-import { LayerType, OptionalLayer, CustomEvents } from "./Layer";
+import { LayerType, OptionalLayer } from "./Layer";
 import { TracesLayer } from "./TracesLayer";
 import { D3Selection, LayerArgs, Point, XY } from "@/types";
 
@@ -151,16 +151,14 @@ export class TooltipsLayer extends OptionalLayer {
       }
     });
 
-    const hideTooltipCallback = () => {
+    this.brushStart = () => {
       hideTooltip = true;
       tooltip.html("");
     };
-    const showTooltipCallback = () => {
+    this.afterZoom = () => {
       hideTooltip = false;
     };
 
-    svg.on(CustomEvents.ZoomStart, hideTooltipCallback);
-    svg.on(CustomEvents.ZoomEnd, showTooltipCallback);
     svg.on("mouseleave", () => tooltip.remove());
     svg.on("mouseenter", () => document.body.append(tooltip.node()!));
   };

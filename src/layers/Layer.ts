@@ -17,17 +17,6 @@ export enum LayerType {
   Grid = "grid",
 }
 
-/*
-  We need some custom events so that layers can listen
-  to events (such as turning off tooltips when brushing).
-  To keep it simple, all these events will be
-  dispatched on the svg element
-*/
-export enum CustomEvents {
-  ZoomStart = "zoomstart",
-  ZoomEnd = "zoomend",
-}
-
 export abstract class OptionalLayer<Properties = null> {
   abstract type: LayerType;
   properties: Properties | null = null;
@@ -36,7 +25,12 @@ export abstract class OptionalLayer<Properties = null> {
 
   abstract draw(layerArgs: LayerArgs): void;
 
+  // brush lifecycle hooks
+  // note: brushEnd is the same as beforeZoom
+  brushStart() {};
+
   // zoom lifecycle hooks
   beforeZoom(_zoomExtents: ZoomExtents) {};
   async zoom(_zoomExtents: ZoomExtents) {};
+  afterZoom() {};
 };
