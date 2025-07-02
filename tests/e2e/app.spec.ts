@@ -78,8 +78,12 @@ class SkadiChartTest {
 
   expectZoom = () => {
     return this.addTest(async () => {
-      const zoom = await this.selector(LayerType.Zoom);
-      expect(zoom).toHaveLength(1);
+      const zoomBrush = await this.selector(LayerType.Zoom, "brush");
+      expect(zoomBrush).toHaveLength(1);
+      const zoomOverlay = await this.selector(LayerType.Zoom, "overlay");
+      expect(zoomOverlay).toHaveLength(1);
+      const zoomSelection = await this.selector(LayerType.Zoom, "selection");
+      expect(zoomSelection).toHaveLength(1);
     });
   };
 
