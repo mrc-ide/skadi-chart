@@ -171,5 +171,6 @@ test("custom chart works as expected", async ({ page }) => {
     .expectGridlines()
     .expectLabels({ x: "Time", y: "Value" })
     .expectZoom()
+    .expectCustomCircle()
     .end()
 });
