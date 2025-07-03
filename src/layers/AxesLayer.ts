@@ -16,23 +16,26 @@ export class AxesLayer extends OptionalLayer {
     const { getHtmlId } = layerArgs;
     const { animationDuration, ticks } = layerArgs.globals;
 
-    const axisX = d3.axisBottom(scaleX).ticks(ticks.x).tickSize(0).tickPadding(8);
+    const axisX = d3.axisBottom(scaleX).ticks(ticks.x).tickSize(0).tickPadding(12);
     const axisLayerX = svgLayer.append("g")
       .attr("id", `${getHtmlId(LayerType.Axes)}-x`)
+      .style("font-size", "0.75rem")
       .attr("transform", `translate(0,${height - margin.bottom})`)
       .call(axisX);
 
-    const axisY = d3.axisLeft(scaleY).ticks(ticks.y).tickSize(0).tickPadding(8)
+    const axisY = d3.axisLeft(scaleY).ticks(ticks.y).tickSize(0).tickPadding(12)
       // SI-prefix with 2 significant figures and no trailing zeros, 42e6 -> 42M
       .tickFormat(d3.format(".2~s"));
     const axisLayerY = svgLayer.append("g")
       .attr("id", `${getHtmlId(LayerType.Axes)}-y`)
+      .style("font-size", "0.75rem")
       .attr("transform", `translate(${margin.left},0)`)
       .call(axisY);
 
     if (this.labels.y) {
       layerArgs.coreLayers[LayerType.Svg].append("text")
         .attr("id", `${getHtmlId(LayerType.Axes)}-labely`)
+        .style("font-size", "1.2rem")
         .attr("text-anchor", "middle")
         .attr("x", - (height - margin.top - margin.bottom) / 2 - margin.top)
         .attr("y", margin.left / 3)
@@ -43,6 +46,7 @@ export class AxesLayer extends OptionalLayer {
     if (this.labels.x) {
       layerArgs.coreLayers[LayerType.Svg].append("text")
         .attr("id", `${getHtmlId(LayerType.Axes)}-labelx`)
+        .style("font-size", "1.2rem")
         .attr("text-anchor", "middle")
         .attr("x", (width - margin.left - margin.right) / 2 + margin.left)
         .attr("y", layerArgs.bounds.height - margin.bottom / 3)

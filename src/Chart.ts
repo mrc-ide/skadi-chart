@@ -34,8 +34,8 @@ export class Chart {
 
   addAxes = (labels?: XYLabel) => {
     if (labels) {
-      if (labels.x) this.defaultMargin.bottom = 60;
-      if (labels.y) this.defaultMargin.left = 80;
+      if (labels.x) this.defaultMargin.bottom = 80;
+      if (labels.y) this.defaultMargin.left = 90;
     }
     this.optionalLayers.push(new AxesLayer(labels || {}));
     return this;
