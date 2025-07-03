@@ -46,8 +46,8 @@ export class Chart {
     return this;
   };
 
-  addTraces = (lines: Lines) => {
-    this.optionalLayers.push(new TracesLayer(lines));
+  addTraces = (lines: Lines, RDPEpsilon: number | null = null) => {
+    this.optionalLayers.push(new TracesLayer(lines, RDPEpsilon));
     return this;
   };
 

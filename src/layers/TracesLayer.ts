@@ -93,7 +93,7 @@ export class TracesLayer extends OptionalLayer {
   private lowResLinesSC: Point[][] = [];
   private getNewPoint: null | ((x: number, y: number, t: number) => Point) = null;
 
-  constructor(public linesDC: Lines) {
+  constructor(public linesDC: Lines, public RDPEpsilon: number | null) {
     super();
   };
 
@@ -131,7 +131,11 @@ export class TracesLayer extends OptionalLayer {
     const linesSC = this.linesDC.map(l => {
       return l.points.map(p => ({ x: scaleX(p.x), y: scaleY(p.y) }));
     });
-    this.lowResLinesSC = RDPAlgorithm(linesSC, 1);
+    if (this.RDPEpsilon !== null) {
+      this.lowResLinesSC = RDPAlgorithm(linesSC, this.RDPEpsilon);
+    } else {
+      this.lowResLinesSC = linesSC;
+    }
   };
 
   draw = (layerArgs: LayerArgs) => {
