@@ -15,7 +15,7 @@
   <div class="chart" ref="chartAxesLabelGridAndZoom" id="chartAxesLabelGridAndZoom"></div>
   <button @click="() => exportToPng!('zoomPlot.png')">Download PNG</button>
 
-  <h1>Scatter points, axes, zoom</h1>
+  <h1>Scatter points, axes, zoom (locked X axis)</h1>
   <div class="chart" ref="chartPointsAxesAndZoom" id="chartPointsAxesAndZoom"></div>
 
   <h1>Chart with tooltips</h1>
