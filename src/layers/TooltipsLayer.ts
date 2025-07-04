@@ -2,6 +2,7 @@ import * as d3 from "@/d3";
 import { LayerType, OptionalLayer } from "./Layer";
 import { TracesLayer } from "./TracesLayer";
 import { D3Selection, LayerArgs, Point, XY } from "@/types";
+import { ScatterLayer } from "./ScatterLayer";
 
 export type TooltipHtmlCallback = (point: Point) => string
 
@@ -117,8 +118,9 @@ export class TooltipsLayer extends OptionalLayer {
 
   draw = (layerArgs: LayerArgs) => {
     const traceLayers = layerArgs.optionalLayers.filter(l => l.type === LayerType.Trace) as TracesLayer[];
-    if (traceLayers.length === 0) {
-      console.warn("Tooltip Layer was added without a Traces Layer.");
+    const scatterLayers = layerArgs.optionalLayers.filter(l => l.type === LayerType.Scatter) as ScatterLayer[];
+    if (traceLayers.length === 0 && scatterLayers.length === 0) {
+      console.warn("Tooltip Layer was added without a Traces Layer or a Scatter Layer.");
       return;
     };
 
@@ -127,9 +129,12 @@ export class TooltipsLayer extends OptionalLayer {
       .style("position", "fixed")
       .style("pointer-events", "none") as any as D3Selection<HTMLDivElement>;
     
-    const flatPointsDC = traceLayers.reduce((points, layer) => {
+    let flatPointsDC = traceLayers.reduce((points, layer) => {
       return [...layer.linesDC.map(l => l.points).flat(), ...points];
     }, [] as Point[]);
+    flatPointsDC = scatterLayers.reduce((points, layer) => {
+      return [...layer.points.map(p => ({ x: p.x, y: p.y })), ...points];
+    }, flatPointsDC);
 
     const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
     const rangeXDC = scaleX.domain()[1] - scaleX.domain()[0];

@@ -45,6 +45,13 @@ class SkadiChartTest {
     });
   };
 
+  expectNPoints = (n: number) => {
+    return this.addTest(async () => {
+      const scatterPoints = await this.selector(LayerType.Scatter);
+      expect(scatterPoints).toHaveLength(n);
+    });
+  };
+
   expectAxes = () => {
     return this.addTest(async () => {
       const xAxis = await this.selector(LayerType.Axes, "x");
@@ -157,9 +164,19 @@ test("basic traces and axes and grid and labels and zoom", async ({ page }) => {
     .end()
 });
 
+test("point and axes and zoom", async ({ page }) => {
+  await new SkadiChartTest(page, "chartPointsAxesAndZoom")
+    .expectNPoints(1000)
+    .expectAxes()
+    .expectLabels({ x: "Time", y: "Value" })
+    .expectZoom()
+    .end()
+});
+
 test("basic traces and tooltips", async ({ page }) => {
   await new SkadiChartTest(page, "chartTooltips")
     .expectNTraces(10)
+    .expectNPoints(1000)
     .expectTooltip()
     .end()
 });
