@@ -265,7 +265,7 @@ onMounted(async () => {
   new Chart(scales)
     .addScatterPoints(pointsPointsAxesAndZoom)
     .addAxes(axesLAbels)
-    .addZoom()
+    .addZoom({ lockAxis: "x" })
     .appendTo(chartPointsAxesAndZoom.value!);
 
   new Chart(scales)
