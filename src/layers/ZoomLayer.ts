@@ -2,13 +2,17 @@ import * as d3 from "@/d3";
 import { LayerType, OptionalLayer } from "./Layer";
 import { D3Selection, LayerArgs, Point, ZoomExtents } from "@/types";
 
+export type ZoomOptions = {
+  lockAxis: "x" | "y" | null
+}
+
 export class ZoomLayer extends OptionalLayer {
   type = LayerType.Zoom;
   zooming = false;
   selectionMask: D3Selection<SVGRectElement> | null = null;
   overlay: D3Selection<SVGRectElement> | null = null;
 
-  constructor() {
+  constructor(public options: ZoomOptions) {
     super();
   };
 
@@ -22,7 +26,11 @@ export class ZoomLayer extends OptionalLayer {
     const distX = Math.abs(x0 - x1);
     const distY = Math.abs(y0 - y1);
 
-    if (distX > zoom1dThreshold && distY <= zoom1dThreshold) {
+    if (this.options.lockAxis === "y") {
+      return [[x0, margin.top], [x1, height - margin.bottom]];
+    } else if (this.options.lockAxis === "x") {
+      return [[margin.left, y0], [width - margin.right, y1]];
+    } else if (distX > zoom1dThreshold && distY <= zoom1dThreshold) {
       return [[x0, margin.top], [x1, height - margin.bottom]];
     } else if (distX <= zoom1dThreshold && distY > zoom1dThreshold) {
       return [[margin.left, y0], [width - margin.right, y1]];

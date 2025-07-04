@@ -213,7 +213,7 @@ const drawStressChart = () => {
   const curvesStress = makeRandomCurves(propsStress);
   new Chart(scales)
     .addZoom()
-    .addTraces(curvesStress, 1)
+    .addTraces(curvesStress, { RDPEpsilon: 1 })
     .addAxes()
     .addTooltips(tooltipHtmlCallback)
     .appendTo(chartStress.value!);
