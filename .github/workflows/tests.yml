@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        project: [ chromium, firefox, webkit, mobileChrome, mobileSafari ]
+        project: [ chromium, firefox, webkit, mobileChrome, mobileSafari, googleChrome, microsoftEdge ]
     steps:
       - uses: actions/checkout@v4
 
