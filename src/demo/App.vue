@@ -18,7 +18,7 @@
   <h1>Chart with tooltips</h1>
   <div class="chart" ref="chartTooltips" id="chartTooltips"></div>
 
-  <h1>Responsive chart</h1>
+  <h1>Responsive chart (and dashed lines)</h1>
   <div class="chart-responsive" ref="chartResponsive" id="chartResponsive"></div>
 
   <h1>Custom layers + custom lifecycle hooks</h1>
@@ -195,6 +195,9 @@ onMounted(async () => {
     .addTooltips(tooltipHtmlCallback)
     .appendTo(chartTooltips.value!);
 
+  curvesResponsive.forEach((l, i) => {
+    l.style.strokeDasharray = `${i * 2} 5`
+  });
   new Chart(scales)
     .addTraces(curvesResponsive)
     .addAxes()
@@ -221,7 +224,7 @@ onMounted(async () => {
     .addGridLines()
     .addZoom()
     .addCustomLayer(new CustomLayer())
-    .addCustomLifecycleHook({
+    .addCustomLifecycleHooks({
       afterZoom() { console.log("triggered after zoom") }
     })
     .appendTo(chartCustom.value!);
