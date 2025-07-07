@@ -15,6 +15,10 @@
   <div class="chart" ref="chartAxesLabelGridAndZoom" id="chartAxesLabelGridAndZoom"></div>
   <button @click="() => exportToPng!('zoomPlot.png')">Download PNG</button>
 
+  <h1>Traces, gridlines, axes, labels, zoom and log scale toggle</h1>
+  <div class="chart" ref="chartAxesLabelGridZoomAndLogScale" id="chartAxesLabelGridZoomAndLogScale"></div>
+  <button @click="() => logScaleY = !logScaleY">Toggle log scale</button>
+
   <h1>Scatter points, axes, zoom (locked X axis)</h1>
   <div class="chart" ref="chartPointsAxesAndZoom" id="chartPointsAxesAndZoom"></div>
 
@@ -51,13 +55,14 @@
 <script setup lang="ts">
 import { ScatterPoints } from "@/types";
 import { Chart, LayerArgs, LayerType, Lines, OptionalLayer, Scales } from "../skadi-chart";
-import { onMounted, ref } from "vue";
+import { onMounted, ref, watch } from "vue";
 
 const chartSparkLines = ref<HTMLDivElement | null>(null);
 const chartOnlyAxes = ref<HTMLDivElement | null>(null);
 const chartAxesAndGrid = ref<HTMLDivElement | null>(null);
 const chartAxesLabelsAndGrid = ref<HTMLDivElement | null>(null);
 const chartAxesLabelGridAndZoom = ref<HTMLDivElement | null>(null);
+const chartAxesLabelGridZoomAndLogScale = ref<HTMLDivElement | null>(null);
 const chartPointsAxesAndZoom = ref<HTMLDivElement | null>(null);
 const chartTooltips = ref<HTMLDivElement | null>(null);
 const chartResponsive = ref<HTMLDivElement | null>(null);
@@ -201,6 +206,12 @@ const curvesOnlyAxes = makeRandomCurves(propsBasic);
 const curvesAxesAndGrid = makeRandomCurves(propsBasic);
 const curvesAxesLabelsAndGrid = makeRandomCurves(propsBasic);
 const curvesAxesLabelGridAndZoom = makeRandomCurves(propsBasic);
+const curvesAxesLabelGridZoomAndLogScale = makeRandomCurves(propsBasic);
+curvesAxesLabelGridZoomAndLogScale.forEach(l => {
+  l.points.forEach((p, i) => {
+    p.y = Math.abs(p.y) * Math.pow(10, Math.floor(-i / 100));
+  });
+});
 const pointsPointsAxesAndZoom = makeRandomPoints(pointPropsBasic);
 const curvesTooltips = makeRandomCurves(propsBasic);
 const pointsTooltips = makeRandomPoints(pointPropsTooltips);
@@ -229,10 +240,22 @@ const drawStressChartPoints = () => {
     .appendTo(chartStressPoints.value!);
 };
 
+const axesLabels = { x: "Time", y: "Value" };
+
 const exportToPng = ref<(name?: string) => void>();
 
+const logScaleY = ref<boolean>(false);
+
+watch(logScaleY, () => {
+  new Chart({ logScale: { y: logScaleY.value } })
+    .addTraces(curvesAxesLabelGridZoomAndLogScale)
+    .addAxes(axesLabels)
+    .addGridLines()
+    .addZoom()
+    .appendTo(chartAxesLabelGridZoomAndLogScale.value!);
+});
+
 onMounted(async () => {
-  const axesLAbels = { x: "Time", y: "Value" };
   new Chart()
     .addTraces(curvesSparkLines)
     .appendTo(chartSparkLines.value!);
@@ -250,21 +273,28 @@ onMounted(async () => {
 
   new Chart()
     .addTraces(curvesAxesLabelsAndGrid)
-    .addAxes(axesLAbels)
+    .addAxes(axesLabels)
     .addGridLines()
     .appendTo(chartAxesLabelsAndGrid.value!);
 
   const chart = new Chart()
     .addTraces(curvesAxesLabelGridAndZoom)
-    .addAxes(axesLAbels)
+    .addAxes(axesLabels)
     .addGridLines()
     .addZoom()
     .appendTo(chartAxesLabelGridAndZoom.value!);
   exportToPng.value = chart.exportToPng!;
 
+  new Chart({ logScale: { y: logScaleY.value } })
+    .addTraces(curvesAxesLabelGridZoomAndLogScale)
+    .addAxes(axesLabels)
+    .addGridLines()
+    .addZoom()
+    .appendTo(chartAxesLabelGridZoomAndLogScale.value!);
+
   new Chart()
     .addScatterPoints(pointsPointsAxesAndZoom)
-    .addAxes(axesLAbels)
+    .addAxes(axesLabels)
     .addZoom({ lockAxis: "x" })
     .appendTo(chartPointsAxesAndZoom.value!, scales);
 
@@ -299,7 +329,7 @@ onMounted(async () => {
   }
   new Chart()
     .addTraces(curvesCustom)
-    .addAxes(axesLAbels)
+    .addAxes(axesLabels)
     .addGridLines()
     .addZoom()
     .addCustomLayer(new CustomLayer())

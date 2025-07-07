@@ -3,7 +3,7 @@ import { AxesLayer } from "./layers/AxesLayer";
 import { TracesLayer, TracesOptions } from "./layers/TracesLayer";
 import { ZoomLayer, ZoomOptions } from "./layers/ZoomLayer";
 import { TooltipHtmlCallback, TooltipsLayer } from "./layers/TooltipsLayer";
-import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, PartialScales, Point, Scales, ScatterPoints, XYLabel } from "./types";
+import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, PartialScales, Point, Scales, ScatterPoints, XY, XYLabel } from "./types";
 import { LayerType, LifecycleHooks, OptionalLayer } from "./layers/Layer";
 import { GridLayer } from "./layers/GridLayer";
 import html2canvas from "html2canvas";
@@ -16,6 +16,14 @@ class CustomHooksLayer extends OptionalLayer {
   draw() {};
 }
 
+type ChartOptions = {
+  logScale: XY<boolean>
+}
+
+type PartialChartOptions = {
+  logScale?: Partial<XY<boolean>>
+}
+
 export class Chart {
   id: string;
   optionalLayers: AllOptionalLayers[] = [];
@@ -26,8 +34,15 @@ export class Chart {
   };
   defaultMargin = { top: 20, bottom: 35, left: 50, right: 20 };
   exportToPng: ((name?: string) => void) | null = null;
+  options: ChartOptions;
 
-  constructor() {
+  constructor(options?: PartialChartOptions) {
+    this.options = {
+      logScale: {
+        x: options?.logScale?.x ?? false,
+        y: options?.logScale?.y ?? false
+      }
+    };
     this.id = Math.random().toString(26).substring(2, 10);
 
     return this;
@@ -155,10 +170,12 @@ export class Chart {
       .attr("clip-path", `url(#${getHtmlId(LayerType.ClipPath)})`);
 
     const { x, y } = scales;
-    const scaleX = d3.scaleLinear()
+    const d3ScaleX = this.options.logScale.x ? d3.scaleLog : d3.scaleLinear;
+    const scaleX = d3ScaleX()
       .domain([x.start, x.end])
       .range([ margin.left, width - margin.right ]);
-    const scaleY = d3.scaleLinear()
+    const d3ScaleY = this.options.logScale.y ? d3.scaleLog : d3.scaleLinear;
+    const scaleY = d3ScaleY()
       .domain([y.start, y.end])
       .range([ height - margin.bottom, margin.top ]);
     
