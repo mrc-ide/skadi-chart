@@ -221,7 +221,7 @@ onMounted(async () => {
     .addGridLines()
     .addZoom()
     .addCustomLayer(new CustomLayer())
-    .addCustomLifecycleHook({
+    .addCustomLifecycleHooks({
       afterZoom() { console.log("triggered after zoom") }
     })
     .appendTo(chartCustom.value!);
