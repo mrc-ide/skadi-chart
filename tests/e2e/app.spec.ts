@@ -156,3 +156,10 @@ test("basic traces and tooltips", async ({ page }) => {
     .expectTooltip()
     .end()
 });
+
+test("download button works as expected", async ({ page }) => {
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByText("Download PNG").click({ force: true });
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe("zoomPlot.png");
+});
