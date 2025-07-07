@@ -55,11 +55,11 @@ export default defineConfig({
       use: { ...devices['iPhone 12'] },
     },
     {
-      name: 'Google Chrome',
+      name: 'googleChrome',
       use: { ...devices['Desktop Chrome'], channel: 'chrome' },
     },
     {
-      name: 'Microsoft Edge',
+      name: 'microsoftEdge',
       use: { ...devices['Desktop Edge'], channel: 'msedge' },
     },
   ],
