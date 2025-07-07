@@ -2,7 +2,7 @@
   <h1>Basic traces (spark lines)</h1>
   <div class="chart" ref="chartSparkLines" id="chartSparkLines"></div>
 
-  <h1>Chart with axes</h1>
+  <h1>Chart with axes (with a fixed scale)</h1>
   <div class="chart" ref="chartOnlyAxes" id="chartOnlyAxes"></div>
 
   <h1>Axes and gridlines</h1>
@@ -211,7 +211,7 @@ const scales: Scales = { x: {start: 0, end: 1}, y: {start: -3e6, end: 3e6} };
 
 const drawStressChart = () => {
   const curvesStress = makeRandomCurves(propsStress);
-  new Chart(scales)
+  new Chart()
     .addZoom()
     .addTraces(curvesStress, { RDPEpsilon: 1 })
     .addAxes()
@@ -221,7 +221,7 @@ const drawStressChart = () => {
 
 const drawStressChartPoints = () => {
   const pointsStress = makeRandomPoints(pointPropsStress);
-  new Chart(scales)
+  new Chart()
     .addZoom()
     .addScatterPoints(pointsStress)
     .addAxes()
@@ -233,28 +233,28 @@ const exportToPng = ref<(name?: string) => void>();
 
 onMounted(async () => {
   const axesLAbels = { x: "Time", y: "Value" };
-  new Chart(scales)
+  new Chart()
     .addTraces(curvesSparkLines)
     .appendTo(chartSparkLines.value!);
 
-  new Chart(scales)
+  new Chart()
     .addTraces(curvesOnlyAxes)
     .addAxes()
-    .appendTo(chartOnlyAxes.value!);
+    .appendTo(chartOnlyAxes.value!, scales);
 
-  new Chart(scales)
+  new Chart()
     .addTraces(curvesAxesAndGrid)
     .addAxes()
     .addGridLines()
     .appendTo(chartAxesAndGrid.value!);
 
-  new Chart(scales)
+  new Chart()
     .addTraces(curvesAxesLabelsAndGrid)
     .addAxes(axesLAbels)
     .addGridLines()
     .appendTo(chartAxesLabelsAndGrid.value!);
 
-  const chart = new Chart(scales)
+  const chart = new Chart()
     .addTraces(curvesAxesLabelGridAndZoom)
     .addAxes(axesLAbels)
     .addGridLines()
@@ -262,13 +262,13 @@ onMounted(async () => {
     .appendTo(chartAxesLabelGridAndZoom.value!);
   exportToPng.value = chart.exportToPng!;
 
-  new Chart(scales)
+  new Chart()
     .addScatterPoints(pointsPointsAxesAndZoom)
     .addAxes(axesLAbels)
     .addZoom({ lockAxis: "x" })
-    .appendTo(chartPointsAxesAndZoom.value!);
+    .appendTo(chartPointsAxesAndZoom.value!, scales);
 
-  new Chart(scales)
+  new Chart()
     .addTraces(curvesTooltips)
     .addScatterPoints(pointsTooltips)
     .addTooltips(tooltipHtmlCallback)
@@ -277,7 +277,7 @@ onMounted(async () => {
   curvesResponsive.forEach((l, i) => {
     l.style.strokeDasharray = `${i * 2} 5`
   });
-  new Chart(scales)
+  new Chart()
     .addTraces(curvesResponsive)
     .addAxes()
     .addGridLines()
@@ -297,7 +297,7 @@ onMounted(async () => {
           .attr("r", "5%")
     }
   }
-  new Chart(scales)
+  new Chart()
     .addTraces(curvesCustom)
     .addAxes(axesLAbels)
     .addGridLines()

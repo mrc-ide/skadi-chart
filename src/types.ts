@@ -52,6 +52,7 @@ export type LayerArgs = {
 
 export type ZoomExtents = Partial<XY<[number, number]>>
 export type Scales = XY<{ start: number, end: number }>
+export type PartialScales = Partial<XY<{ start?: number, end?: number }>>
 
 type LineConfig = {
   points: Point[],

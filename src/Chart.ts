@@ -3,7 +3,7 @@ import { AxesLayer } from "./layers/AxesLayer";
 import { TracesLayer, TracesOptions } from "./layers/TracesLayer";
 import { ZoomLayer, ZoomOptions } from "./layers/ZoomLayer";
 import { TooltipHtmlCallback, TooltipsLayer } from "./layers/TooltipsLayer";
-import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, Point, Scales, ScatterPoints, XYLabel } from "./types";
+import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, PartialScales, Point, Scales, ScatterPoints, XYLabel } from "./types";
 import { LayerType, LifecycleHooks, OptionalLayer } from "./layers/Layer";
 import { GridLayer } from "./layers/GridLayer";
 import html2canvas from "html2canvas";
@@ -27,7 +27,7 @@ export class Chart {
   defaultMargin = { top: 20, bottom: 35, left: 50, right: 20 };
   exportToPng: ((name?: string) => void) | null = null;
 
-  constructor(public scales: Scales) {
+  constructor() {
     this.id = Math.random().toString(26).substring(2, 10);
 
     return this;
@@ -88,9 +88,51 @@ export class Chart {
     return this;
   };
 
-  private draw = (baseElement: HTMLDivElement, bounds: Bounds) => {
+  private getXYMinMax = (points: Point[]) => {
+    const scales: Scales = {
+      x: { start: Infinity, end: -Infinity },
+      y: { start: Infinity, end: -Infinity }
+    };
+    for (let i = 0; i < points.length; i++) {
+      const { x, y } = points[i];
+      if (x < scales.x.start) scales.x.start = x;
+      if (x > scales.x.end) scales.x.end = x;
+      if (y < scales.y.start) scales.y.start = y;
+      if (y > scales.y.end) scales.y.end = y;
+    }
+    return scales;
+  };
+
+  private processScales = (partialScales: PartialScales): Scales => {
+    const traceLayers = this.optionalLayers.filter(l => l.type === LayerType.Trace) as TracesLayer[];
+    const scatterLayers = this.optionalLayers.filter(l => l.type === LayerType.Scatter) as ScatterLayer[];
+    let flatPointsDC = traceLayers.reduce((points, layer) => {
+      return [...layer.linesDC.map(l => l.points).flat(), ...points];
+    }, [] as Point[]);
+    flatPointsDC = scatterLayers.reduce((points, layer) => {
+      return [...layer.points.map(p => ({ x: p.x, y: p.y })), ...points];
+    }, flatPointsDC);
+
+    const minMax = this.getXYMinMax(flatPointsDC);
+
+    const yPaddingFactor = 1.1;
+
+    return {
+      x: {
+        start: partialScales.x?.start ?? minMax.x.start,
+        end: partialScales.x?.end ?? minMax.x.end,
+      },
+      y: {
+        start: (partialScales.y?.start ?? minMax.y.start) * yPaddingFactor,
+        end: (partialScales.y?.end ?? minMax.y.end) * yPaddingFactor,
+      },
+    };
+  };
+
+  private draw = (baseElement: HTMLDivElement, bounds: Bounds, partialScales: PartialScales = {}) => {
     const getHtmlId = (layer: LayerType[keyof LayerType]) => `${layer}-${this.id}`;
     const { height, width, margin } = bounds;
+    const scales = this.processScales(partialScales);
  
     const svg = d3.create("svg")
       .attr("id", getHtmlId(LayerType.Svg))
@@ -112,7 +154,7 @@ export class Chart {
       .attr("id", getHtmlId(LayerType.BaseLayer))
       .attr("clip-path", `url(#${getHtmlId(LayerType.ClipPath)})`);
 
-    const { x, y } = this.scales;
+    const { x, y } = scales;
     const scaleX = d3.scaleLinear()
       .domain([x.start, x.end])
       .range([ margin.left, width - margin.right ]);
@@ -141,7 +183,7 @@ export class Chart {
       scaleConfig: {
         linearScales: { x: scaleX, y: scaleY },
         lineGen,
-        scaleExtents: this.scales
+        scaleExtents: scales
       },
       coreLayers: {
         [LayerType.Svg]: svg,
@@ -159,10 +201,10 @@ export class Chart {
     baseElement.append(layerArgs.coreLayers[LayerType.Svg].node()!);
   };
 
-  appendTo = (baseElement: HTMLDivElement) => {
+  appendTo = (baseElement: HTMLDivElement, partialScales?: PartialScales) => {
     const drawWithBounds = (width: number, height: number) => {
       const bounds = { width, height, margin: this.defaultMargin };
-      this.draw(baseElement, bounds);
+      this.draw(baseElement, bounds, partialScales);
     };
 
     const { width, height } = baseElement.getBoundingClientRect();
