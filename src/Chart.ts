@@ -129,7 +129,7 @@ export class Chart {
     };
   };
 
-  private draw = (baseElement: HTMLDivElement, bounds: Bounds, partialScales: PartialScales = {}) => {
+  private draw = (baseElement: HTMLDivElement, bounds: Bounds, partialScales: PartialScales) => {
     const getHtmlId = (layer: LayerType[keyof LayerType]) => `${layer}-${this.id}`;
     const { height, width, margin } = bounds;
     const scales = this.processScales(partialScales);
@@ -201,7 +201,7 @@ export class Chart {
     baseElement.append(layerArgs.coreLayers[LayerType.Svg].node()!);
   };
 
-  appendTo = (baseElement: HTMLDivElement, partialScales?: PartialScales) => {
+  appendTo = (baseElement: HTMLDivElement, partialScales: PartialScales = {}) => {
     const drawWithBounds = (width: number, height: number) => {
       const bounds = { width, height, margin: this.defaultMargin };
       this.draw(baseElement, bounds, partialScales);
