@@ -8,7 +8,7 @@ import { LayerType, LifecycleHooks, OptionalLayer } from "./layers/Layer";
 import { GridLayer } from "./layers/GridLayer";
 import html2canvas from "html2canvas";
 
-// used for custom lifecycle hooks
+// used for holding custom lifecycle hooks only - layer has no visual effect
 class InvisibleLayer extends OptionalLayer {
   type = LayerType.Custom;
   constructor() { super() };
