@@ -53,7 +53,15 @@ export default defineConfig({
     {
       name: 'mobileSafari',
       use: { ...devices['iPhone 12'] },
-    }
+    },
+    {
+      name: 'googleChrome',
+      use: { ...devices['Desktop Chrome'], channel: 'chrome' },
+    },
+    {
+      name: 'microsoftEdge',
+      use: { ...devices['Desktop Edge'], channel: 'msedge' },
+    },
   ],
 
   /* Run your local dev server before starting the tests */

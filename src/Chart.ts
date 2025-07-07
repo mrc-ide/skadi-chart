@@ -9,8 +9,8 @@ import { GridLayer } from "./layers/GridLayer";
 import html2canvas from "html2canvas";
 import { ScatterLayer } from "./layers/ScatterLayer";
 
-// used for custom lifecycle hooks
-class InvisibleLayer extends OptionalLayer {
+// used for holding custom lifecycle hooks only - layer has no visual effect
+class CustomHooksLayer extends OptionalLayer {
   type = LayerType.Custom;
   constructor() { super() };
   draw() {};
@@ -67,10 +67,10 @@ export class Chart {
     return this;
   };
 
-  addCustomLifecycleHook = (lifecycleHooks: Partial<LifecycleHooks>) => {
-    const invisibleLayer = new InvisibleLayer();
-    Object.assign(invisibleLayer, lifecycleHooks);
-    this.optionalLayers.push(invisibleLayer);
+  addCustomLifecycleHooks = (lifecycleHooks: Partial<LifecycleHooks>) => {
+    const customHooksLayer = new CustomHooksLayer();
+    Object.assign(customHooksLayer, lifecycleHooks);
+    this.optionalLayers.push(customHooksLayer);
     return this;
   };
 
