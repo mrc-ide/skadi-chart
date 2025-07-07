@@ -191,3 +191,10 @@ test("custom chart works as expected", async ({ page }) => {
     .expectCustomCircle()
     .end()
 });
+
+test("download button works as expected", async ({ page }) => {
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByText("Download PNG").click({ force: true });
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe("zoomPlot.png");
+});
