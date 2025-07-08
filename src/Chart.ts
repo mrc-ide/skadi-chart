@@ -115,7 +115,10 @@ export class Chart {
 
     const minMax = this.getXYMinMax(flatPointsDC);
 
-    const yPaddingFactor = 1.1;
+    const yPaddingFactor = 0.1;
+    const yStart = partialScales.y?.start ?? minMax.y.start;
+    const yEnd = partialScales.y?.end ?? minMax.y.end;
+    const yRange = Math.abs(yStart - yEnd);
 
     return {
       x: {
@@ -123,8 +126,8 @@ export class Chart {
         end: partialScales.x?.end ?? minMax.x.end,
       },
       y: {
-        start: (partialScales.y?.start ?? minMax.y.start) * yPaddingFactor,
-        end: (partialScales.y?.end ?? minMax.y.end) * yPaddingFactor,
+        start: yStart - yRange * yPaddingFactor,
+        end: yEnd + yRange * yPaddingFactor,
       },
     };
   };
