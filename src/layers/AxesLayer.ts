@@ -33,7 +33,8 @@ export class AxesLayer extends OptionalLayer {
         .attr("x2", scaleX(0))
         .attr("y1", height - margin.bottom)
         .attr("y2", margin.top)
-        .style("stroke", "black");
+        .style("stroke", "black")
+        .style("stroke-width", 0.5);
     }
 
     // SI-prefix with 2 significant figures and no trailing zeros, 42e6 -> 42M
@@ -52,7 +53,8 @@ export class AxesLayer extends OptionalLayer {
         .attr("x2", width - margin.right)
         .attr("y1", scaleY(0))
         .attr("y2", scaleY(0))
-        .style("stroke", "black");
+        .style("stroke", "black")
+        .style("stroke-width", 0.5);
     }
 
     if (this.labels.y) {
