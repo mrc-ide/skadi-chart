@@ -16,7 +16,7 @@ class CustomHooksLayer extends OptionalLayer {
   draw() {};
 }
 
-type ChartOptions = {
+export type ChartOptions = {
   logScale: XY<boolean>
 }
 
@@ -222,7 +222,8 @@ export class Chart {
         [LayerType.ClipPath]: clipPath,
         [LayerType.BaseLayer]: baseLayer
       },
-      optionalLayers: this.optionalLayers
+      optionalLayers: this.optionalLayers,
+      chartOptions: this.options
     };
 
     // Clear any existing content in the element
