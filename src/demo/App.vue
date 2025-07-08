@@ -17,7 +17,8 @@
 
   <h1>Traces, gridlines, axes, labels, zoom and log scale toggle</h1>
   <div class="chart" ref="chartAxesLabelGridZoomAndLogScale" id="chartAxesLabelGridZoomAndLogScale"></div>
-  <button @click="() => logScaleY = !logScaleY">Toggle log scale</button>
+  <button @click="() => logScaleX = !logScaleX">Toggle log scale X</button>
+  <button @click="() => logScaleY = !logScaleY">Toggle log scale Y</button>
 
   <h1>Scatter points, axes, zoom (locked X axis)</h1>
   <div class="chart" ref="chartPointsAxesAndZoom" id="chartPointsAxesAndZoom"></div>
@@ -207,11 +208,9 @@ const curvesAxesAndGrid = makeRandomCurves(propsBasic);
 const curvesAxesLabelsAndGrid = makeRandomCurves(propsBasic);
 const curvesAxesLabelGridAndZoom = makeRandomCurves(propsBasic);
 const curvesAxesLabelGridZoomAndLogScale = makeRandomCurves(propsBasic);
-curvesAxesLabelGridZoomAndLogScale.forEach(l => {
-  l.points.forEach((p, i) => {
-    p.y = Math.abs(p.y) * Math.pow(10, Math.floor(-i / 100));
-  });
-});
+curvesAxesLabelGridZoomAndLogScale.forEach(l => l.points.forEach(p => p.x -= 0.5));
+const pointsAxesLabelGridZoomAndLogScale = makeRandomPoints(pointPropsBasic);
+pointsAxesLabelGridZoomAndLogScale.forEach(p => p.x -= 0.5);
 const pointsPointsAxesAndZoom = makeRandomPoints(pointPropsBasic);
 const curvesTooltips = makeRandomCurves(propsBasic);
 const pointsTooltips = makeRandomPoints(pointPropsTooltips);
@@ -245,10 +244,12 @@ const axesLabels = { x: "Time", y: "Value" };
 const exportToPng = ref<(name?: string) => void>();
 
 const logScaleY = ref<boolean>(false);
+const logScaleX = ref<boolean>(false);
 
-watch(logScaleY, () => {
-  new Chart({ logScale: { y: logScaleY.value } })
+watch([logScaleY, logScaleX], () => {
+  new Chart({ logScale: { y: logScaleY.value, x: logScaleX.value }})
     .addTraces(curvesAxesLabelGridZoomAndLogScale)
+    .addScatterPoints(pointsAxesLabelGridZoomAndLogScale)
     .addAxes(axesLabels)
     .addGridLines()
     .addZoom()
@@ -285,8 +286,9 @@ onMounted(async () => {
     .appendTo(chartAxesLabelGridAndZoom.value!);
   exportToPng.value = chart.exportToPng!;
 
-  new Chart({ logScale: { y: logScaleY.value } })
+  new Chart({ logScale: { y: logScaleY.value, x: logScaleX.value } })
     .addTraces(curvesAxesLabelGridZoomAndLogScale)
+    .addScatterPoints(pointsAxesLabelGridZoomAndLogScale)
     .addAxes(axesLabels)
     .addGridLines()
     .addZoom()

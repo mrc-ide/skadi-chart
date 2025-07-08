@@ -60,11 +60,53 @@ export class Chart {
     return this;
   };
 
+  // Filtering lines is a bit harder than points, if there is a segment of
+  // the line that is <= 0 then you have to split up the line into two line
+  // segments. Here we create a line segment and iterate down the points of
+  // a line and once we hit a negative coordinate we push that line segment
+  // and start a new one
+  private filterLinesForLogAxis = (lines: Lines, axis: "x" | "y") => {
+    const filteredPoints: Lines = [];
+    for (let i = 0; i < lines.length; i++) {
+      const currLine = lines[i];
+      let isLastCoordinatePositive = currLine.points[0][axis] > 0;
+      let lineSegment: Lines[number] = { points: [], style: currLine.style };
+
+      for (let j = 0; j < currLine.points.length; j++) {
+        if (currLine.points[j][axis] > 0) {
+          lineSegment.points.push(currLine.points[j]);
+          isLastCoordinatePositive = true;
+        } else if (isLastCoordinatePositive) {
+          filteredPoints.push(lineSegment);
+          lineSegment = { points: [], style: currLine.style };
+          isLastCoordinatePositive = false;
+        }
+      }
+
+      if (isLastCoordinatePositive) {
+        filteredPoints.push(lineSegment);
+      }
+    }
+    return filteredPoints;
+  };
+
+  private filterLines = (lines: Lines) => {
+    let filteredLines = lines;
+    if (this.options.logScale.x) {
+      filteredLines = this.filterLinesForLogAxis(filteredLines, "x");
+    }
+    if (this.options.logScale.y) {
+      filteredLines = this.filterLinesForLogAxis(filteredLines, "y");
+    }
+    return filteredLines;
+  };
+
   addTraces = (lines: Lines, options?: Partial<TracesOptions>) => {
     const optionsWithDefaults: TracesOptions = {
       RDPEpsilon: options?.RDPEpsilon ?? null
     };
-    this.optionalLayers.push(new TracesLayer(lines, optionsWithDefaults));
+    const filteredLines = this.filterLines(lines);
+    this.optionalLayers.push(new TracesLayer(filteredLines, optionsWithDefaults));
     return this;
   };
 
@@ -82,7 +124,14 @@ export class Chart {
   };
 
   addScatterPoints = (points: ScatterPoints) => {
-    this.optionalLayers.push(new ScatterLayer(points));
+    let filteredPoints = points;
+    if (this.options.logScale.x) {
+      filteredPoints = filteredPoints.filter(p => p.x > 0);
+    }
+    if (this.options.logScale.y) {
+      filteredPoints = filteredPoints.filter(p => p.y > 0);
+    }
+    this.optionalLayers.push(new ScatterLayer(filteredPoints));
     return this;
   };
 
