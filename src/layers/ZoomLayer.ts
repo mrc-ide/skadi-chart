@@ -133,6 +133,12 @@ export class ZoomLayer extends OptionalLayer {
     // and finally the overlay rect subtracts the selection mask from the
     // overlay mask to get the "cut out" effect we want where the user selection
     // is transparent and everything else is greyed
+    // 
+    // note: fill white actually equates to 1 alpha value and fill black to 0
+    // meaning that we get a translucent black overlay by using a mask with
+    // fill white and opacity set, the selection mask then subtracts everything
+    // from our overlay because it has fill black and gives an alpha value of 0
+    // in the user selection
     const overlayMaskId = `${layerArgs.getHtmlId(LayerType.Zoom)}-overlay`;
     svg.select("defs").append("svg:mask")
       .attr("id", overlayMaskId)
