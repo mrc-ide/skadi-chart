@@ -15,11 +15,15 @@ export class GridLayer extends OptionalLayer {
     const { animationDuration, ticks } = layerArgs.globals;
     const { getHtmlId } = layerArgs;
   
+    const gridOpacity = 0.15;
+    const gridStrokeWidth = 0.5;
+
     const addGridX = (g: D3Selection<SVGGElement>) => {
       g.selectAll("line")
         .data(scaleX.ticks(ticks.x))
         .join("line")
-        .style("stroke", "grey")
+        .style("stroke", "black")
+        .style("stroke-width", gridStrokeWidth)
         .attr("x1", (d: number) => scaleX(d))
         .attr("x2", (d: number) => scaleX(d))
         .attr("y1", margin.top)
@@ -30,7 +34,8 @@ export class GridLayer extends OptionalLayer {
       g.selectAll("line")
         .data(scaleY.ticks(ticks.y))
         .join("line")
-        .style("stroke", "grey")
+        .style("stroke", "black")
+        .style("stroke-width", gridStrokeWidth)
         .attr("x1", margin.left)
         .attr("x2", width - margin.right)
         .attr("y1", (d: number) => scaleY(d))
@@ -39,12 +44,12 @@ export class GridLayer extends OptionalLayer {
 
     const gridX = svgLayer.append("g")
       .call(addGridX)
-      .attr("opacity", 0.3)
+      .attr("opacity", gridOpacity)
       .attr("id", `${getHtmlId(this.type)}-x`);
 
     const gridY = svgLayer.append("g")
       .call(addGridY)
-      .attr("opacity", 0.3)
+      .attr("opacity", gridOpacity)
       .attr("id", `${getHtmlId(this.type)}-y`);
 
     this.zoom = async () => {
@@ -66,13 +71,13 @@ export class GridLayer extends OptionalLayer {
         .style("opacity", 0)
         .transition()
         .duration(animationDuration / 2)
-        .style("opacity", 0.3)
+        .style("opacity", gridOpacity)
         .end();
       const fadeInY = gridY.call(addGridY)
         .style("opacity", 0)
         .transition()
         .duration(animationDuration / 2)
-        .style("opacity", 0.3)
+        .style("opacity", gridOpacity)
         .end();
       await Promise.all([fadeInX, fadeInY]);
     };
