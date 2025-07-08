@@ -75,8 +75,8 @@ export class Chart {
 
       for (let j = 0; j < currLine.points.length; j++) {
         if (currLine.points[j][axis] <= 0) {
-          warningMsg = `You have tried to use ${axis} axis`
-                     + `log scale but there are traces with`
+          warningMsg = `You have tried to use ${axis} axis `
+                     + `log scale but there are traces with `
                      + `${axis} coordinates that are <= 0`;
         }
 
@@ -135,8 +135,8 @@ export class Chart {
     const filteredPoints = points.filter(p => p[axis] > 0);
     if (filteredPoints.length !== points.length) {
       console.warn(
-        `You have tried to use ${axis} axis`
-         + `log scale but there are points with`
+        `You have tried to use ${axis} axis `
+         + `log scale but there are points with `
          + `${axis} coordinates that are <= 0`
       );
     }
@@ -146,10 +146,10 @@ export class Chart {
   private filterScatterPoints = (points: ScatterPoints) => {
     let filteredPoints = points;
     if (this.options.logScale.x) {
-      filteredPoints = this.filterScatterPointsForLogAxis(points, "x");
+      filteredPoints = this.filterScatterPointsForLogAxis(filteredPoints, "x");
     }
     if (this.options.logScale.y) {
-      filteredPoints = this.filterScatterPointsForLogAxis(points, "y");
+      filteredPoints = this.filterScatterPointsForLogAxis(filteredPoints, "y");
     }
     return filteredPoints;
   }
