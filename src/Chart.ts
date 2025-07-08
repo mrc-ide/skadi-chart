@@ -118,6 +118,24 @@ export class Chart {
     return scales;
   };
 
+  private addLinearPadding = (range: Scales["x"], paddingFactor: number): Scales["x"] => {
+    const rangeLinear = Math.abs(range.start - range.end);
+    return {
+      start: range.start - rangeLinear * paddingFactor,
+      end: range.end + rangeLinear * paddingFactor
+    };
+  };
+
+  private addLogPadding = (range: Scales["x"], paddingFactor: number): Scales["x"] => {
+    const startLog = Math.log(range.start);
+    const endLog = Math.log(range.end);
+    const rangeLog = Math.abs(startLog - endLog);
+    return {
+      start: Math.exp(startLog - rangeLog * paddingFactor),
+      end: Math.exp(endLog + rangeLog * paddingFactor)
+    };
+  };
+
   private processScales = (partialScales: PartialScales): Scales => {
     const traceLayers = this.optionalLayers.filter(l => l.type === LayerType.Trace) as TracesLayer[];
     const scatterLayers = this.optionalLayers.filter(l => l.type === LayerType.Scatter) as ScatterLayer[];
@@ -129,33 +147,24 @@ export class Chart {
     }, flatPointsDC);
 
     const minMax = this.getXYMinMax(flatPointsDC);
-
-    const yPaddingFactor = 0.1;
-    const yStart = partialScales.y?.start ?? minMax.y.start;
-    const yEnd = partialScales.y?.end ?? minMax.y.end;
-    let yStartWithPadding: number;
-    let yEndWithPadding: number;
-    if (this.options.logScale.y) {
-      const yStartLog = Math.log(yStart);
-      const yEndLog = Math.log(yEnd);
-      const yRangeLog = Math.abs(yStartLog - yEndLog);
-      yStartWithPadding = Math.exp(yStartLog - yRangeLog * yPaddingFactor);
-      yEndWithPadding = Math.exp(yEndLog + yRangeLog * yPaddingFactor);
-    } else {
-      const yRange = Math.abs(yStart - yEnd);
-      yStartWithPadding = yStart - yRange * yPaddingFactor;
-      yEndWithPadding = yEnd + yRange * yPaddingFactor;
-    }
+    const paddingFactorX = 0.05;
+    const paddingFactorY = 0.1;
+  
+    const paddingFuncX = this.options.logScale.x ? this.addLogPadding : this.addLinearPadding;
+    const paddingFuncY = this.options.logScale.y ? this.addLogPadding : this.addLinearPadding;
+    
+    const paddedX = paddingFuncX(minMax.x, paddingFactorX);
+    const paddedY = paddingFuncY(minMax.y, paddingFactorY);
 
     return {
       x: {
-        start: partialScales.x?.start ?? minMax.x.start,
-        end: partialScales.x?.end ?? minMax.x.end,
+        start: partialScales.x?.start ?? paddedX.start,
+        end: partialScales.x?.end ?? paddedX.end
       },
       y: {
-        start: yStartWithPadding,
-        end: yEndWithPadding,
-      },
+        start: partialScales.y?.start ?? paddedY.start,
+        end: partialScales.y?.end ?? paddedY.end
+      }
     };
   };
 
