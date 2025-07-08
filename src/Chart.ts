@@ -66,6 +66,7 @@ export class Chart {
   // a line and once we hit a negative coordinate we push that line segment
   // and start a new one
   private filterLinesForLogAxis = (lines: Lines, axis: "x" | "y") => {
+    let warningMsg = "";
     const filteredPoints: Lines = [];
     for (let i = 0; i < lines.length; i++) {
       const currLine = lines[i];
@@ -73,6 +74,12 @@ export class Chart {
       let lineSegment: Lines[number] = { points: [], style: currLine.style };
 
       for (let j = 0; j < currLine.points.length; j++) {
+        if (currLine.points[j][axis] <= 0) {
+          warningMsg = `You have tried to use ${axis} axis`
+                     + `log scale but there are traces with`
+                     + `${axis} coordinates that are <= 0`;
+        }
+
         if (currLine.points[j][axis] > 0) {
           lineSegment.points.push(currLine.points[j]);
           isLastCoordinatePositive = true;
@@ -87,6 +94,7 @@ export class Chart {
         filteredPoints.push(lineSegment);
       }
     }
+    if (warningMsg) console.warn(warningMsg);
     return filteredPoints;
   };
 
@@ -123,14 +131,31 @@ export class Chart {
     return this;
   };
 
-  addScatterPoints = (points: ScatterPoints) => {
+  private filterScatterPointsForLogAxis = (points: ScatterPoints, axis: "x" | "y") => {
+    const filteredPoints = points.filter(p => p[axis] > 0);
+    if (filteredPoints.length !== points.length) {
+      console.warn(
+        `You have tried to use ${axis} axis`
+         + `log scale but there are points with`
+         + `${axis} coordinates that are <= 0`
+      );
+    }
+    return filteredPoints;
+  };
+
+  private filterScatterPoints = (points: ScatterPoints) => {
     let filteredPoints = points;
     if (this.options.logScale.x) {
-      filteredPoints = filteredPoints.filter(p => p.x > 0);
+      filteredPoints = this.filterScatterPointsForLogAxis(points, "x");
     }
     if (this.options.logScale.y) {
-      filteredPoints = filteredPoints.filter(p => p.y > 0);
+      filteredPoints = this.filterScatterPointsForLogAxis(points, "y");
     }
+    return filteredPoints;
+  }
+
+  addScatterPoints = (points: ScatterPoints) => {
+    const filteredPoints = this.filterScatterPoints(points);
     this.optionalLayers.push(new ScatterLayer(filteredPoints));
     return this;
   };
