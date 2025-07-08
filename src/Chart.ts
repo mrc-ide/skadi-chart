@@ -133,7 +133,19 @@ export class Chart {
     const yPaddingFactor = 0.1;
     const yStart = partialScales.y?.start ?? minMax.y.start;
     const yEnd = partialScales.y?.end ?? minMax.y.end;
-    const yRange = Math.abs(yStart - yEnd);
+    let yStartWithPadding: number;
+    let yEndWithPadding: number;
+    if (this.options.logScale.y) {
+      const yStartLog = Math.log(yStart);
+      const yEndLog = Math.log(yEnd);
+      const yRangeLog = Math.abs(yStartLog - yEndLog);
+      yStartWithPadding = Math.exp(yStartLog - yRangeLog * yPaddingFactor);
+      yEndWithPadding = Math.exp(yEndLog + yRangeLog * yPaddingFactor);
+    } else {
+      const yRange = Math.abs(yStart - yEnd);
+      yStartWithPadding = yStart - yRange * yPaddingFactor;
+      yEndWithPadding = yEnd + yRange * yPaddingFactor;
+    }
 
     return {
       x: {
@@ -141,8 +153,8 @@ export class Chart {
         end: partialScales.x?.end ?? minMax.x.end,
       },
       y: {
-        start: yStart - yRange * yPaddingFactor,
-        end: yEnd + yRange * yPaddingFactor,
+        start: yStartWithPadding,
+        end: yEndWithPadding,
       },
     };
   };

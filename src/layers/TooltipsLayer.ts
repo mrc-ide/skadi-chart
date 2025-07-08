@@ -148,7 +148,7 @@ export class TooltipsLayer extends OptionalLayer {
       if (timerFlag === undefined && !hideTooltip) {
         // in laggy situation there is a persistent phantom tooltip left behind.
         // this gets rid of any other tooltips that are not meant to be there
-        document.querySelectorAll(`#${layerArgs.getHtmlId(this.type)}`)?.forEach(el => el.innerHTML = "");
+        document.querySelectorAll(`*[id*="${this.type}"]`)?.forEach(el => el.innerHTML = "");
         this.handleMouseMove(e, layerArgs, tooltip, flatPointsDC, rangeDC);
         timerFlag = setTimeout(() => {
           timerFlag = undefined;
