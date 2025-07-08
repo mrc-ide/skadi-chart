@@ -147,8 +147,8 @@ export class Chart {
     }, flatPointsDC);
 
     const minMax = this.getXYMinMax(flatPointsDC);
-    const paddingFactorX = 0.05;
-    const paddingFactorY = 0.1;
+    const paddingFactorX = 0.02;
+    const paddingFactorY = 0.03;
   
     const paddingFuncX = this.options.logScale.x ? this.addLogPadding : this.addLinearPadding;
     const paddingFuncY = this.options.logScale.y ? this.addLogPadding : this.addLinearPadding;
