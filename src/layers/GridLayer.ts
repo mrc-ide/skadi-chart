@@ -13,6 +13,7 @@ export class GridLayer extends OptionalLayer {
     const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
     const svgLayer = layerArgs.coreLayers[LayerType.Svg];
     const { animationDuration, ticks } = layerArgs.globals;
+    const { getHtmlId } = layerArgs;
   
     const addGridX = (g: D3Selection<SVGGElement>) => {
       g.selectAll("line")
@@ -38,11 +39,13 @@ export class GridLayer extends OptionalLayer {
 
     const gridX = svgLayer.append("g")
       .call(addGridX)
-      .attr("opacity", 0.3);
+      .attr("opacity", 0.3)
+      .attr("id", `${getHtmlId(this.type)}-x`);
 
     const gridY = svgLayer.append("g")
       .call(addGridY)
-      .attr("opacity", 0.3);
+      .attr("opacity", 0.3)
+      .attr("id", `${getHtmlId(this.type)}-y`);
 
     this.zoom = async () => {
       const fadeOutX = gridX.selectAll("line")
