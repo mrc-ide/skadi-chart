@@ -48,7 +48,7 @@ export class ZoomLayer extends OptionalLayer {
     layerArgs.optionalLayers.forEach(layer => promises.push(layer.zoom(zoomExtents)));
     await Promise.all(promises);
 
-    layerArgs.optionalLayers.forEach(layer => layer.afterZoom());
+    layerArgs.optionalLayers.forEach(layer => layer.afterZoom(zoomExtents));
     this.zooming = false;
   };
 
@@ -80,7 +80,7 @@ export class ZoomLayer extends OptionalLayer {
 
     // if it is more than a 500x zoom we don't zoom
     if (Math.abs(extentXStart - extentXEnd) < minDistX || Math.abs(extentYStart - extentYEnd) < minDistY) {
-      layerArgs.optionalLayers.forEach(layer => layer.afterZoom());
+      layerArgs.optionalLayers.forEach(layer => layer.afterZoom(null));
       return;
     };
     this.handleZoom({ x: [extentXStart, extentXEnd], y: [extentYStart, extentYEnd] }, layerArgs);

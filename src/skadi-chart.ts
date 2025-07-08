@@ -1,4 +1,5 @@
 import { Chart } from "./Chart";
-import { Lines, Scales } from "./types";
-export { Chart };
-export type { Lines, Scales }
+import { Lines, Scales, ZoomExtents, LayerArgs } from "./types";
+import { OptionalLayer, LayerType } from "./layers/Layer";
+export { Chart, OptionalLayer, LayerType };
+export type { Lines, Scales, ZoomExtents, LayerArgs }

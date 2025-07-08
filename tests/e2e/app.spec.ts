@@ -102,6 +102,13 @@ class SkadiChartTest {
     });
   };
 
+  expectCustomCircle = () => {
+    return this.addTest(async () => {
+      const circle = await this.selector(LayerType.Custom, "circle");
+      expect(circle).toHaveLength(1);
+    });
+  };
+
   end = async () => {
     for (let i = 0; i < this.tests.length; i++) {
       await this.tests[i];
@@ -154,6 +161,17 @@ test("basic traces and tooltips", async ({ page }) => {
   await new SkadiChartTest(page, "chartTooltips")
     .expectNTraces(10)
     .expectTooltip()
+    .end()
+});
+
+test("custom chart works as expected", async ({ page }) => {
+  await new SkadiChartTest(page, "chartCustom")
+    .expectNTraces(10)
+    .expectAxes()
+    .expectGridlines()
+    .expectLabels({ x: "Time", y: "Value" })
+    .expectZoom()
+    .expectCustomCircle()
     .end()
 });
 

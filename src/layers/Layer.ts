@@ -15,6 +15,7 @@ export enum LayerType {
   Trace = "trace",
   Tooltip = "tooltip",
   Grid = "grid",
+  Custom = "custom",
 }
 
 export abstract class OptionalLayer<Properties = null> {
@@ -32,5 +33,7 @@ export abstract class OptionalLayer<Properties = null> {
   // zoom lifecycle hooks
   beforeZoom(_zoomExtents: ZoomExtents) {};
   async zoom(_zoomExtents: ZoomExtents) {};
-  afterZoom() {};
+  afterZoom(_zoomExtents: ZoomExtents | null) {};
 };
+
+export type LifecycleHooks = Omit<OptionalLayer, "type" | "properties" | "draw">;

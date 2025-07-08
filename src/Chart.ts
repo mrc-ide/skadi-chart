@@ -4,9 +4,16 @@ import { TracesLayer } from "./layers/TracesLayer";
 import { ZoomLayer } from "./layers/ZoomLayer";
 import { TooltipHtmlCallback, TooltipsLayer } from "./layers/TooltipsLayer";
 import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, Point, Scales, XYLabel } from "./types";
-import { LayerType } from "./layers/Layer";
+import { LayerType, LifecycleHooks, OptionalLayer } from "./layers/Layer";
 import { GridLayer } from "./layers/GridLayer";
 import html2canvas from "html2canvas";
+
+// used for holding custom lifecycle hooks only - layer has no visual effect
+class CustomHooksLayer extends OptionalLayer {
+  type = LayerType.Custom;
+  constructor() { super() };
+  draw() {};
+}
 
 export class Chart {
   id: string;
@@ -51,6 +58,18 @@ export class Chart {
 
   addTooltips = (tooltipHtmlCallback: TooltipHtmlCallback) => {
     this.optionalLayers.push(new TooltipsLayer(tooltipHtmlCallback));
+    return this;
+  };
+
+  addCustomLifecycleHooks = (lifecycleHooks: Partial<LifecycleHooks>) => {
+    const customHooksLayer = new CustomHooksLayer();
+    Object.assign(customHooksLayer, lifecycleHooks);
+    this.optionalLayers.push(customHooksLayer);
+    return this;
+  };
+
+  addCustomLayer = (customLayer: OptionalLayer) => {
+    this.optionalLayers.push(customLayer);
     return this;
   };
 

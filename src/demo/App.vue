@@ -21,6 +21,9 @@
   <h1>Responsive chart</h1>
   <div class="chart-responsive" ref="chartResponsive" id="chartResponsive"></div>
 
+  <h1>Custom layers + custom lifecycle hooks</h1>
+  <div class="chart" ref="chartCustom" id="chartCustom"></div>
+
   <h1>Stress test: 800 traces</h1>
   <button @click="drawStressChart">Draw</button>
   <div class="chart" ref="chartStress" id="chartStress"></div>
@@ -39,7 +42,7 @@
 </style>
 
 <script setup lang="ts">
-import { Chart, Lines, Scales } from "../skadi-chart";
+import { Chart, LayerArgs, LayerType, Lines, OptionalLayer, Scales } from "../skadi-chart";
 import { onMounted, ref } from "vue";
 
 const chartSparkLines = ref<HTMLDivElement | null>(null);
@@ -50,6 +53,7 @@ const chartAxesLabelGridAndZoom = ref<HTMLDivElement | null>(null);
 const chartTooltips = ref<HTMLDivElement | null>(null);
 const chartResponsive = ref<HTMLDivElement | null>(null);
 const chartStress = ref<HTMLDivElement | null>(null);
+const chartCustom = ref<HTMLDivElement | null>(null);
 
 const propsBasic = {
   nX: 1000,
@@ -139,6 +143,7 @@ const curvesAxesLabelsAndGrid = makeRandomCurves(propsBasic);
 const curvesAxesLabelGridAndZoom = makeRandomCurves(propsBasic);
 const curvesTooltips = makeRandomCurves(propsBasic);
 const curvesResponsive = makeRandomCurves(propsBasic);
+const curvesCustom = makeRandomCurves(propsBasic);
 
 const scales: Scales = { x: {start: 0, end: 1}, y: {start: -3e6, end: 3e6} };
 
@@ -196,5 +201,29 @@ onMounted(async () => {
     .addGridLines()
     .makeResponsive()
     .appendTo(chartResponsive.value!);
+
+  class CustomLayer extends OptionalLayer {
+    type = LayerType.Custom;
+    constructor() { super() };
+    draw(layerArgs: LayerArgs): void {
+        const svg = layerArgs.coreLayers[LayerType.Svg];
+        const { getHtmlId } = layerArgs;
+        svg.append("svg:circle")
+          .attr("id", `${getHtmlId(this.type)}-circle`)
+          .attr("cx", "50%")
+          .attr("cy", "50%")
+          .attr("r", "5%")
+    }
+  }
+  new Chart(scales)
+    .addTraces(curvesCustom)
+    .addAxes(axesLAbels)
+    .addGridLines()
+    .addZoom()
+    .addCustomLayer(new CustomLayer())
+    .addCustomLifecycleHooks({
+      afterZoom() { console.log("triggered after zoom") }
+    })
+    .appendTo(chartCustom.value!);
 });
 </script>
