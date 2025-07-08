@@ -13,6 +13,7 @@
 
   <h1>Traces, gridlines, axes, labels and zoom</h1>
   <div class="chart" ref="chartAxesLabelGridAndZoom" id="chartAxesLabelGridAndZoom"></div>
+  <button @click="() => exportToPng!('zoomPlot.png')">Download PNG</button>
 
   <h1>Chart with tooltips</h1>
   <div class="chart" ref="chartTooltips" id="chartTooltips"></div>
@@ -151,6 +152,8 @@ const drawStressChart = () => {
     .appendTo(chartStress.value!);
 };
 
+const exportToPng = ref<(name?: string) => void>();
+
 onMounted(async () => {
   const axesLAbels = { x: "Time", y: "Value" };
   new Chart(scales)
@@ -174,12 +177,13 @@ onMounted(async () => {
     .addGridLines()
     .appendTo(chartAxesLabelsAndGrid.value!);
 
-  new Chart(scales)
+  const chart = new Chart(scales)
     .addTraces(curvesAxesLabelGridAndZoom)
     .addAxes(axesLAbels)
     .addGridLines()
     .addZoom()
     .appendTo(chartAxesLabelGridAndZoom.value!);
+  exportToPng.value = chart.exportToPng!;
 
   new Chart(scales)
     .addTraces(curvesTooltips)

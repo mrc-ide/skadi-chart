@@ -6,6 +6,7 @@ import { TooltipHtmlCallback, TooltipsLayer } from "./layers/TooltipsLayer";
 import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, Point, Scales, XYLabel } from "./types";
 import { LayerType } from "./layers/Layer";
 import { GridLayer } from "./layers/GridLayer";
+import html2canvas from "html2canvas";
 
 export class Chart {
   id: string;
@@ -16,6 +17,7 @@ export class Chart {
     ticks: { x: 0, y: 0 }
   };
   defaultMargin = { top: 20, bottom: 35, left: 50, right: 20 };
+  exportToPng: ((name?: string) => void) | null = null;
 
   constructor(public scales: Scales) {
     this.id = Math.random().toString(26).substring(2, 10);
@@ -154,6 +156,17 @@ export class Chart {
         drawWithBounds(width, height);
       });
     }
+
+    this.exportToPng = async (name: string = "graph.png") => {
+      const canvas = await html2canvas(baseElement);
+      const image = canvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      link.download = name;
+      link.href = `data:${image}`;
+      link.click();
+      link.remove();
+    }
+
     return this;
   };
 };
