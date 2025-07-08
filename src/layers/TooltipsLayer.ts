@@ -130,11 +130,12 @@ export class TooltipsLayer extends OptionalLayer {
     };
 
     const tooltip = d3.create("div")
+      .attr("id", `${layerArgs.getHtmlId(this.type)}`)
       .style("position", "fixed")
       .style("pointer-events", "none") as any as D3Selection<HTMLDivElement>;
     
     const flatPointsDC = traceLayers.reduce((points, layer) => {
-      return [...layer.lines.map(l => l.points).flat(), ...points];
+      return [...layer.linesDC.map(l => l.points).flat(), ...points];
     }, [] as Point[]);
 
     const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
@@ -147,6 +148,9 @@ export class TooltipsLayer extends OptionalLayer {
     let hideTooltip = false;
     svg.on("mousemove", e => {
       if (timerFlag === undefined && !hideTooltip) {
+        // in laggy situation there is a persistent phantom tooltip left behind.
+        // this gets rid of any other tooltips that are not meant to be there
+        document.querySelectorAll(`#${layerArgs.getHtmlId(this.type)}`)?.forEach(el => el.innerHTML = "");
         this.handleMouseMove(e, layerArgs, tooltip, flatPointsDC, rangeDC);
         timerFlag = setTimeout(() => {
           timerFlag = undefined;
