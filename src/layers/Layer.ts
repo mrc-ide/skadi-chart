@@ -13,7 +13,8 @@ export enum LayerType {
   Axes = "axes",
   Zoom = "zoom",
   Trace = "trace",
-  Tooltip = "tooltip"
+  Tooltip = "tooltip",
+  Grid = "grid",
 }
 
 /*
