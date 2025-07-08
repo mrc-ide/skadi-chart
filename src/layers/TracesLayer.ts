@@ -91,7 +91,7 @@ export class TracesLayer extends OptionalLayer {
   type = LayerType.Trace;
   private traces: D3Selection<SVGPathElement>[] = [];
   private lowResLinesSC: Point[][] = [];
-  private getNewPoint: null | ((x: number, t: number) => number) = null;
+  private getNewPoint: null | ((x: number, y: number, t: number) => Point) = null;
 
   constructor(public linesDC: Lines) {
     super();
@@ -103,9 +103,7 @@ export class TracesLayer extends OptionalLayer {
   private customTween = (index: number) => {
     const currLineSC = this.lowResLinesSC[index];
     return (t: number) => {
-      const intermediateLineSC = currLineSC.map(({x, y}) => {
-        return { x: this.getNewPoint!(x, t), y };
-      });
+      const intermediateLineSC = currLineSC.map(({x, y}) => this.getNewPoint!(x, y, t));
       return this.customLineGen(intermediateLineSC);
     };
   };
@@ -153,25 +151,34 @@ export class TracesLayer extends OptionalLayer {
 
     this.beforeZoom = (zoomExtentsDC: ZoomExtents) => {
       const newExtentXDC = zoomExtentsDC.x!;
-      const { x: scaleX } = layerArgs.scaleConfig.linearScales;
+      const newExtentYDC = zoomExtentsDC.y!;
+
+      const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
       const oldExtentXDC = scaleX.domain();
+      const oldExtentYDC = scaleY.domain();
 
       // how much we have to zoom is the same in DC and SC since they are proportional to
       // each other. scale is therefore a variable that isn't in SC or DC, it is coordinate
       // independent
-      const scale = (oldExtentXDC[1] - oldExtentXDC[0]) / (newExtentXDC[1] - newExtentXDC[0]);
+      const scalingX = (oldExtentXDC[1] - oldExtentXDC[0]) / (newExtentXDC[1] - newExtentXDC[0]);
+      const scalingY = (oldExtentYDC[1] - oldExtentYDC[0]) / (newExtentYDC[1] - newExtentYDC[0]);
 
       // translation to make sure the start of the zoomed in graph is the start of the user
       // brush selection
-      const offsetSC = scale * scaleX(newExtentXDC[0]) - scaleX(oldExtentXDC[0]);
+      const offsetXSC = scalingX * scaleX(newExtentXDC[0]) - scaleX(oldExtentXDC[0]);
+      const offsetYSC = scalingY * scaleY(newExtentYDC[0]) - scaleY(oldExtentYDC[0]);
       
       // useful to precompute
-      const scaleRelative = scale - 1;
+      const scaleRelativeX = scalingX - 1;
+      const scaleRelativeY = scalingY - 1;
 
       // this function gives us the x coordinate at any point t (between 0 and 1) of the
       // animation, t = 0 gives the x points of the original traces, t = 1 gives the zoomed
       // in line x coordinates
-      this.getNewPoint = (x, t) => x * (t * scaleRelative + 1) - t * offsetSC;
+      this.getNewPoint = (x, y, t) => ({
+        x: x * (t * scaleRelativeX + 1) - t * offsetXSC,
+        y: y * (t * scaleRelativeY + 1) - t * offsetYSC
+      });
     };
 
     // the zoom layer updates scaleX and scaleY which change our customLineGen function

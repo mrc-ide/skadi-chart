@@ -20,7 +20,7 @@
   <h1>Responsive chart</h1>
   <div class="chart-responsive" ref="chartResponsive" id="chartResponsive"></div>
 
-  <h1>Stress test: 1000 traces</h1>
+  <h1>Stress test: 800 traces</h1>
   <button @click="drawStressChart">Draw</button>
   <div class="chart" ref="chartStress" id="chartStress"></div>
 </template>
@@ -66,7 +66,7 @@ const propsBasic = {
 
 const propsStress = {
   nX: 1000,
-  nL: 1000,
+  nL: 800,
   ampScaling: 3,
   freqRange: 0.1,
   freqOffset: 0.95,
