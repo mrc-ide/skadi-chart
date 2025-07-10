@@ -100,7 +100,7 @@ const pointPropsStress = {
 
 const propsBasic = {
   nX: 1000,
-  nL: 10,
+  nL: 1,
   ampScaling: 1e6,
   freqRange: 0.1,
   freqOffset: 0.95,
@@ -114,7 +114,7 @@ const propsBasic = {
 
 const propsStress = {
   nX: 1000,
-  nL: 800,
+  nL: 1000,
   ampScaling: 1e6,
   freqRange: 0.1,
   freqOffset: 0.95,

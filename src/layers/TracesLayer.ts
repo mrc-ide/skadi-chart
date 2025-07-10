@@ -104,27 +104,48 @@ export class TracesLayer<Metadata> extends OptionalLayer {
   // d3 feeds the function we return from this function with t, which goes from
   // 0 to 1 with different jumps based on your ease, t = 0 is the start state of
   // your animation, t = 1 is the end state of your animation
-  private customTween = (index: number) => {
+  private customTween = (index: number, zoomExtents: ZoomExtents) => {
     const currLineSC = this.lowResLinesSC[index];
     return (t: number) => {
       const intermediateLineSC = currLineSC.map(({x, y}) => this.getNewPoint!(x, y, t));
-      return this.customLineGen(intermediateLineSC);
+      return this.customLineGen(intermediateLineSC, zoomExtents);
     };
   };
 
-  private customLineGen = (lineSC: Point[]) => {
-    let retStr = "M";
-    const { x, y } = lineSC[0];
-    retStr += x;
-    retStr += ",";
-    retStr += y;
+  private round = (num: number) => Math.floor(num * 10000) / 10000;
 
-    for (let i = 2; i < lineSC.length; i++) {
+  private customLineGen = (lineSC: Point[], zoomExtents: ZoomExtents) => {
+    let retStr = "";
+    const { x, y } = lineSC[0];
+    const isInXRange = !zoomExtents.x || (zoomExtents.x[0] <= x && x <= zoomExtents.x[1]);
+    const isInYRange = !zoomExtents.y || (zoomExtents.y[1] <= y && y <= zoomExtents.y[0]);
+    let wasLastPointInRange = isInXRange && isInYRange;
+
+    for (let i = 0; i < lineSC.length; i++) {
       const { x, y } = lineSC[i];
-      retStr += "L";
-      retStr += x;
-      retStr += ",";
-      retStr += y;
+      const isInXRange = !zoomExtents.x || (zoomExtents.x[0] <= x && x <= zoomExtents.x[1]);
+      const isInYRange = !zoomExtents.y || (zoomExtents.y[1] <= y && y <= zoomExtents.y[0]);
+      const isCurrPointInRange = isInXRange && isInYRange;
+      if (wasLastPointInRange) {
+        retStr += retStr ? "L" : "M"
+        retStr += this.round(x);
+        retStr += ",";
+        retStr += this.round(y);
+      } else if (isCurrPointInRange) {
+        // prev point will always exist, i.e. i will never be 0 in this branch
+        // because wasLastPointInRange will always match isCurrPointInRange for
+        // i = 0 so we have to fall into the previous range
+        const { x: prevX, y: prevY } = lineSC[i - 1];
+        retStr += "M"
+        retStr += this.round(prevX);
+        retStr += ",";
+        retStr += this.round(prevY);
+        retStr += "L"
+        retStr += this.round(x);
+        retStr += ",";
+        retStr += this.round(y);
+      }
+      wasLastPointInRange = isCurrPointInRange;
     }
 
     return retStr;
@@ -146,7 +167,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
     this.updateLowResLinesSC(layerArgs);
 
     this.traces = this.linesDC.map((l, index) => {
-      const linePathSC = this.customLineGen(this.lowResLinesSC[index]);
+      const linePathSC = this.customLineGen(this.lowResLinesSC[index], {});
       return layerArgs.coreLayers[LayerType.BaseLayer].append("path")
         .attr("id", `${layerArgs.getHtmlId(LayerType.Trace)}-${index}`)
         .attr("pointer-events", "none")
@@ -195,14 +216,23 @@ export class TracesLayer<Metadata> extends OptionalLayer {
     };
 
     // the zoom layer updates scaleX and scaleY which change our customLineGen function
-    this.zoom = async () => {
+    this.zoom = async zoomExtentsDC => {
+      const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
+      const zoomExtentsSC: ZoomExtents = {};
+      if (zoomExtentsDC.y) {
+        zoomExtentsSC.y = [scaleY(zoomExtentsDC.y[0]), scaleY(zoomExtentsDC.y[1])];
+      }
+      if (zoomExtentsDC.x) {
+        zoomExtentsSC.x = [scaleX(zoomExtentsDC.x[0]), scaleX(zoomExtentsDC.x[1])];
+      }
+
       const promises: Promise<void>[] = [];
       for (let i = 0; i < this.linesDC.length; i++) {
         const promise = this.traces[i]
           .transition()
           .duration(layerArgs.globals.animationDuration)
           // we do a custom animation because it is faster than d3's default
-          .attrTween("d", () => this.customTween(i))
+          .attrTween("d", () => this.customTween(i, zoomExtentsSC))
           .end();
         promises.push(promise);
       };
@@ -211,8 +241,9 @@ export class TracesLayer<Metadata> extends OptionalLayer {
       // after zoom animation, calculate appropriate resolution lines again and replace
       // without the user knowing
       this.updateLowResLinesSC(layerArgs);
+
       this.traces.forEach((t, index) => {
-        t.attr("d", this.customLineGen(this.lowResLinesSC[index]))
+        t.attr("d", this.customLineGen(this.lowResLinesSC[index], zoomExtentsSC))
       });
     };
   };

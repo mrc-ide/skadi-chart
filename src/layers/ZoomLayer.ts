@@ -68,7 +68,10 @@ export class ZoomLayer extends OptionalLayer {
       .attr("width", 0)
       .attr("height", 0);
 
-    if (!event.selection) return;
+    if (!event.selection) {
+      layerArgs.optionalLayers.forEach(layer => layer.afterZoom(null));
+      return;
+    }
     // removes the grey area of the brush
     brushLayer.call(event.target.move as any, null);
 
