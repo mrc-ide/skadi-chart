@@ -53,7 +53,7 @@ export type LayerArgs = {
   chartOptions: ChartOptions
 };
 
-export type ZoomExtents = Partial<XY<[number, number]>>
+export type ZoomExtents = XY<[number, number]> & { eventType: "brush" | "dblclick" }
 export type Scales = XY<{ start: number, end: number }>
 export type PartialScales = Partial<XY<{ start?: number, end?: number }>>
 

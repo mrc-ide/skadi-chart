@@ -29,7 +29,7 @@ export class Chart<Metadata = any> {
   optionalLayers: AllOptionalLayers[] = [];
   isResponsive: boolean = false;
   globals = {
-    animationDuration: 350,
+    animationDuration: 0,
     ticks: { x: 0, y: 0 }
   };
   defaultMargin = { top: 20, bottom: 35, left: 50, right: 20 };
@@ -243,7 +243,12 @@ export class Chart<Metadata = any> {
     };
   };
 
-  private draw = (baseElement: HTMLDivElement, bounds: Bounds, partialScales: PartialScales) => {
+  private draw = (
+    baseElement: HTMLDivElement,
+    bounds: Bounds,
+    partialScales: PartialScales,
+    initialExtents: PartialScales
+  ) => {
     const getHtmlId = (layer: LayerType[keyof LayerType]) => `${layer}-${this.id}`;
     const { height, width, margin } = bounds;
     this.scales = this.processScales(partialScales);
@@ -271,11 +276,11 @@ export class Chart<Metadata = any> {
     const { x, y } = this.scales;
     const d3ScaleX = this.options.logScale.x ? d3.scaleLog : d3.scaleLinear;
     const scaleX = d3ScaleX()
-      .domain([x.start, x.end])
+      .domain([initialExtents.x?.start ?? x.start, initialExtents.x?.end ?? x.end])
       .range([ margin.left, width - margin.right ]);
     const d3ScaleY = this.options.logScale.y ? d3.scaleLog : d3.scaleLinear;
     const scaleY = d3ScaleY()
-      .domain([y.start, y.end])
+      .domain([initialExtents.y?.start ?? y.start, initialExtents.y?.end ?? y.end])
       .range([ height - margin.bottom, margin.top ]);
     
     const lineGen = d3.line<Point>()
@@ -318,10 +323,14 @@ export class Chart<Metadata = any> {
     baseElement.append(layerArgs.coreLayers[LayerType.Svg].node()!);
   };
 
-  appendTo = (baseElement: HTMLDivElement, partialScales: PartialScales = {}) => {
+  appendTo = (
+    baseElement: HTMLDivElement,
+    partialScales: PartialScales = {},
+    initialExtents: PartialScales = {}
+  ) => {
     const drawWithBounds = (width: number, height: number) => {
       const bounds = { width, height, margin: this.defaultMargin };
-      this.draw(baseElement, bounds, partialScales);
+      this.draw(baseElement, bounds, partialScales, initialExtents);
     };
 
     const { width, height } = baseElement.getBoundingClientRect();

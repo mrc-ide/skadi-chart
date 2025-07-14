@@ -5,6 +5,8 @@ export type TracesOptions = {
   RDPEpsilon: number | null
 }
 
+type NumericZoomExtents = Omit<ZoomExtents, "eventType">
+
 // see https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line#Line_defined_by_two_points
 // we compute the expression without denominator because it is faster and still proportional
 // NOTE: this is independent of coordinate system
@@ -104,7 +106,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
   // d3 feeds the function we return from this function with t, which goes from
   // 0 to 1 with different jumps based on your ease, t = 0 is the start state of
   // your animation, t = 1 is the end state of your animation
-  private customTween = (index: number, zoomExtents: ZoomExtents) => {
+  private customTween = (index: number, zoomExtents: NumericZoomExtents) => {
     const currLineSC = this.lowResLinesSC[index];
     return (t: number) => {
       const intermediateLineSC = currLineSC.map(({x, y}) => this.getNewPoint!(x, y, t));
@@ -114,7 +116,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
 
   private round = (num: number) => Math.floor(num * 10000) / 10000;
 
-  private customLineGen = (lineSC: Point[], zoomExtents: ZoomExtents) => {
+  private customLineGen = (lineSC: Point[], zoomExtents: Partial<ZoomExtents>) => {
     let retStr = "";
     const { x, y } = lineSC[0];
     const isInXRange = !zoomExtents.x || (zoomExtents.x[0] <= x && x <= zoomExtents.x[1]);
@@ -179,7 +181,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
         .attr("d", linePathSC);
     });
 
-    this.beforeZoom = (zoomExtentsDC: ZoomExtents) => {
+    this.beforeZoom = (zoomExtentsDC: NumericZoomExtents) => {
       const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
 
       // we have to convert the extents to SC from DC to find out what pixel
@@ -218,13 +220,10 @@ export class TracesLayer<Metadata> extends OptionalLayer {
     // the zoom layer updates scaleX and scaleY which change our customLineGen function
     this.zoom = async zoomExtentsDC => {
       const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
-      const zoomExtentsSC: ZoomExtents = {};
-      if (zoomExtentsDC.y) {
-        zoomExtentsSC.y = [scaleY(zoomExtentsDC.y[0]), scaleY(zoomExtentsDC.y[1])];
-      }
-      if (zoomExtentsDC.x) {
-        zoomExtentsSC.x = [scaleX(zoomExtentsDC.x[0]), scaleX(zoomExtentsDC.x[1])];
-      }
+      const zoomExtentsSC: NumericZoomExtents = {
+        y: [scaleY(zoomExtentsDC.y[0]), scaleY(zoomExtentsDC.y[1])],
+        x: [scaleX(zoomExtentsDC.x[0]), scaleX(zoomExtentsDC.x[1])]
+      };
 
       const promises: Promise<void>[] = [];
       for (let i = 0; i < this.linesDC.length; i++) {
