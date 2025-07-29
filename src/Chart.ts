@@ -24,7 +24,7 @@ type PartialChartOptions = {
   logScale?: Partial<XY<boolean>>
 }
 
-export class Chart {
+export class Chart<Metadata = any> {
   id: string;
   optionalLayers: AllOptionalLayers[] = [];
   isResponsive: boolean = false;
@@ -65,13 +65,13 @@ export class Chart {
   // segments, missing out the points with values <= 0. Here we create a line
   // segment and iterate down the points of a line and once we hit a negative
   // coordinate we push that line segment and start a new one
-  private filterLinesForLogAxis = (lines: Lines, axis: "x" | "y") => {
+  private filterLinesForLogAxis = (lines: Lines<Metadata>, axis: "x" | "y") => {
     let warningMsg = "";
-    const filteredPoints: Lines = [];
+    const filteredPoints: Lines<Metadata> = [];
     for (let i = 0; i < lines.length; i++) {
       const currLine = lines[i];
       let isLastCoordinatePositive = currLine.points[0] && currLine.points[0][axis] > 0;
-      let lineSegment: Lines[number] = { points: [], style: currLine.style };
+      let lineSegment: Lines<Metadata>[number] = { points: [], style: currLine.style };
 
       for (let j = 0; j < currLine.points.length; j++) {
         if (currLine.points[j][axis] <= 0) {
@@ -98,7 +98,7 @@ export class Chart {
     return filteredPoints;
   };
 
-  private filterLines = (lines: Lines) => {
+  private filterLines = (lines: Lines<Metadata>) => {
     let filteredLines = lines;
     if (this.options.logScale.x) {
       filteredLines = this.filterLinesForLogAxis(filteredLines, "x");
@@ -109,7 +109,7 @@ export class Chart {
     return filteredLines;
   };
 
-  addTraces = (lines: Lines, options?: Partial<TracesOptions>) => {
+  addTraces = (lines: Lines<Metadata>, options?: Partial<TracesOptions>) => {
     const optionsWithDefaults: TracesOptions = {
       RDPEpsilon: options?.RDPEpsilon ?? null
     };
@@ -126,12 +126,12 @@ export class Chart {
     return this;
   };
 
-  addTooltips = (tooltipHtmlCallback: TooltipHtmlCallback) => {
+  addTooltips = (tooltipHtmlCallback: TooltipHtmlCallback<Metadata>) => {
     this.optionalLayers.push(new TooltipsLayer(tooltipHtmlCallback));
     return this;
   };
 
-  private filterScatterPointsForLogAxis = (points: ScatterPoints, axis: "x" | "y") => {
+  private filterScatterPointsForLogAxis = (points: ScatterPoints<Metadata>, axis: "x" | "y") => {
     const filteredPoints = points.filter(p => p[axis] > 0);
     if (filteredPoints.length !== points.length) {
       console.warn(
@@ -143,7 +143,7 @@ export class Chart {
     return filteredPoints;
   };
 
-  private filterScatterPoints = (points: ScatterPoints) => {
+  private filterScatterPoints = (points: ScatterPoints<Metadata>) => {
     let filteredPoints = points;
     if (this.options.logScale.x) {
       filteredPoints = this.filterScatterPointsForLogAxis(filteredPoints, "x");
@@ -154,7 +154,7 @@ export class Chart {
     return filteredPoints;
   }
 
-  addScatterPoints = (points: ScatterPoints) => {
+  addScatterPoints = (points: ScatterPoints<Metadata>) => {
     const filteredPoints = this.filterScatterPoints(points);
     this.optionalLayers.push(new ScatterLayer(filteredPoints));
     return this;
@@ -211,8 +211,10 @@ export class Chart {
   };
 
   private processScales = (partialScales: PartialScales): Scales => {
-    const traceLayers = this.optionalLayers.filter(l => l.type === LayerType.Trace) as TracesLayer[];
-    const scatterLayers = this.optionalLayers.filter(l => l.type === LayerType.Scatter) as ScatterLayer[];
+    const traceLayers = this.optionalLayers
+      .filter(l => l.type === LayerType.Trace) as TracesLayer<Metadata>[];
+    const scatterLayers = this.optionalLayers
+      .filter(l => l.type === LayerType.Scatter) as ScatterLayer<Metadata>[];
     let flatPointsDC = traceLayers.reduce((points, layer) => {
       return [...layer.linesDC.map(l => l.points).flat(), ...points];
     }, [] as Point[]);

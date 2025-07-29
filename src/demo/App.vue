@@ -133,9 +133,11 @@ const randomIndex = (length: number) => {
   return Math.floor(Math.random() * length);
 };
 
+type Metadata = { color: string }
+
 const makeRandomPoints = (props: typeof pointPropsBasic) => {
   const xPoints = Array.from({length: props.n + 1}, () => Math.random());
-  const points: ScatterPoints = [];
+  const points: ScatterPoints<Metadata> = [];
   const y = () => {
     const rand = (Math.random() - 0.5) * 2;
     const e = rand * rand * rand;
@@ -143,13 +145,15 @@ const makeRandomPoints = (props: typeof pointPropsBasic) => {
   };
 
   for (let i = 0; i < props.n; i++) {
-    const scatterPoint: ScatterPoints[number] = {
+    const color = colors[randomIndex(colors.length)];
+    const scatterPoint: ScatterPoints<Metadata>[number] = {
       x: xPoints[i], y: y(),
       style: {
         radius: Math.random() * props.radiusRange + props.radiusOffset,
-        color: colors[randomIndex(colors.length)],
+        color,
         opacity: Math.random() * props.opacityRange + props.opacityOffset
-      }
+      },
+      metadata: { color }
     };
     points.push(scatterPoint);
   }
@@ -158,7 +162,7 @@ const makeRandomPoints = (props: typeof pointPropsBasic) => {
 
 const makeRandomCurves = (props: typeof propsBasic) => {
   const xPoints = Array.from({length: props.nX + 1}, (_, i) => i / props.nX);
-  const lines: Lines = [];
+  const lines: Lines<Metadata> = [];
   const makeYFunc = () => {
     const amp1 = Math.random();
     const amp2 = Math.random();
@@ -181,13 +185,15 @@ const makeRandomCurves = (props: typeof propsBasic) => {
   };
 
   for (let l = 0; l < props.nL; l++) {
-    const line: Lines[number] = {
+    const color = colors[randomIndex(colors.length)];
+    const line: Lines<Metadata>[number] = {
       points: [],
       style: {
         opacity: Math.random() * props.opacityRange + props.opacityOffset,
-        color: colors[randomIndex(colors.length)],
+        color,
         strokeWidth: Math.random() * 1
-      }
+      },
+      metadata: { color }
     };
     const yfunc = makeYFunc();
     for (let i = 0; i < props.nX + 1; i++) {
@@ -198,8 +204,8 @@ const makeRandomCurves = (props: typeof propsBasic) => {
   return lines;
 };
 
-const tooltipHtmlCallback = (point: {x: number, y: number}) => {
-  return `X: ${point.x.toFixed(3)}, Y: ${point.y.toFixed(3)}`;
+const tooltipHtmlCallback = (point: {x: number, y: number, metadata?: Metadata}) => {
+  return `<div style="color: ${point.metadata?.color};">X: ${point.x.toFixed(3)}, Y: ${point.y.toFixed(3)}</div>`;
 };
 
 const curvesSparkLines = makeRandomCurves(propsBasic);
@@ -300,7 +306,7 @@ onMounted(async () => {
     .addZoom({ lockAxis: "x" })
     .appendTo(chartPointsAxesAndZoom.value!, scales);
 
-  new Chart()
+  new Chart<Metadata>()
     .addTraces(curvesTooltips)
     .addScatterPoints(pointsTooltips)
     .addTooltips(tooltipHtmlCallback)

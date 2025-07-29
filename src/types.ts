@@ -5,6 +5,7 @@ import { LayerType, OptionalLayer } from "./layers/Layer";
 export type XY<T> = { x: T, y: T }
 
 export type Point = XY<number>
+export type PointWithMetadata<Metadata> = Point & { metadata?: Metadata }
 
 export type XYLabel = Partial<XY<string>>
 
@@ -56,24 +57,26 @@ export type ZoomExtents = Partial<XY<[number, number]>>
 export type Scales = XY<{ start: number, end: number }>
 export type PartialScales = Partial<XY<{ start?: number, end?: number }>>
 
-type LineConfig = {
+type LineConfig<Metadata> = {
   points: Point[],
   style: {
     color?: string,
     opacity?: number,
     strokeWidth?: number
     strokeDasharray?: string
-  }
+  },
+  metadata?: Metadata
 }
-export type Lines = LineConfig[]
+export type Lines<Metadata> = LineConfig<Metadata>[]
 
-type ScatterPointConfig = {
+type ScatterPointConfig<Metadata> = {
   x: number,
   y: number,
   style: {
     radius?: number,
     color?: string,
     opacity?: number
-  }
+  },
+  metadata?: Metadata
 }
-export type ScatterPoints = ScatterPointConfig[];
+export type ScatterPoints<Metadata> = ScatterPointConfig<Metadata>[];
