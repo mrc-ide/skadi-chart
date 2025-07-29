@@ -26,6 +26,7 @@ export class ZoomLayer extends OptionalLayer {
     const distX = Math.abs(x0 - x1);
     const distY = Math.abs(y0 - y1);
 
+    // the return value is in the form [topLeftCoord, bottomRightCoord]
     if (this.options.lockAxis === "y") {
       return [[x0, margin.top], [x1, height - margin.bottom]];
     } else if (this.options.lockAxis === "x") {
