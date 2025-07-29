@@ -59,6 +59,7 @@ type LineConfig = {
     color?: string,
     opacity?: number,
     strokeWidth?: number
+    strokeDasharray?: string
   }
 }
 export type Lines = LineConfig[]

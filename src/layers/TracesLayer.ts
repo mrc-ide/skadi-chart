@@ -150,6 +150,7 @@ export class TracesLayer extends OptionalLayer {
         .attr("stroke", l.style.color || "black")
         .attr("opacity", l.style.opacity || 1)
         .attr("stroke-width", l.style.strokeWidth || 0.5)
+        .attr("stroke-dasharray", l.style.strokeDasharray || "")
         .attr("d", linePathSC);
     });
 
