@@ -60,17 +60,17 @@ export class Chart {
     return this;
   };
 
-  // Filtering lines is a bit harder than points, if there is a segment of
-  // the line that is <= 0 then you have to split up the line into two line
-  // segments. Here we create a line segment and iterate down the points of
-  // a line and once we hit a negative coordinate we push that line segment
-  // and start a new one
+  // Filtering lines is a bit harder than points, if there are points in
+  // the line with values <= 0 then you have to split up the line into two line
+  // segments, missing out the points with values <= 0. Here we create a line
+  // segment and iterate down the points of a line and once we hit a negative
+  // coordinate we push that line segment and start a new one
   private filterLinesForLogAxis = (lines: Lines, axis: "x" | "y") => {
     let warningMsg = "";
     const filteredPoints: Lines = [];
     for (let i = 0; i < lines.length; i++) {
       const currLine = lines[i];
-      let isLastCoordinatePositive = currLine.points[0][axis] > 0;
+      let isLastCoordinatePositive = currLine.points[0] && currLine.points[0][axis] > 0;
       let lineSegment: Lines[number] = { points: [], style: currLine.style };
 
       for (let j = 0; j < currLine.points.length; j++) {
