@@ -21,7 +21,8 @@ export type ChartOptions = {
 }
 
 type PartialChartOptions = {
-  logScale?: Partial<XY<boolean>>
+  logScale?: Partial<XY<boolean>>,
+  animationDuration?: number
 }
 
 export class Chart<Metadata = any> {
@@ -43,6 +44,9 @@ export class Chart<Metadata = any> {
         y: options?.logScale?.y ?? false
       }
     };
+    if (options?.animationDuration) {
+      this.globals.animationDuration = options.animationDuration;
+    }
     this.id = Math.random().toString(26).substring(2, 10);
 
     return this;
