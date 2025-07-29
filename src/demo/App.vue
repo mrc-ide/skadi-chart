@@ -20,7 +20,7 @@
   <button @click="() => logScaleX = !logScaleX">Toggle log scale X</button>
   <button @click="() => logScaleY = !logScaleY">Toggle log scale Y</button>
 
-  <h1>Scatter points, axes, zoom (locked X axis)</h1>
+  <h1>Scatter points, axes, zoom with locked X axis and initial zoom (double click graph)</h1>
   <div class="chart" ref="chartPointsAxesAndZoom" id="chartPointsAxesAndZoom"></div>
 
   <h1>Chart with tooltips</h1>
@@ -304,7 +304,7 @@ onMounted(async () => {
     .addScatterPoints(pointsPointsAxesAndZoom)
     .addAxes(axesLabels)
     .addZoom({ lockAxis: "x" })
-    .appendTo(chartPointsAxesAndZoom.value!, scales);
+    .appendTo(chartPointsAxesAndZoom.value!, scales, { y: { start: -2e6, end: -0.5e6 } });
 
   new Chart<Metadata>()
     .addTraces(curvesTooltips)
