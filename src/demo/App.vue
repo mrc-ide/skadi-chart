@@ -32,7 +32,7 @@
   <h1>Custom layers + custom lifecycle hooks</h1>
   <div class="chart" ref="chartCustom" id="chartCustom"></div>
 
-  <h1>Stress test: 800 traces</h1>
+  <h1>Stress test: 1000 traces</h1>
   <button @click="drawStressChart">Draw</button>
   <div class="chart" ref="chartStress" id="chartStress"></div>
 
@@ -114,7 +114,7 @@ const propsBasic = {
 
 const propsStress = {
   nX: 1000,
-  nL: 800,
+  nL: 1000,
   ampScaling: 1e6,
   freqRange: 0.1,
   freqOffset: 0.95,
@@ -342,7 +342,14 @@ onMounted(async () => {
     .addZoom()
     .addCustomLayer(new CustomLayer())
     .addCustomLifecycleHooks({
-      afterZoom() { console.log("triggered after zoom") }
+      beforeZoom(zoomExtents) {
+        if (zoomExtents.eventType !== "dblclick") return;
+        console.log("you double clicked!")
+      },
+      afterZoom(zoomExtents) {
+        if (!zoomExtents) return;
+        console.log("triggered after zoom")
+      }
     })
     .appendTo(chartCustom.value!);
 });

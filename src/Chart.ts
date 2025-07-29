@@ -3,7 +3,7 @@ import { AxesLayer } from "./layers/AxesLayer";
 import { TracesLayer, TracesOptions } from "./layers/TracesLayer";
 import { ZoomLayer, ZoomOptions } from "./layers/ZoomLayer";
 import { TooltipHtmlCallback, TooltipsLayer } from "./layers/TooltipsLayer";
-import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, PartialScales, Point, Scales, ScatterPoints, XY, XYLabel } from "./types";
+import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, NumericZoomExtents, PartialScales, Point, Scales, ScatterPoints, XY, XYLabel } from "./types";
 import { LayerType, LifecycleHooks, OptionalLayer } from "./layers/Layer";
 import { GridLayer } from "./layers/GridLayer";
 import html2canvas from "html2canvas";
@@ -283,13 +283,17 @@ export class Chart<Metadata = any> {
       .attr("clip-path", `url(#${getHtmlId(LayerType.ClipPath)})`);
 
     const { x, y } = this.autoscaledMaxExtents;
+    const initialDomain: NumericZoomExtents = {
+      x: [initialExtents.x?.start ?? x.start, initialExtents.x?.end ?? x.end],
+      y: [initialExtents.y?.start ?? y.start, initialExtents.y?.end ?? y.end]
+    };
     const d3ScaleX = this.options.logScale.x ? d3.scaleLog : d3.scaleLinear;
     const scaleX = d3ScaleX()
-      .domain([initialExtents.x?.start ?? x.start, initialExtents.x?.end ?? x.end])
+      .domain(initialDomain.x)
       .range([ margin.left, width - margin.right ]);
     const d3ScaleY = this.options.logScale.y ? d3.scaleLog : d3.scaleLinear;
     const scaleY = d3ScaleY()
-      .domain([initialExtents.y?.start ?? y.start, initialExtents.y?.end ?? y.end])
+      .domain(initialDomain.y)
       .range([ height - margin.bottom, margin.top ]);
     
     const lineGen = d3.line<Point>()
@@ -327,7 +331,7 @@ export class Chart<Metadata = any> {
     // Clear any existing content in the element
     baseElement.childNodes.forEach(n => n.remove());
 
-    this.optionalLayers.forEach(l => l.draw(layerArgs));
+    this.optionalLayers.forEach(l => l.draw(layerArgs, initialDomain));
 
     baseElement.append(layerArgs.coreLayers[LayerType.Svg].node()!);
   };

@@ -68,7 +68,11 @@ export class ZoomLayer extends OptionalLayer {
       .attr("width", 0)
       .attr("height", 0);
 
-    if (!event.selection) return;
+    if (!event.selection) {
+      layerArgs.optionalLayers.forEach(layer => layer.afterZoom(null));
+      return;
+    }
+
     // removes the grey area of the brush
     brushLayer.call(event.target.move as any, null);
 
@@ -89,7 +93,12 @@ export class ZoomLayer extends OptionalLayer {
       layerArgs.optionalLayers.forEach(layer => layer.afterZoom(null));
       return;
     };
-    this.handleZoom({ x: [extentXStart, extentXEnd], y: [extentYStart, extentYEnd] }, layerArgs);
+    const zoomExtents: ZoomExtents = {
+      x: [extentXStart, extentXEnd],
+      y: [extentYStart, extentYEnd],
+      eventType: "brush"
+    };
+    this.handleZoom(zoomExtents, layerArgs);
   };
 
   private handleBrushMove = (event: d3.D3BrushEvent<Point>, layerArgs: LayerArgs) => {
@@ -163,7 +172,21 @@ export class ZoomLayer extends OptionalLayer {
 
     // Respond to double click event by fully zooming out
     const { x, y } = layerArgs.scaleConfig.scaleExtents;
+    const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
+    const dblClickZoomExtents: ZoomExtents = {
+      x: [x.start, x.end],
+      y: [y.start, y.end],
+      eventType: "dblclick"
+    };
+
+    if (this.options.lockAxis === "y") {
+      dblClickZoomExtents.y = scaleY.domain() as [number, number];
+    }
+    if (this.options.lockAxis === "x") {
+      dblClickZoomExtents.x = scaleX.domain() as [number, number];
+    }
+
     layerArgs.coreLayers[LayerType.Svg]
-      .on("dblclick",() => this.handleZoom({ x: [x.start, x.end], y: [y.start, y.end] }, layerArgs));
+      .on("dblclick",() => this.handleZoom(dblClickZoomExtents, layerArgs));
   };
 };
