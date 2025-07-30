@@ -1,6 +1,10 @@
 import { D3Selection, LayerArgs, Lines, Point, ZoomExtents } from "@/types";
 import { LayerType, OptionalLayer } from "./Layer";
 
+export type TracesOptions = {
+  RDPEpsilon: number | null
+}
+
 // see https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line#Line_defined_by_two_points
 // we compute the expression without denominator because it is faster and still proportional
 // NOTE: this is independent of coordinate system
@@ -93,7 +97,7 @@ export class TracesLayer extends OptionalLayer {
   private lowResLinesSC: Point[][] = [];
   private getNewPoint: null | ((x: number, y: number, t: number) => Point) = null;
 
-  constructor(public linesDC: Lines, public RDPEpsilon: number | null) {
+  constructor(public linesDC: Lines, public options: TracesOptions) {
     super();
   };
 
@@ -131,8 +135,8 @@ export class TracesLayer extends OptionalLayer {
     const linesSC = this.linesDC.map(l => {
       return l.points.map(p => ({ x: scaleX(p.x), y: scaleY(p.y) }));
     });
-    if (this.RDPEpsilon !== null) {
-      this.lowResLinesSC = RDPAlgorithm(linesSC, this.RDPEpsilon);
+    if (this.options.RDPEpsilon !== null) {
+      this.lowResLinesSC = RDPAlgorithm(linesSC, this.options.RDPEpsilon);
     } else {
       this.lowResLinesSC = linesSC;
     }

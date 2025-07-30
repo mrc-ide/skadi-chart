@@ -1,7 +1,7 @@
 import * as d3 from "./d3";
 import { AxesLayer } from "./layers/AxesLayer";
-import { TracesLayer } from "./layers/TracesLayer";
-import { ZoomLayer } from "./layers/ZoomLayer";
+import { TracesLayer, TracesOptions } from "./layers/TracesLayer";
+import { ZoomLayer, ZoomOptions } from "./layers/ZoomLayer";
 import { TooltipHtmlCallback, TooltipsLayer } from "./layers/TooltipsLayer";
 import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, Point, Scales, ScatterPoints, XYLabel } from "./types";
 import { LayerType, LifecycleHooks, OptionalLayer } from "./layers/Layer";
@@ -33,11 +33,9 @@ export class Chart {
     return this;
   };
 
-  addAxes = (labels?: XYLabel) => {
-    if (labels) {
-      if (labels.x) this.defaultMargin.bottom = 80;
-      if (labels.y) this.defaultMargin.left = 90;
-    }
+  addAxes = (labels: XYLabel = {}) => {
+    if (labels.x) this.defaultMargin.bottom = 80;
+    if (labels.y) this.defaultMargin.left = 90;
     this.optionalLayers.push(new AxesLayer(labels || {}));
     return this;
   };
@@ -47,13 +45,19 @@ export class Chart {
     return this;
   };
 
-  addTraces = (lines: Lines, RDPEpsilon: number | null = null) => {
-    this.optionalLayers.push(new TracesLayer(lines, RDPEpsilon));
+  addTraces = (lines: Lines, options?: Partial<TracesOptions>) => {
+    const optionsWithDefaults: TracesOptions = {
+      RDPEpsilon: options?.RDPEpsilon ?? null
+    };
+    this.optionalLayers.push(new TracesLayer(lines, optionsWithDefaults));
     return this;
   };
 
-  addZoom = () => {
-    this.optionalLayers.push(new ZoomLayer());
+  addZoom = (options?: ZoomOptions) => {
+    const optionsWithDefaults: ZoomOptions = {
+      lockAxis: options?.lockAxis ?? null
+    };
+    this.optionalLayers.push(new ZoomLayer(optionsWithDefaults));
     return this;
   };
 

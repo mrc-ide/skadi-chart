@@ -15,7 +15,7 @@
   <div class="chart" ref="chartAxesLabelGridAndZoom" id="chartAxesLabelGridAndZoom"></div>
   <button @click="() => exportToPng!('zoomPlot.png')">Download PNG</button>
 
-  <h1>Scatter points, axes, zoom</h1>
+  <h1>Scatter points, axes, zoom (locked X axis)</h1>
   <div class="chart" ref="chartPointsAxesAndZoom" id="chartPointsAxesAndZoom"></div>
 
   <h1>Chart with tooltips</h1>
@@ -213,7 +213,7 @@ const drawStressChart = () => {
   const curvesStress = makeRandomCurves(propsStress);
   new Chart(scales)
     .addZoom()
-    .addTraces(curvesStress, 1)
+    .addTraces(curvesStress, { RDPEpsilon: 1 })
     .addAxes()
     .addTooltips(tooltipHtmlCallback)
     .appendTo(chartStress.value!);
@@ -265,7 +265,7 @@ onMounted(async () => {
   new Chart(scales)
     .addScatterPoints(pointsPointsAxesAndZoom)
     .addAxes(axesLAbels)
-    .addZoom()
+    .addZoom({ lockAxis: "x" })
     .appendTo(chartPointsAxesAndZoom.value!);
 
   new Chart(scales)
