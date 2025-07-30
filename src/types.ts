@@ -64,3 +64,13 @@ type LineConfig = {
 }
 export type Lines = LineConfig[]
 
+type ScatterPointConfig = {
+  x: number,
+  y: number,
+  style?: {
+    radius: number,
+    color: string,
+    opacity: number
+  }
+}
+export type ScatterPoints = ScatterPointConfig[];

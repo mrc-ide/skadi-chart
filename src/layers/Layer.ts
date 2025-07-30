@@ -15,6 +15,7 @@ export enum LayerType {
   Trace = "trace",
   Tooltip = "tooltip",
   Grid = "grid",
+  Scatter = "scatter",
   Custom = "custom",
 }
 

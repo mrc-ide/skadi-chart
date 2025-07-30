@@ -15,6 +15,9 @@
   <div class="chart" ref="chartAxesLabelGridAndZoom" id="chartAxesLabelGridAndZoom"></div>
   <button @click="() => exportToPng!('zoomPlot.png')">Download PNG</button>
 
+  <h1>Scatter points, axes, zoom</h1>
+  <div class="chart" ref="chartPointsAxesAndZoom" id="chartPointsAxesAndZoom"></div>
+
   <h1>Chart with tooltips</h1>
   <div class="chart" ref="chartTooltips" id="chartTooltips"></div>
 
@@ -27,6 +30,10 @@
   <h1>Stress test: 800 traces</h1>
   <button @click="drawStressChart">Draw</button>
   <div class="chart" ref="chartStress" id="chartStress"></div>
+
+  <h1>Stress test: 10,000 points</h1>
+  <button @click="drawStressChartPoints">Draw</button>
+  <div class="chart" ref="chartStressPoints" id="chartStressPoints"></div>
 </template>
 
 <style>
@@ -42,6 +49,7 @@
 </style>
 
 <script setup lang="ts">
+import { ScatterPoints } from "@/types";
 import { Chart, LayerArgs, LayerType, Lines, OptionalLayer, Scales } from "../skadi-chart";
 import { onMounted, ref } from "vue";
 
@@ -50,10 +58,39 @@ const chartOnlyAxes = ref<HTMLDivElement | null>(null);
 const chartAxesAndGrid = ref<HTMLDivElement | null>(null);
 const chartAxesLabelsAndGrid = ref<HTMLDivElement | null>(null);
 const chartAxesLabelGridAndZoom = ref<HTMLDivElement | null>(null);
+const chartPointsAxesAndZoom = ref<HTMLDivElement | null>(null);
 const chartTooltips = ref<HTMLDivElement | null>(null);
 const chartResponsive = ref<HTMLDivElement | null>(null);
 const chartStress = ref<HTMLDivElement | null>(null);
+const chartStressPoints = ref<HTMLDivElement | null>(null);
 const chartCustom = ref<HTMLDivElement | null>(null);
+
+const pointPropsBasic = {
+  n: 1000,
+  ampScaling: 1e6,
+  opacityRange: 0.5,
+  opacityOffset: 0.5,
+  radiusRange: 2,
+  radiusOffset: 0.5,
+}
+
+const pointPropsTooltips = {
+  n: 1000,
+  ampScaling: 1.5e6,
+  opacityRange: 0.5,
+  opacityOffset: 0.5,
+  radiusRange: 2,
+  radiusOffset: 0.5,
+}
+
+const pointPropsStress = {
+  n: 10000,
+  ampScaling: 1.5e6,
+  opacityRange: 0.5,
+  opacityOffset: 0,
+  radiusRange: 1.5,
+  radiusOffset: 0.2,
+}
 
 const propsBasic = {
   nX: 1000,
@@ -83,6 +120,36 @@ const propsStress = {
   strokeWidthOffset: 0,
 }
 
+// rainbow
+const colors = [ "#e81416", "#ffa500", "#faeb36", "#79c314", "#487de7", "#4b369d", "#70369d" ];
+
+const randomIndex = (length: number) => {
+  return Math.floor(Math.random() * length);
+};
+
+const makeRandomPoints = (props: typeof pointPropsBasic) => {
+  const xPoints = Array.from({length: props.n + 1}, () => Math.random());
+  const points: ScatterPoints = [];
+  const y = () => {
+    const rand = (Math.random() - 0.5) * 2;
+    const e = rand * rand * rand;
+    return Math.atan(1/e) * props.ampScaling;
+  };
+
+  for (let i = 0; i < props.n; i++) {
+    const scatterPoint: ScatterPoints[number] = {
+      x: xPoints[i], y: y(),
+      style: {
+        radius: Math.random() * props.radiusRange + props.radiusOffset,
+        color: colors[randomIndex(colors.length)],
+        opacity: Math.random() * props.opacityRange + props.opacityOffset
+      }
+    };
+    points.push(scatterPoint);
+  }
+  return points;
+};
+
 const makeRandomCurves = (props: typeof propsBasic) => {
   const xPoints = Array.from({length: props.nX + 1}, (_, i) => i / props.nX);
   const lines: Lines = [];
@@ -105,13 +172,6 @@ const makeRandomCurves = (props: typeof propsBasic) => {
         + amp3 * Math.sin(freq3 * 26 * x + phase3)
         + amp4 * Math.cos(freq4 * 67 * x + phase4)
     };
-  };
-
-  // rainbow
-  const colors = [ "#e81416", "#ffa500", "#faeb36", "#79c314", "#487de7", "#4b369d", "#70369d" ];
-
-  const randomIndex = (length: number) => {
-    return Math.floor(Math.random() * length);
   };
 
   for (let l = 0; l < props.nL; l++) {
@@ -141,7 +201,9 @@ const curvesOnlyAxes = makeRandomCurves(propsBasic);
 const curvesAxesAndGrid = makeRandomCurves(propsBasic);
 const curvesAxesLabelsAndGrid = makeRandomCurves(propsBasic);
 const curvesAxesLabelGridAndZoom = makeRandomCurves(propsBasic);
+const pointsPointsAxesAndZoom = makeRandomPoints(pointPropsBasic);
 const curvesTooltips = makeRandomCurves(propsBasic);
+const pointsTooltips = makeRandomPoints(pointPropsTooltips);
 const curvesResponsive = makeRandomCurves(propsBasic);
 const curvesCustom = makeRandomCurves(propsBasic);
 
@@ -155,6 +217,16 @@ const drawStressChart = () => {
     .addAxes()
     .addTooltips(tooltipHtmlCallback)
     .appendTo(chartStress.value!);
+};
+
+const drawStressChartPoints = () => {
+  const pointsStress = makeRandomPoints(pointPropsStress);
+  new Chart(scales)
+    .addZoom()
+    .addScatterPoints(pointsStress)
+    .addAxes()
+    .addTooltips(tooltipHtmlCallback)
+    .appendTo(chartStressPoints.value!);
 };
 
 const exportToPng = ref<(name?: string) => void>();
@@ -191,7 +263,14 @@ onMounted(async () => {
   exportToPng.value = chart.exportToPng!;
 
   new Chart(scales)
+    .addScatterPoints(pointsPointsAxesAndZoom)
+    .addAxes(axesLAbels)
+    .addZoom()
+    .appendTo(chartPointsAxesAndZoom.value!);
+
+  new Chart(scales)
     .addTraces(curvesTooltips)
+    .addScatterPoints(pointsTooltips)
     .addTooltips(tooltipHtmlCallback)
     .appendTo(chartTooltips.value!);
 

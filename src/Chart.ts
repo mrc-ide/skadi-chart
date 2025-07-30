@@ -3,10 +3,11 @@ import { AxesLayer } from "./layers/AxesLayer";
 import { TracesLayer } from "./layers/TracesLayer";
 import { ZoomLayer } from "./layers/ZoomLayer";
 import { TooltipHtmlCallback, TooltipsLayer } from "./layers/TooltipsLayer";
-import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, Point, Scales, XYLabel } from "./types";
+import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, Point, Scales, ScatterPoints, XYLabel } from "./types";
 import { LayerType, LifecycleHooks, OptionalLayer } from "./layers/Layer";
 import { GridLayer } from "./layers/GridLayer";
 import html2canvas from "html2canvas";
+import { ScatterLayer } from "./layers/ScatterLayer";
 
 // used for holding custom lifecycle hooks only - layer has no visual effect
 class CustomHooksLayer extends OptionalLayer {
@@ -58,6 +59,11 @@ export class Chart {
 
   addTooltips = (tooltipHtmlCallback: TooltipHtmlCallback) => {
     this.optionalLayers.push(new TooltipsLayer(tooltipHtmlCallback));
+    return this;
+  };
+
+  addScatterPoints = (points: ScatterPoints) => {
+    this.optionalLayers.push(new ScatterLayer(points));
     return this;
   };
 
