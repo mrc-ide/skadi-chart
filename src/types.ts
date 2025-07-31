@@ -1,3 +1,4 @@
+import { ChartOptions } from "./Chart";
 import * as d3 from "./d3";
 import { LayerType, OptionalLayer } from "./layers/Layer";
 
@@ -47,7 +48,8 @@ export type LayerArgs = {
     [LayerType.ClipPath]: D3Selection<SVGClipPathElement>,
     [LayerType.BaseLayer]: D3Selection<SVGGElement>,
   },
-  optionalLayers: AllOptionalLayers[]
+  optionalLayers: AllOptionalLayers[],
+  chartOptions: ChartOptions
 };
 
 export type ZoomExtents = Partial<XY<[number, number]>>
