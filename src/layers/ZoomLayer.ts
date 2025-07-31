@@ -83,12 +83,10 @@ export class ZoomLayer extends OptionalLayer {
     const extentYStart = scaleY.invert(y1);
     const extentYEnd = scaleY.invert(y0);
 
-    const { scaleExtents } = layerArgs.scaleConfig;
-    const minDistX = Math.abs(scaleExtents.x.start - scaleExtents.x.end) / 500;
-    const minDistY = Math.abs(scaleExtents.y.start - scaleExtents.y.end) / 500;
-
-    // if it is more than a 500x zoom we don't zoom
-    if (Math.abs(extentXStart - extentXEnd) < minDistX || Math.abs(extentYStart - extentYEnd) < minDistY) {
+    // if selection is smaller than 10 pixels in width or height don't zoom as
+    // user may have made a mistake
+    const zoomMinPixelThreshold = 10;
+    if (Math.abs(x0 - x1) < zoomMinPixelThreshold || Math.abs(y0 - y1) < zoomMinPixelThreshold) {
       layerArgs.optionalLayers.forEach(layer => layer.afterZoom(null));
       return;
     };

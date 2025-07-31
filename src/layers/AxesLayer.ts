@@ -23,9 +23,8 @@ export class AxesLayer extends OptionalLayer {
       .attr("transform", `translate(0,${height - margin.bottom})`)
       .call(axisX);
 
-    const axisY = d3.axisLeft(scaleY).ticks(ticks.y).tickSize(0).tickPadding(12)
-      // SI-prefix with 2 significant figures and no trailing zeros, 42e6 -> 42M
-      .tickFormat(d3.format(".2~s"));
+    // SI-prefix with 2 significant figures and no trailing zeros, 42e6 -> 42M
+    const axisY = d3.axisLeft(scaleY).ticks(ticks.y, ".2~s").tickSize(0).tickPadding(12);
     const axisLayerY = svgLayer.append("g")
       .attr("id", `${getHtmlId(LayerType.Axes)}-y`)
       .style("font-size", "0.75rem")

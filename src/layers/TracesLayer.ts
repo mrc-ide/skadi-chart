@@ -159,18 +159,22 @@ export class TracesLayer extends OptionalLayer {
     });
 
     this.beforeZoom = (zoomExtentsDC: ZoomExtents) => {
+      const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
+
+      // we have to convert the extents to SC from DC to find out what pixel
+      // scaling we need
       const newExtentXDC = zoomExtentsDC.x!;
       const newExtentYDC = zoomExtentsDC.y!;
+      const newExtentXSC = [scaleX(newExtentXDC[0]), scaleX(newExtentXDC[1])];
+      const newExtentYSC = [scaleY(newExtentYDC[0]), scaleY(newExtentYDC[1])];
 
-      const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
       const oldExtentXDC = scaleX.domain();
       const oldExtentYDC = scaleY.domain();
+      const oldExtentXSC = [scaleX(oldExtentXDC[0]), scaleX(oldExtentXDC[1])];
+      const oldExtentYSC = [scaleY(oldExtentYDC[0]), scaleY(oldExtentYDC[1])];
 
-      // how much we have to zoom is the same in DC and SC since they are proportional to
-      // each other. scale is therefore a variable that isn't in SC or DC, it is coordinate
-      // independent
-      const scalingX = (oldExtentXDC[1] - oldExtentXDC[0]) / (newExtentXDC[1] - newExtentXDC[0]);
-      const scalingY = (oldExtentYDC[1] - oldExtentYDC[0]) / (newExtentYDC[1] - newExtentYDC[0]);
+      const scalingX = (oldExtentXSC[1] - oldExtentXSC[0]) / (newExtentXSC[1] - newExtentXSC[0]);
+      const scalingY = (oldExtentYSC[1] - oldExtentYSC[0]) / (newExtentYSC[1] - newExtentYSC[0]);
 
       // translation to make sure the start of the zoomed in graph is the start of the user
       // brush selection

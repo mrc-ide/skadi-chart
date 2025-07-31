@@ -13,7 +13,7 @@ export enum LayerType {
   Axes = "axes",
   Zoom = "zoom",
   Trace = "trace",
-  Tooltip = "tooltip",
+  Tooltip = "skadi-chart-tooltip",
   Grid = "grid",
   Scatter = "scatter",
   Custom = "custom",
