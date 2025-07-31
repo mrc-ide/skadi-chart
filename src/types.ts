@@ -52,6 +52,7 @@ export type LayerArgs = {
 
 export type ZoomExtents = Partial<XY<[number, number]>>
 export type Scales = XY<{ start: number, end: number }>
+export type PartialScales = Partial<XY<{ start?: number, end?: number }>>
 
 type LineConfig = {
   points: Point[],
@@ -67,10 +68,10 @@ export type Lines = LineConfig[]
 type ScatterPointConfig = {
   x: number,
   y: number,
-  style?: {
-    radius: number,
-    color: string,
-    opacity: number
+  style: {
+    radius?: number,
+    color?: string,
+    opacity?: number
   }
 }
 export type ScatterPoints = ScatterPointConfig[];

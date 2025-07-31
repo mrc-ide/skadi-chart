@@ -1,21 +1,15 @@
-import { Chart, Scales } from "../../src/Chart";
+import { Chart } from "../../src/Chart";
 import { AxesLayer } from "@/layers/AxesLayer";
 import { TracesLayer } from "@/layers/TracesLayer";
 import { ZoomLayer } from "@/layers/ZoomLayer";
 import { TooltipsLayer } from "@/layers/TooltipsLayer";
 
 describe("Chart tests", () => {
-  const scales: Scales = {
-    x: { start: 0, end: 100 },
-    y: { start: 200, end: 300 }
-  };
-
   test("constructor works as expected", () => {
-    const chart = new Chart(scales); 
+    const chart = new Chart(); 
     expect(chart.id).not.toBe("");
     expect(chart.optionalLayers).toStrictEqual([]);
     expect(chart.isResponsive).toBe(false);
-    expect(chart.scales).toStrictEqual(scales);
   });
 
   const expectLastAddedLayer = (chart: Chart) => {
@@ -27,7 +21,7 @@ describe("Chart tests", () => {
   };
 
   test("add functions work as expected", () => {
-    const chart = new Chart(scales);
+    const chart = new Chart();
     chart.addAxes();
     expectLastAddedLayer(chart).toBe(AxesLayer);
     chart.addTraces([]);
@@ -39,7 +33,7 @@ describe("Chart tests", () => {
   });
 
   test("make responsive sets boolean", () => {
-    const chart = new Chart(scales);
+    const chart = new Chart();
     chart.makeResponsive();
     expect(chart.isResponsive).toBe(true);
   });
