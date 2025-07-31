@@ -58,26 +58,28 @@ export type ZoomExtents = NumericZoomExtents & { eventType: "brush" | "dblclick"
 export type Scales = XY<{ start: number, end: number }>
 export type PartialScales = Partial<XY<{ start?: number, end?: number }>>
 
+export type LineStyle = {
+  color?: string,
+  opacity?: number,
+  strokeWidth?: number
+  strokeDasharray?: string
+}
 type LineConfig<Metadata> = {
   points: Point[],
-  style: {
-    color?: string,
-    opacity?: number,
-    strokeWidth?: number
-    strokeDasharray?: string
-  },
+  style: LineStyle,
   metadata?: Metadata
 }
 export type Lines<Metadata> = LineConfig<Metadata>[]
 
+export type ScatterPointStyle = {
+  radius?: number,
+  color?: string,
+  opacity?: number,
+}
 type ScatterPointConfig<Metadata> = {
   x: number,
   y: number,
-  style: {
-    radius?: number,
-    color?: string,
-    opacity?: number
-  },
+  style: ScatterPointStyle,
   metadata?: Metadata
 }
 export type ScatterPoints<Metadata> = ScatterPointConfig<Metadata>[];
