@@ -145,7 +145,8 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
     const rangeXDC = scaleX.domain()[1] - scaleX.domain()[0];
     const rangeYDC = scaleY.domain()[1] - scaleY.domain()[0];
-    const rangeDC = { x: rangeXDC, y: rangeYDC };
+    // edge case if range is 0 then don't scale the coordinate
+    const rangeDC = { x: rangeXDC || 1, y: rangeYDC || 1 };
 
     const svg = layerArgs.coreLayers[LayerType.Svg];
     let timerFlag: NodeJS.Timeout | undefined = undefined;
