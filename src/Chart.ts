@@ -40,6 +40,7 @@ export class Chart<Metadata = any> {
     x: { start: -Infinity, end: Infinity },
     y: { start: -Infinity, end: Infinity }
   };
+  baseLayer: D3Selection<SVGGElement> | null = null;
 
   constructor(options?: PartialChartOptions) {
     this.options = {
@@ -281,6 +282,7 @@ export class Chart<Metadata = any> {
     const baseLayer = svg.append('g')
       .attr("id", getHtmlId(LayerType.BaseLayer))
       .attr("clip-path", `url(#${getHtmlId(LayerType.ClipPath)})`);
+    this.baseLayer = baseLayer;
 
     const { x, y } = this.autoscaledMaxExtents;
     const initialDomain: NumericZoomExtents = {

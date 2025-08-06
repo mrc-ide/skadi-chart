@@ -32,6 +32,11 @@
   <h1>Custom layers + custom lifecycle hooks</h1>
   <div class="chart" ref="chartCustom" id="chartCustom"></div>
 
+  <h1>Smooth Free Draw</h1>
+  <div class="chart" ref="chartFreeDraw" id="chartFreeDraw"></div>
+  <button id="chartFreeDrawDraw">Draw</button>
+  <button id="chartFreeDrawPoints">Get points</button>
+
   <h1>Stress test: 1000 traces</h1>
   <button @click="drawStressChart">Draw</button>
   <div class="chart" ref="chartStress" id="chartStress"></div>
@@ -57,6 +62,8 @@
 import { ScatterPoints } from "@/types";
 import { Chart, LayerArgs, LayerType, Lines, OptionalLayer, Scales } from "../skadi-chart";
 import { onMounted, ref, watch } from "vue";
+import { FreeDraw } from "@/FreeDraw";
+import { FreeDrawMode } from "@/freeDrawModes/mode";
 
 const chartSparkLines = ref<HTMLDivElement | null>(null);
 const chartOnlyAxes = ref<HTMLDivElement | null>(null);
@@ -70,6 +77,7 @@ const chartResponsive = ref<HTMLDivElement | null>(null);
 const chartStress = ref<HTMLDivElement | null>(null);
 const chartStressPoints = ref<HTMLDivElement | null>(null);
 const chartCustom = ref<HTMLDivElement | null>(null);
+const chartFreeDraw = ref<HTMLDivElement | null>(null);
 
 const pointPropsBasic = {
   n: 1000,
@@ -352,5 +360,15 @@ onMounted(async () => {
       }
     })
     .appendTo(chartCustom.value!);
+
+  const freeDrawScales: Scales = {
+    x: { start: 0, end: 100 },
+    y: { start: 0, end: 10 }
+  };
+  const freeDraw = new FreeDraw(freeDrawScales, FreeDrawMode.Smooth);
+  const drawButton = document.getElementById("chartFreeDrawDraw") as HTMLButtonElement;
+  drawButton.onclick = () => freeDraw.drawCanvas(chartFreeDraw.value!);
+  const getPointsButton = document.getElementById("chartFreeDrawPoints") as HTMLButtonElement;
+  getPointsButton.onclick = freeDraw.getPoints;
 });
 </script>
