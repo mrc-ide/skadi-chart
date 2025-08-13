@@ -60,11 +60,61 @@ export class Chart {
     return this;
   };
 
+  // Filtering lines is a bit harder than points, if there are points in
+  // the line with values <= 0 then you have to split up the line into two line
+  // segments, missing out the points with values <= 0. Here we create a line
+  // segment and iterate down the points of a line and once we hit a negative
+  // coordinate we push that line segment and start a new one
+  private filterLinesForLogAxis = (lines: Lines, axis: "x" | "y") => {
+    let warningMsg = "";
+    const filteredPoints: Lines = [];
+    for (let i = 0; i < lines.length; i++) {
+      const currLine = lines[i];
+      let isLastCoordinatePositive = currLine.points[0] && currLine.points[0][axis] > 0;
+      let lineSegment: Lines[number] = { points: [], style: currLine.style };
+
+      for (let j = 0; j < currLine.points.length; j++) {
+        if (currLine.points[j][axis] <= 0) {
+          warningMsg = `You have tried to use ${axis} axis `
+                     + `log scale but there are traces with `
+                     + `${axis} coordinates that are <= 0`;
+        }
+
+        if (currLine.points[j][axis] > 0) {
+          lineSegment.points.push(currLine.points[j]);
+          isLastCoordinatePositive = true;
+        } else if (isLastCoordinatePositive) {
+          filteredPoints.push(lineSegment);
+          lineSegment = { points: [], style: currLine.style };
+          isLastCoordinatePositive = false;
+        }
+      }
+
+      if (isLastCoordinatePositive) {
+        filteredPoints.push(lineSegment);
+      }
+    }
+    if (warningMsg) console.warn(warningMsg);
+    return filteredPoints;
+  };
+
+  private filterLines = (lines: Lines) => {
+    let filteredLines = lines;
+    if (this.options.logScale.x) {
+      filteredLines = this.filterLinesForLogAxis(filteredLines, "x");
+    }
+    if (this.options.logScale.y) {
+      filteredLines = this.filterLinesForLogAxis(filteredLines, "y");
+    }
+    return filteredLines;
+  };
+
   addTraces = (lines: Lines, options?: Partial<TracesOptions>) => {
     const optionsWithDefaults: TracesOptions = {
       RDPEpsilon: options?.RDPEpsilon ?? null
     };
-    this.optionalLayers.push(new TracesLayer(lines, optionsWithDefaults));
+    const filteredLines = this.filterLines(lines);
+    this.optionalLayers.push(new TracesLayer(filteredLines, optionsWithDefaults));
     return this;
   };
 
@@ -81,8 +131,32 @@ export class Chart {
     return this;
   };
 
+  private filterScatterPointsForLogAxis = (points: ScatterPoints, axis: "x" | "y") => {
+    const filteredPoints = points.filter(p => p[axis] > 0);
+    if (filteredPoints.length !== points.length) {
+      console.warn(
+        `You have tried to use ${axis} axis `
+         + `log scale but there are points with `
+         + `${axis} coordinates that are <= 0`
+      );
+    }
+    return filteredPoints;
+  };
+
+  private filterScatterPoints = (points: ScatterPoints) => {
+    let filteredPoints = points;
+    if (this.options.logScale.x) {
+      filteredPoints = this.filterScatterPointsForLogAxis(filteredPoints, "x");
+    }
+    if (this.options.logScale.y) {
+      filteredPoints = this.filterScatterPointsForLogAxis(filteredPoints, "y");
+    }
+    return filteredPoints;
+  }
+
   addScatterPoints = (points: ScatterPoints) => {
-    this.optionalLayers.push(new ScatterLayer(points));
+    const filteredPoints = this.filterScatterPoints(points);
+    this.optionalLayers.push(new ScatterLayer(filteredPoints));
     return this;
   };
 
