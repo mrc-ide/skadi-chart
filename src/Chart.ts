@@ -36,6 +36,10 @@ export class Chart<Metadata = any> {
   defaultMargin = { top: 20, bottom: 35, left: 50, right: 20 };
   exportToPng: ((name?: string) => void) | null = null;
   options: ChartOptions;
+  autoscaledMaxExtents: Scales = {
+    x: { start: -Infinity, end: Infinity },
+    y: { start: -Infinity, end: Infinity }
+  };
 
   constructor(options?: PartialChartOptions) {
     this.options = {
@@ -248,10 +252,15 @@ export class Chart<Metadata = any> {
     };
   };
 
-  private draw = (baseElement: HTMLDivElement, bounds: Bounds, partialScales: PartialScales) => {
+  private draw = (
+    baseElement: HTMLDivElement,
+    bounds: Bounds,
+    maxExtents: PartialScales,
+    initialExtents: PartialScales
+  ) => {
     const getHtmlId = (layer: LayerType[keyof LayerType]) => `${layer}-${this.id}`;
     const { height, width, margin } = bounds;
-    const scales = this.processScales(partialScales);
+    this.autoscaledMaxExtents = this.processScales(maxExtents);
  
     const svg = d3.create("svg")
       .attr("id", getHtmlId(LayerType.Svg))
@@ -273,14 +282,14 @@ export class Chart<Metadata = any> {
       .attr("id", getHtmlId(LayerType.BaseLayer))
       .attr("clip-path", `url(#${getHtmlId(LayerType.ClipPath)})`);
 
-    const { x, y } = scales;
+    const { x, y } = this.autoscaledMaxExtents;
     const d3ScaleX = this.options.logScale.x ? d3.scaleLog : d3.scaleLinear;
     const scaleX = d3ScaleX()
-      .domain([x.start, x.end])
+      .domain([initialExtents.x?.start ?? x.start, initialExtents.x?.end ?? x.end])
       .range([ margin.left, width - margin.right ]);
     const d3ScaleY = this.options.logScale.y ? d3.scaleLog : d3.scaleLinear;
     const scaleY = d3ScaleY()
-      .domain([y.start, y.end])
+      .domain([initialExtents.y?.start ?? y.start, initialExtents.y?.end ?? y.end])
       .range([ height - margin.bottom, margin.top ]);
     
     const lineGen = d3.line<Point>()
@@ -304,7 +313,7 @@ export class Chart<Metadata = any> {
       scaleConfig: {
         linearScales: { x: scaleX, y: scaleY },
         lineGen,
-        scaleExtents: scales
+        scaleExtents: this.autoscaledMaxExtents
       },
       coreLayers: {
         [LayerType.Svg]: svg,
@@ -323,10 +332,14 @@ export class Chart<Metadata = any> {
     baseElement.append(layerArgs.coreLayers[LayerType.Svg].node()!);
   };
 
-  appendTo = (baseElement: HTMLDivElement, partialScales: PartialScales = {}) => {
+  appendTo = (
+    baseElement: HTMLDivElement,
+    maxExtents: PartialScales = {},
+    initialExtents: PartialScales = {},
+  ) => {
     const drawWithBounds = (width: number, height: number) => {
       const bounds = { width, height, margin: this.defaultMargin };
-      this.draw(baseElement, bounds, partialScales);
+      this.draw(baseElement, bounds, maxExtents, initialExtents);
     };
 
     const { width, height } = baseElement.getBoundingClientRect();
