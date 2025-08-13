@@ -91,13 +91,13 @@ const RDPAlgorithm = (linesSC: Point[][], epsilon: number) => {
   });
 };
 
-export class TracesLayer extends OptionalLayer {
+export class TracesLayer<Metadata> extends OptionalLayer {
   type = LayerType.Trace;
   private traces: D3Selection<SVGPathElement>[] = [];
   private lowResLinesSC: Point[][] = [];
   private getNewPoint: null | ((x: number, y: number, t: number) => Point) = null;
 
-  constructor(public linesDC: Lines, public options: TracesOptions) {
+  constructor(public linesDC: Lines<Metadata>, public options: TracesOptions) {
     super();
   };
 

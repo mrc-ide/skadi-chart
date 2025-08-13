@@ -1,10 +1,10 @@
 import { LayerArgs, ScatterPoints } from "@/types";
 import { LayerType, OptionalLayer } from "./Layer";
 
-export class ScatterLayer extends OptionalLayer {
+export class ScatterLayer<Metadata> extends OptionalLayer {
   type = LayerType.Scatter;
 
-  constructor(public points: ScatterPoints) {
+  constructor(public points: ScatterPoints<Metadata>) {
     super();
   };
 
