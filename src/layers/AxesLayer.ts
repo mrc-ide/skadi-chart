@@ -38,7 +38,7 @@ export class AxesLayer extends OptionalLayer {
     }
 
     // SI-prefix with 2 significant figures and no trailing zeros, 42e6 -> 42M
-    const axisY = d3.axisLeft(scaleY).ticks(ticks.y, ".2~s").tickSize(0).tickPadding(12);
+    const axisY = d3.axisLeft(layerArgs.scaleConfig.scaleYCategorical).ticks(ticks.y, ".2~s").tickSize(0).tickPadding(12);
     const axisLayerY = svgLayer.append("g")
       .attr("id", `${getHtmlId(LayerType.Axes)}-y`)
       .style("font-size", "0.75rem")

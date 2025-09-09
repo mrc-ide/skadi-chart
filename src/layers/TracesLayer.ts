@@ -1,4 +1,4 @@
-import { D3Selection, LayerArgs, Lines, NumericZoomExtents, Point, ZoomExtents } from "@/types";
+import { BetterPoint, D3Selection, LayerArgs, Lines, NumericZoomExtents, Point, ZoomExtents } from "@/types";
 import { LayerType, OptionalLayer } from "./Layer";
 
 export type TracesOptions = {
@@ -49,7 +49,7 @@ const doRDP = (
   const rangeYSC = endSC.y - startSC.y;
   const rangeXSC = endSC.x - startSC.x;
   const crossProductSC = endSC.x * startSC.y - endSC.y * startSC.x;
-  
+
   // we are applying this algorthim in svg coordinates as we want to lower resolution of lines based on
   // visual distance instead of data coordinates (DC)
   //
@@ -97,7 +97,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
   private lowResLinesSC: Point[][] = [];
   private getNewPoint: null | ((x: number, y: number, t: number) => Point) = null;
 
-  constructor(public linesDC: Lines<Metadata>, public options: TracesOptions) {
+  constructor(public linesDC: Lines<Metadata>, public options: TracesOptions, public categoricalPoints: Lines<Metadata> = []) {
     super();
   };
 
@@ -107,7 +107,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
   private customTween = (index: number, zoomExtents: NumericZoomExtents) => {
     const currLineSC = this.lowResLinesSC[index];
     return (t: number) => {
-      const intermediateLineSC = currLineSC.map(({x, y}) => this.getNewPoint!(x, y, t));
+      const intermediateLineSC = currLineSC.map(({ x, y }) => this.getNewPoint!(x, y, t));
       return this.customLineGen(intermediateLineSC, zoomExtents);
     };
   };
@@ -118,12 +118,12 @@ export class TracesLayer<Metadata> extends OptionalLayer {
     let retStr = "";
     const { x, y } = lineSC[0];
     let wasLastPointInRange = zoomExtents.x[0] <= x && x <= zoomExtents.x[1]
-                           && zoomExtents.y[1] <= y && y <= zoomExtents.y[0];
+      && zoomExtents.y[1] <= y && y <= zoomExtents.y[0];
 
     for (let i = 0; i < lineSC.length; i++) {
       const { x, y } = lineSC[i];
       const isPointInRange = zoomExtents.x[0] <= x && x <= zoomExtents.x[1]
-                          && zoomExtents.y[1] <= y && y <= zoomExtents.y[0];
+        && zoomExtents.y[1] <= y && y <= zoomExtents.y[0];
 
       // if last point in range we always want to add next point even if it
       // isn't in range because we want the line to at least continue off the
@@ -190,6 +190,22 @@ export class TracesLayer<Metadata> extends OptionalLayer {
         .attr("d", linePathSC);
     });
 
+    // categorical points means lines ok
+    this.categoricalPoints.map((line, index) => {
+      const translation = layerArgs.scaleConfig.scaleYCategorical(line.metadata?.category)! + layerArgs.scaleConfig.categoryThickness / 2;
+      const linePathSC = layerArgs.scaleConfig.lineGen(line.points);
+      return layerArgs.coreLayers[LayerType.BaseLayer].append("path")
+        .attr("id", `${layerArgs.getHtmlId(LayerType.Trace)}-${index}`)
+        .attr("pointer-events", "none")
+        .attr("fill", "none")
+        .attr("stroke", line.style.color || "black")
+        .attr("opacity", line.style.opacity || 1)
+        .attr("stroke-width", line.style.strokeWidth || 0.5)
+        .attr("stroke-dasharray", line.style.strokeDasharray || "")
+        .attr("d", linePathSC)
+        .attr("transform", `translate(0, ${translation})`);
+    });
+
     this.beforeZoom = (zoomExtentsDC: NumericZoomExtents) => {
       const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
 
@@ -212,7 +228,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
       // brush selection
       const offsetXSC = scalingX * scaleX(newExtentXDC[0]) - scaleX(oldExtentXDC[0]);
       const offsetYSC = scalingY * scaleY(newExtentYDC[0]) - scaleY(oldExtentYDC[0]);
-      
+
       // useful to precompute
       const scaleRelativeX = scalingX - 1;
       const scaleRelativeY = scalingY - 1;

@@ -1,4 +1,7 @@
 <template>
+  <h1>Categorical axis</h1>
+  <div class="chart" ref="chartCategoricalAxis" id="chartCategoricalAxis"></div>
+
   <h1>Basic traces (spark lines)</h1>
   <div class="chart" ref="chartSparkLines" id="chartSparkLines"></div>
 
@@ -58,6 +61,7 @@ import { ScatterPoints } from "@/types";
 import { Chart, LayerArgs, LayerType, Lines, OptionalLayer, Scales } from "../skadi-chart";
 import { onMounted, ref, watch } from "vue";
 
+const chartCategoricalAxis = ref<HTMLDivElement | null>(null);
 const chartSparkLines = ref<HTMLDivElement | null>(null);
 const chartOnlyAxes = ref<HTMLDivElement | null>(null);
 const chartAxesAndGrid = ref<HTMLDivElement | null>(null);
@@ -262,7 +266,26 @@ watch([logScaleY, logScaleX], () => {
     .appendTo(chartAxesLabelGridZoomAndLogScale.value!);
 });
 
+const myPoints = [
+  { x: 0.1, y: "a" },
+  { x: 0.2, y: "bee" },
+  { x: 0.3, y: "a" },
+  { x: 0.4, y: "a" },
+  { x: 0.5, y: "a" },
+  { x: 0.6, y: "bee" },
+  { x: 0.7, y: "sea" },
+  { x: 0.8, y: "a" },
+  { x: 0.9, y: "D3" },
+  { x: 0.95, y: "D3" },
+]
+
 onMounted(async () => {
+  new Chart()
+    .addAxes(axesLabels)
+    .addScatterPoints([], myPoints)
+    .addTraces([], {}, curvesSparkLines.map(l => ({ ...l, metadata: { category: "D3" } })))
+    .appendTo(chartCategoricalAxis.value!, scales);
+
   new Chart()
     .addTraces(curvesSparkLines)
     .appendTo(chartSparkLines.value!);

@@ -1,10 +1,10 @@
-import { LayerArgs, ScatterPoints } from "@/types";
+import { BetterPoint, LayerArgs, ScatterPoints } from "@/types";
 import { LayerType, OptionalLayer } from "./Layer";
 
 export class ScatterLayer<Metadata> extends OptionalLayer {
   type = LayerType.Scatter;
 
-  constructor(public points: ScatterPoints<Metadata>) {
+  constructor(public points: ScatterPoints<Metadata>, public categoricalPoints: BetterPoint[] = []) {
     super();
   };
 
@@ -13,7 +13,7 @@ export class ScatterLayer<Metadata> extends OptionalLayer {
     const baseLayer = layerArgs.coreLayers[LayerType.BaseLayer];
     const { animationDuration } = layerArgs.globals;
     const { getHtmlId } = layerArgs;
-  
+
     const scatter = baseLayer.append("g");
     const scatterPoints = this.points.map((p, index) => {
       return scatter.append("circle")
@@ -25,6 +25,19 @@ export class ScatterLayer<Metadata> extends OptionalLayer {
         .attr("fill", p.style?.color || "black")
         .style("opacity", p.style?.opacity || 1)
     });
+
+    this.categoricalPoints.map((p, index) => {
+      console.log(layerArgs.scaleConfig.scaleYCategorical(p.y))
+
+      return scatter.append("circle")
+        .attr("id", `${getHtmlId(LayerType.Scatter)}-${index}`)
+        .attr("pointer-events", "none")
+        .attr("cx", scaleX(p.x))
+        .attr("cy", layerArgs.scaleConfig.scaleYCategorical(p.y)! + layerArgs.scaleConfig.categoryThickness / 2)
+        .attr("r", "0.9%")
+        .attr("fill", "red")
+        .style("opacity", 1)
+    })
 
     this.zoom = async () => {
       const promises: Promise<void>[] = [];
