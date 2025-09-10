@@ -97,7 +97,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
   private lowResLinesSC: Point[][] = [];
   private getNewPoint: null | ((x: number, y: number, t: number) => Point) = null;
 
-  constructor(public linesDC: Lines<Metadata>, public options: TracesOptions, public categoricalPoints: Lines<Metadata> = []) {
+  constructor(public linesDC: Lines<Metadata>, public options: TracesOptions, public categoricalLines: Lines<Metadata> = []) {
     super();
   };
 
@@ -190,8 +190,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
         .attr("d", linePathSC);
     });
 
-    // categorical points means lines ok
-    this.categoricalPoints.map((line, index) => {
+    this.categoricalLines.map((line, index) => {
       const translation = layerArgs.scaleConfig.scaleYCategorical(line.metadata?.category)! + layerArgs.scaleConfig.categoryThickness / 2;
       const linePathSC = layerArgs.scaleConfig.lineGen(line.points);
       return layerArgs.coreLayers[LayerType.BaseLayer].append("path")
