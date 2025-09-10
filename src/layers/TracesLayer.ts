@@ -97,7 +97,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
   private lowResLinesSC: Point[][] = [];
   private getNewPoint: null | ((x: number, y: number, t: number) => Point) = null;
 
-  constructor(public linesDC: Lines<Metadata>, public options: TracesOptions, public categoricalLines: Lines<Metadata> = []) {
+  constructor(public linesDC: Lines<Metadata>, public options: TracesOptions, public categoricalLinesDC: Lines<Metadata> = []) {
     super();
   };
 
@@ -190,19 +190,31 @@ export class TracesLayer<Metadata> extends OptionalLayer {
         .attr("d", linePathSC);
     });
 
-    this.categoricalLines.map((line, index) => {
-      const translation = layerArgs.scaleConfig.scaleYCategorical(line.metadata?.category)! + layerArgs.scaleConfig.categoryThickness / 2;
+    const categoricalDomainAgain3 = ["a", "bee", "sea", "D3"]
+
+    console.log("\n\n")
+    this.categoricalLinesDC.map((line, index) => {
+      const category = line.metadata?.category;
+      const categoryIndex = categoricalDomainAgain3.findIndex(c => c === category);
+      const categoryThickness = layerArgs.scaleConfig.scaleYCategorical.step();
+      // Centering 0 within the ridge. TODO: Alternative (for lines with no negative values) would put 0 at bottom of ridge.
+      const adjustmentIfCenteringZero = 1;
+      const translation = categoryThickness * (categoryIndex + ((adjustmentIfCenteringZero - categoricalDomainAgain3.length) / 2));
+
+      const color = ["green", "orange", "turquoise", "blue"][categoryIndex];
+
       const linePathSC = layerArgs.scaleConfig.lineGen(line.points);
-      return layerArgs.coreLayers[LayerType.BaseLayer].append("path")
+      const baseLayer = layerArgs.coreLayers[LayerType.BaseLayer];
+      baseLayer.append("path")
         .attr("id", `${layerArgs.getHtmlId(LayerType.Trace)}-${index}`)
         .attr("pointer-events", "none")
         .attr("fill", "none")
-        .attr("stroke", line.style.color || "black")
-        .attr("opacity", line.style.opacity || 1)
-        .attr("stroke-width", line.style.strokeWidth || 0.5)
+        .attr("stroke", color)
+        .attr("opacity", 1)
+        .attr("stroke-width", 1)
         .attr("stroke-dasharray", line.style.strokeDasharray || "")
         .attr("d", linePathSC)
-        .attr("transform", `translate(0, ${translation})`);
+        .attr("transform", `translate(0, ${translation})`)
     });
 
     this.beforeZoom = (zoomExtentsDC: NumericZoomExtents) => {

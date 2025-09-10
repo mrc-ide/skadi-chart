@@ -5,7 +5,7 @@ import { D3Selection, LayerArgs, Point, PointWithMetadata, XY } from "@/types";
 import { ScatterLayer } from "./ScatterLayer";
 
 export type TooltipHtmlCallback<Metadata> =
-  (pointWithMetadata: PointWithMetadata<Metadata>) => string
+  (pointWithMetadata: PointWithMetadata<Metadata>, bandName?: string) => string
 
 // this file uses variable naming conventions that follow the coordinate systems
 // section outlined in the README. If DC, SC and CC don't make sense to you please
@@ -49,12 +49,37 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     rangeDC: XY<number>
   ) => {
     // d3.pointer converts coords from CC to SC
-    const [ clientXSC, clientYSC ] = d3.pointer(eventCC);
+    const [clientXSC, clientYSC] = d3.pointer(eventCC);
     const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
+
+    // To get DC coordinates from SC coordinates in the case of band scales,
+    // we must first work out which band we are in. Then we must transform the
+    // distance from the band's zero-line into a nominal distance from the graph's
+    // zero-line as if the band took the full height of the graph.
+    const categoryDomain = layerArgs.scaleConfig.scaleYCategorical.domain();
+    const categoriesWithBandStarts = categoryDomain.map(c => {
+      return { name: c, startSC: layerArgs.scaleConfig.scaleYCategorical(c) }
+    });
+    const band = categoriesWithBandStarts.find(band => clientYSC >= band.startSC!);
+
+    // This code bakes in the assumption that the zero (DC) line is in the center (SC) of the band / the graph.
+    // Use bandwidth() instead of step() to exclude inter-band padding. (Not sure this excludes the pre-band padding but it does exclude post-band padding)
+    const bandZeroLineSC = band?.startSC! + (layerArgs.scaleConfig.scaleYCategorical.bandwidth() / 2);
+    const distanceFromBandZeroLineSC = clientYSC - bandZeroLineSC;
+    // Undo squashing.
+    // TODO: squashFactor does not take into account any padding between bands
+    const squashFactor = categoryDomain.length;
+    const distanceFromBandZeroLineAsIfFullHeightSC = distanceFromBandZeroLineSC * squashFactor;
+    const zeroLineAsIfFullHeightSC = scaleY(0);
+    const clientYSCAsIfFullHeight = zeroLineAsIfFullHeightSC + distanceFromBandZeroLineAsIfFullHeightSC;
+
+    console.log("\nclientYSC", clientYSC);
+    console.log("bandZeroLineSC", bandZeroLineSC);
+    console.log("zeroLineAsIfFullHeightSC", zeroLineAsIfFullHeightSC);
 
     // scale.invert functions convert SC to DC, applying just scale converts from
     // DC to SC
-    const coordsDC = { x: scaleX.invert(clientXSC), y: scaleY.invert(clientYSC) };
+    const coordsDC = { x: scaleX.invert(clientXSC), y: scaleY.invert(clientYSCAsIfFullHeight) };
 
     // notice that the min point we want is DC because data points are always
     // going to use data coordinates but the minimum distance that we compare
@@ -72,15 +97,30 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     // compute a proportional distance since we only care about the minimum
     // point
     let fastMinDistanceSC = Infinity;
-    const minPointDC = flatPointsDC.reduce((minPDC, pDC) => {
-      const distanceSC = this.getFastDistanceSC(coordsDC, pDC, rangeDC);
-      if (distanceSC >= fastMinDistanceSC) return minPDC;
-      fastMinDistanceSC = distanceSC;
-      return pDC;
-    }, { x: 0, y: 0 });
+    const minPointDC = flatPointsDC
+      .filter(point => band ? point.metadata?.category! === band.name : true) // Only look for points in the right category
+      .reduce((minPDC, pDC) => {
+        const distanceSC = this.getFastDistanceSC(coordsDC, pDC, rangeDC);
+        if (distanceSC >= fastMinDistanceSC) return minPDC;
+        fastMinDistanceSC = distanceSC;
+        return pDC;
+      }, { x: 0, y: 0 });
 
+
+    // From TraceLayer:
+    const categoryIndex = categoryDomain.findIndex(c => c === band!.name);
+    const categoryThickness = layerArgs.scaleConfig.scaleYCategorical.step();
+    // Centering 0 within the ridge. TODO: Alternative (for lines with no negative values) would put 0 at bottom of ridge.
+    const adjustmentIfCenteringZero = 1;
+    const translation = categoryThickness * (categoryIndex + ((adjustmentIfCenteringZero - categoryDomain.length) / 2));
+
+
+    // scaleY converts DC to SC.
     // SC distance will be the same as pixel distance
-    const minPointSC = { x: scaleX(minPointDC.x), y: scaleY(minPointDC.y) };
+    const minPointSC = {
+      x: scaleX(minPointDC.x),
+      y: scaleY(minPointDC.y / squashFactor) - translation // Solves tooltipRadius check AND positions tooltip correctly on y axis
+    };
     const minDistanceSC = this.getDistance({ x: clientXSC, y: clientYSC }, minPointSC);
 
     // if client pointer is more than 25 pixels away from the closest point
@@ -110,7 +150,7 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
       // tooltips can be accurate to the user data and we translate the tooltip
       // so it is on top of the closest data point for which we need client
       // coordinates of the point (absolute position of the min point)
-      tooltip.html(this.tooltipHtmlCallback(minPointDC))
+      tooltip.html(this.tooltipHtmlCallback(minPointDC, band?.name))
         .style("left", `${minPointCC.x}px`)
         .style("top", `${minPointCC.y}px`)
         .style("opacity", 1)
@@ -131,13 +171,14 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
       .attr("id", `${layerArgs.getHtmlId(this.type)}`)
       .style("position", "fixed")
       .style("pointer-events", "none") as any as D3Selection<HTMLDivElement>;
-    
+
     let flatPointsDC = traceLayers.reduce((pointsWithMetadata, layer) => {
-      const layerPointsWithMetadata = layer.linesDC.flatMap(l => {
+      const layerPointsWithMetadata = layer.categoricalLinesDC.flatMap(l => {
         return l.points.map(p => ({ ...p, metadata: l.metadata }));
       });
       return [...layerPointsWithMetadata, ...pointsWithMetadata];
     }, [] as PointWithMetadata<Metadata>[]);
+
     flatPointsDC = scatterLayers.reduce((points, layer) => {
       return [...layer.points.map(p => ({ x: p.x, y: p.y, metadata: p.metadata })), ...points];
     }, flatPointsDC);

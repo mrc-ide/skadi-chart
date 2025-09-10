@@ -27,13 +27,11 @@ export class ScatterLayer<Metadata> extends OptionalLayer {
     });
 
     this.categoricalPoints.map((p, index) => {
-      console.log(layerArgs.scaleConfig.scaleYCategorical(p.y))
-
-      return scatter.append("circle")
+      scatter.append("circle")
         .attr("id", `${getHtmlId(LayerType.Scatter)}-${index}`)
         .attr("pointer-events", "none")
         .attr("cx", scaleX(p.x))
-        .attr("cy", layerArgs.scaleConfig.scaleYCategorical(p.y)! + layerArgs.scaleConfig.categoryThickness / 2)
+        .attr("cy", layerArgs.scaleConfig.scaleYCategorical(p.y)! + layerArgs.scaleConfig.scaleYCategorical.step() / 2)
         .attr("r", "0.9%")
         .attr("fill", "red")
         .style("opacity", 1)

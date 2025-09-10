@@ -3,7 +3,7 @@ import { AxesLayer } from "./layers/AxesLayer";
 import { TracesLayer, TracesOptions } from "./layers/TracesLayer";
 import { ZoomLayer, ZoomOptions } from "./layers/ZoomLayer";
 import { TooltipHtmlCallback, TooltipsLayer } from "./layers/TooltipsLayer";
-import { AllOptionalLayers, BetterPoint, Bounds, D3Selection, LayerArgs, Lines, NumericZoomExtents, PartialScales, Point, Scales, ScatterPoints, XY, XYLabel } from "./types";
+import { AllOptionalLayers, BetterPoint, BetterPointWithMetadata, Bounds, D3Selection, LayerArgs, Lines, NumericZoomExtents, PartialScales, Point, Scales, ScatterPoints, XY, XYLabel } from "./types";
 import { LayerType, LifecycleHooks, OptionalLayer } from "./layers/Layer";
 import { GridLayer } from "./layers/GridLayer";
 import html2canvas from "html2canvas";
@@ -162,7 +162,7 @@ export class Chart<Metadata = any> {
     return filteredPoints;
   }
 
-  addScatterPoints = (points: ScatterPoints<Metadata>, categoricalPoints: BetterPoint[] = []) => {
+  addScatterPoints = (points: ScatterPoints<Metadata>, categoricalPoints: BetterPointWithMetadata<Metadata>[] = []) => {
     const filteredPoints = this.filterScatterPoints(points);
     this.optionalLayers.push(new ScatterLayer(filteredPoints, categoricalPoints));
     return this;
@@ -282,6 +282,7 @@ export class Chart<Metadata = any> {
       .attr("id", getHtmlId(LayerType.BaseLayer))
       .attr("clip-path", `url(#${getHtmlId(LayerType.ClipPath)})`);
 
+    const categoricalDomain = ["a", "bee", "sea", "D3"]
 
     const { x, y } = this.autoscaledMaxExtents;
     const initialDomain: NumericZoomExtents = {
@@ -296,16 +297,17 @@ export class Chart<Metadata = any> {
     const scaleY = d3ScaleY()
       .domain(initialDomain.y)
       .range([height - margin.bottom, margin.top]);
-    const categoricalDomain = ["a", "bee", "sea", "D3"]
     const scaleYCategorical = d3.scaleBand()
       .domain(categoricalDomain)
       .range([height - margin.bottom, margin.top]);
-    const categoryThickness = ((height - margin.bottom) - margin.top) / categoricalDomain.length
+    // Two y scales are required: the categorical one is mapped to the numerical one.
 
     // 'line' - a function mapping data onto a scale.
+    // scaleY converts domain coordinates (DC) to svg coordinates (SC), so
+    // in the line y function 
     const lineGen = d3.line<Point>()
       .x(d => scaleX(d.x))
-      .y(d => scaleY(d.y));
+      .y(d => scaleY(d.y / categoricalDomain.length)) // squashing the lines to fit within ridges.
 
     let ticksX = 10;
     if (width < 500) ticksX = 6;
@@ -324,7 +326,6 @@ export class Chart<Metadata = any> {
       scaleConfig: {
         linearScales: { x: scaleX, y: scaleY },
         scaleYCategorical,
-        categoryThickness,
         lineGen,
         scaleExtents: this.autoscaledMaxExtents
       },

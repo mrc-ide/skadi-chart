@@ -57,6 +57,41 @@ export class AxesLayer extends OptionalLayer {
         .style("stroke-width", 0.5);
     }
 
+
+    // console.warn("layerArgs.scaleConfig.scaleYCategorical!(nnnn)", layerArgs.scaleConfig.scaleYCategorical!("a"), layerArgs.scaleConfig.scaleYCategorical!("bee"), layerArgs.scaleConfig.scaleYCategorical!("sea"), layerArgs.scaleConfig.scaleYCategorical!("D3"))
+
+    baseLayer.append("g").append("line")
+      .attr("x1", scaleX(0))
+      .attr("x2", scaleX(1))
+      .attr("y1", layerArgs.scaleConfig.scaleYCategorical!("a")!)
+      .attr("y2", layerArgs.scaleConfig.scaleYCategorical!("a")!)
+      .style("stroke", "red")
+      .style("stroke-width", 2);
+
+    baseLayer.append("g").append("line")
+      .attr("x1", scaleX(0))
+      .attr("x2", scaleX(1))
+      .attr("y1", layerArgs.scaleConfig.scaleYCategorical!("bee")!)
+      .attr("y2", layerArgs.scaleConfig.scaleYCategorical!("bee")!)
+      .style("stroke", "red")
+      .style("stroke-width", 2);
+
+    baseLayer.append("g").append("line")
+      .attr("x1", scaleX(0))
+      .attr("x2", scaleX(1))
+      .attr("y1", layerArgs.scaleConfig.scaleYCategorical!("sea")!)
+      .attr("y2", layerArgs.scaleConfig.scaleYCategorical!("sea")!)
+      .style("stroke", "red")
+      .style("stroke-width", 2);
+
+    baseLayer.append("g").append("line")
+      .attr("x1", scaleX(0))
+      .attr("x2", scaleX(1))
+      .attr("y1", layerArgs.scaleConfig.scaleYCategorical!("D3")!)
+      .attr("y2", layerArgs.scaleConfig.scaleYCategorical!("D3")!)
+      .style("stroke", "red")
+      .style("stroke-width", 4);
+
     if (this.labels.y) {
       layerArgs.coreLayers[LayerType.Svg].append("text")
         .attr("id", `${getHtmlId(LayerType.Axes)}-labely`)

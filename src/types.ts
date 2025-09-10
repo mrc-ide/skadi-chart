@@ -7,6 +7,7 @@ export type XY<T> = { x: T, y: T }
 export type Point = XY<number>
 export type BetterPoint = { x: number, y: string }
 export type PointWithMetadata<Metadata> = Point & { metadata?: Metadata }
+export type BetterPointWithMetadata<Metadata> = BetterPoint & { metadata?: Metadata }
 
 export type XYLabel = Partial<XY<string>>
 
@@ -43,7 +44,6 @@ export type LayerArgs = {
   scaleConfig: {
     linearScales: XY<d3.ScaleLinear<number, number, never>>,
     scaleYCategorical: d3.ScaleBand<string>,
-    categoryThickness: number,
     scaleExtents: Scales,
     lineGen: d3.Line<Point>
   },
