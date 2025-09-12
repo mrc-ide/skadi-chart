@@ -214,7 +214,7 @@ const tooltipHtmlCallback = (point: {x: number, y: number, metadata?: Metadata},
   const categoryAccordingToPointMetadata = point.metadata?.category!;
   const agreement = categoryAccordingToPointMetadata === bandName;
   const categoryIndex = categoricalDomainAgain.findIndex(c => c === bandName);
-  const textColor = ["green", "orange", "turquoise", "blue"][categoryIndex] ?? "lightgrey";
+  const textColor = colors[categoryIndex] ?? "lightgrey";
   return `<div style="color: ${textColor}; border: 1px solid black; padding: 5px;">
     X: ${point.x.toFixed(3)}, Y: ${point.y.toFixed(3)}
     <br/>
@@ -278,32 +278,26 @@ watch([logScaleY, logScaleX], () => {
     .appendTo(chartAxesLabelGridZoomAndLogScale.value!);
 });
 
-// TODO: Adapt scatter point layer to support numerical coord in categorical axes (so we can stack scatter plots),
-// as well as string y. This would make it able to behave more like the traces layer does but we should keep the
-// ability to plot against just the category (effectively coord = 0) as a bar chart would. Only then implement tooltips.
-const myPoints = [
-  { x: 0.1, y: "a", metadata: { category: "a" } },
-  { x: 0.2, y: "bee", metadata: { category: "bee" } },
-  { x: 0.3, y: "a", metadata: { category: "a" } },
-  { x: 0.4, y: "a", metadata: { category: "a" } },
-  { x: 0.5, y: "a", metadata: { category: "a" } },
-  { x: 0.6, y: "bee", metadata: { category: "bee" } },
-  { x: 0.7, y: "sea", metadata: { category: "sea" } },
-  { x: 0.8, y: "a", metadata: { category: "a" } },
-  { x: 0.9, y: "D3", metadata: { category: "D3" } },
-  { x: 0.95, y: "D3", metadata: { category: "D3" } },
-]
-
 onMounted(async () => {
   new Chart()
     .addAxes(axesLabels)
-    // .addScatterPoints([], myPoints)
+    .addScatterPoints([], pointsPointsAxesAndZoom.map((p, index) => {
+      const category = categoricalDomainAgain[index % categoricalDomainAgain.length];
+      const color = colors[index % categoricalDomainAgain.length];
+      return {
+        ...p,
+        metadata: { category },
+        style: { ...p.style, color }
+      }
+    }))
     .addTraces([], {}, curvesSparkLines.map((line, index) => {
       const category = categoricalDomainAgain[index % categoricalDomainAgain.length];
+      const color = colors[index % categoricalDomainAgain.length];
 
       return {
         ...line,
         metadata: { category },
+        style: { ...line.style, color }
       }
     }))
     .addTooltips(tooltipHtmlCallback)

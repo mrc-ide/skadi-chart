@@ -1,4 +1,4 @@
-import { BetterPoint, D3Selection, LayerArgs, Lines, NumericZoomExtents, Point, ZoomExtents } from "@/types";
+import { D3Selection, LayerArgs, Lines, NumericZoomExtents, Point, ZoomExtents } from "@/types";
 import { LayerType, OptionalLayer } from "./Layer";
 
 export type TracesOptions = {
@@ -198,7 +198,6 @@ export class TracesLayer<Metadata> extends OptionalLayer {
       const categoryIndex = categoricalDomain.findIndex(c => c === category);
       // Centering 0 within the ridge. TODO: Alternative (for lines with no negative values) would put 0 at bottom of ridge.
       let translation = (((categoricalDomain.length - 1) / 2) - categoryIndex) * categoryThickness;
-      const color = ["green", "orange", "turquoise", "blue", "pink"][categoryIndex];
 
       const linePathSC = layerArgs.scaleConfig.lineGen(line.points);
       const baseLayer = layerArgs.coreLayers[LayerType.BaseLayer];
@@ -206,7 +205,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
         .attr("id", `${layerArgs.getHtmlId(LayerType.Trace)}-${index}`)
         .attr("pointer-events", "none")
         .attr("fill", "none")
-        .attr("stroke", color)
+        .attr("stroke", line.style.color || "black")
         .attr("opacity", 1)
         .attr("stroke-width", 1)
         .attr("stroke-dasharray", line.style.strokeDasharray || "")

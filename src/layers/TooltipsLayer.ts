@@ -73,10 +73,6 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     const zeroLineAsIfFullHeightSC = scaleY(0);
     const clientYSCAsIfFullHeight = zeroLineAsIfFullHeightSC + distanceFromBandZeroLineAsIfFullHeightSC;
 
-    console.log("\nclientYSC", clientYSC);
-    console.log("bandZeroLineSC", bandZeroLineSC);
-    console.log("zeroLineAsIfFullHeightSC", zeroLineAsIfFullHeightSC);
-
     // scale.invert functions convert SC to DC, applying just scale converts from
     // DC to SC
     const coordsDC = { x: scaleX.invert(clientXSC), y: scaleY.invert(clientYSCAsIfFullHeight) };
@@ -180,7 +176,7 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     }, [] as PointWithMetadata<Metadata>[]);
 
     flatPointsDC = scatterLayers.reduce((points, layer) => {
-      return [...layer.points.map(p => ({ x: p.x, y: p.y, metadata: p.metadata })), ...points];
+      return [...layer.categoricalPoints.map(p => ({ x: p.x, y: p.y, metadata: p.metadata })), ...points];
     }, flatPointsDC);
 
     const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;

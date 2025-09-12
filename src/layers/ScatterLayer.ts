@@ -1,10 +1,10 @@
-import { BetterPoint, LayerArgs, ScatterPoints } from "@/types";
+import { LayerArgs, ScatterPoints } from "@/types";
 import { LayerType, OptionalLayer } from "./Layer";
 
 export class ScatterLayer<Metadata> extends OptionalLayer {
   type = LayerType.Scatter;
 
-  constructor(public points: ScatterPoints<Metadata>, public categoricalPoints: BetterPoint[] = []) {
+  constructor(public points: ScatterPoints<Metadata>, public categoricalPoints: ScatterPoints<Metadata> = []) {
     super();
   };
 
@@ -26,15 +26,25 @@ export class ScatterLayer<Metadata> extends OptionalLayer {
         .style("opacity", p.style?.opacity || 1)
     });
 
+    const categoricalDomain = layerArgs.scaleConfig.scaleYCategorical.domain();
+    const categoryThickness = layerArgs.scaleConfig.scaleYCategorical.step();
+    const squashFactor = categoricalDomain.length;
+
     this.categoricalPoints.map((p, index) => {
+      const category = p.metadata?.category;
+      const categoryIndex = categoricalDomain.findIndex(c => c === category);
+      // Centering 0 within the ridge. TODO: Alternative (for lines with no negative values) would put 0 at bottom of ridge.
+      let translation = (((categoricalDomain.length - 1) / 2) - categoryIndex) * categoryThickness;
+
       scatter.append("circle")
         .attr("id", `${getHtmlId(LayerType.Scatter)}-${index}`)
         .attr("pointer-events", "none")
         .attr("cx", scaleX(p.x))
-        .attr("cy", layerArgs.scaleConfig.scaleYCategorical(p.y)! + layerArgs.scaleConfig.scaleYCategorical.step() / 2)
-        .attr("r", "0.9%")
-        .attr("fill", "red")
-        .style("opacity", 1)
+        .attr("cy", scaleY(p.y / squashFactor))
+        .attr("r", p.style?.radius || "0.2%")
+        .attr("fill", p.style?.color || "black")
+        .style("opacity", p.style?.opacity || 1)
+        .attr("transform", `translate(0, ${translation})`)
     })
 
     this.zoom = async () => {

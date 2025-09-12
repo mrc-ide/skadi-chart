@@ -3,7 +3,7 @@ import { AxesLayer } from "./layers/AxesLayer";
 import { TracesLayer, TracesOptions } from "./layers/TracesLayer";
 import { ZoomLayer, ZoomOptions } from "./layers/ZoomLayer";
 import { TooltipHtmlCallback, TooltipsLayer } from "./layers/TooltipsLayer";
-import { AllOptionalLayers, BetterPoint, BetterPointWithMetadata, Bounds, D3Selection, LayerArgs, Lines, NumericZoomExtents, PartialScales, Point, Scales, ScatterPoints, XY, XYLabel } from "./types";
+import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, NumericZoomExtents, PartialScales, Point, Scales, ScatterPoints, XY, XYLabel } from "./types";
 import { LayerType, LifecycleHooks, OptionalLayer } from "./layers/Layer";
 import { GridLayer } from "./layers/GridLayer";
 import html2canvas from "html2canvas";
@@ -162,7 +162,7 @@ export class Chart<Metadata = any> {
     return filteredPoints;
   }
 
-  addScatterPoints = (points: ScatterPoints<Metadata>, categoricalPoints: BetterPointWithMetadata<Metadata>[] = []) => {
+  addScatterPoints = (points: ScatterPoints<Metadata>, categoricalPoints: ScatterPoints<Metadata> = []) => {
     const filteredPoints = this.filterScatterPoints(points);
     this.optionalLayers.push(new ScatterLayer(filteredPoints, categoricalPoints));
     return this;
