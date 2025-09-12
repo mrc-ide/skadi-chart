@@ -190,18 +190,15 @@ export class TracesLayer<Metadata> extends OptionalLayer {
         .attr("d", linePathSC);
     });
 
-    const categoricalDomainAgain3 = ["a", "bee", "sea", "D3"]
+    const categoricalDomain = layerArgs.scaleConfig.scaleYCategorical.domain();
+    const categoryThickness = layerArgs.scaleConfig.scaleYCategorical.step();
 
-    console.log("\n\n")
     this.categoricalLinesDC.map((line, index) => {
       const category = line.metadata?.category;
-      const categoryIndex = categoricalDomainAgain3.findIndex(c => c === category);
-      const categoryThickness = layerArgs.scaleConfig.scaleYCategorical.step();
+      const categoryIndex = categoricalDomain.findIndex(c => c === category);
       // Centering 0 within the ridge. TODO: Alternative (for lines with no negative values) would put 0 at bottom of ridge.
-      const adjustmentIfCenteringZero = 1;
-      const translation = categoryThickness * (categoryIndex + ((adjustmentIfCenteringZero - categoricalDomainAgain3.length) / 2));
-
-      const color = ["green", "orange", "turquoise", "blue"][categoryIndex];
+      let translation = (((categoricalDomain.length - 1) / 2) - categoryIndex) * categoryThickness;
+      const color = ["green", "orange", "turquoise", "blue", "pink"][categoryIndex];
 
       const linePathSC = layerArgs.scaleConfig.lineGen(line.points);
       const baseLayer = layerArgs.coreLayers[LayerType.BaseLayer];

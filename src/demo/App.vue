@@ -208,18 +208,19 @@ const makeRandomCurves = (props: typeof propsBasic) => {
   return lines;
 };
 
-const categoricalDomainAgain = ["a", "bee", "sea", "D3"]
+const categoricalDomainAgain = ["A", "B", "C"]
 
 const tooltipHtmlCallback = (point: {x: number, y: number, metadata?: Metadata}, bandName: string) => {
   const categoryAccordingToPointMetadata = point.metadata?.category!;
   const agreement = categoryAccordingToPointMetadata === bandName;
   const categoryIndex = categoricalDomainAgain.findIndex(c => c === bandName);
-  const textColor = ["blue", "turquoise", "orange", "green"][categoryIndex] ?? "lightgrey";
+  const textColor = ["green", "orange", "turquoise", "blue"][categoryIndex] ?? "lightgrey";
   return `<div style="color: ${textColor}; border: 1px solid black; padding: 5px;">
     X: ${point.x.toFixed(3)}, Y: ${point.y.toFixed(3)}
     <br/>
     <span style="color: ${agreement ? "green" : "red" }">Category according to point metadata: ${categoryAccordingToPointMetadata}</span>
     <br/>Band according to tooltip layer: ${bandName ?? "none"}
+    <br/>point.metadata.category index: ${categoryIndex}
   </div>`;
 };
 
@@ -299,6 +300,25 @@ onMounted(async () => {
     // .addScatterPoints([], myPoints)
     .addTraces([], {}, curvesSparkLines.map((line, index) => {
       const category = categoricalDomainAgain[index % categoricalDomainAgain.length];
+
+      if (category === "A") {
+        return {
+          ...line,
+          points: line.points.map(p => ({ ...p, y: 0 })),
+          metadata: { category },
+        }
+      }
+
+      if (category === "B") {
+        return {
+          ...line,
+          points: line.points.map((p, pi) => ({ ...p, y: pi * 2000 })),
+          metadata: { category },
+        }
+      }
+
+      console.warn("category", category);
+
       return {
         ...line,
         metadata: { category },

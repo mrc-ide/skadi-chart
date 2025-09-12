@@ -282,7 +282,7 @@ export class Chart<Metadata = any> {
       .attr("id", getHtmlId(LayerType.BaseLayer))
       .attr("clip-path", `url(#${getHtmlId(LayerType.ClipPath)})`);
 
-    const categoricalDomain = ["a", "bee", "sea", "D3"]
+    const categoricalDomain = ["A", "B", "C"]
 
     const { x, y } = this.autoscaledMaxExtents;
     const initialDomain: NumericZoomExtents = {
@@ -308,6 +308,10 @@ export class Chart<Metadata = any> {
     const lineGen = d3.line<Point>()
       .x(d => scaleX(d.x))
       .y(d => scaleY(d.y / categoricalDomain.length)) // squashing the lines to fit within ridges.
+
+    // Todo: allow a squashing factor other than categoricalDomain.length (though that is a good default)
+    // Translation logic will need to change (for the non-zero-centering case) so that values only exceed
+    // the band width on one edge (the other edge being bounded by 0).
 
     let ticksX = 10;
     if (width < 500) ticksX = 6;
