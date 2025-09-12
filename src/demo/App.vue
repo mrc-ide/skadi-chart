@@ -301,24 +301,6 @@ onMounted(async () => {
     .addTraces([], {}, curvesSparkLines.map((line, index) => {
       const category = categoricalDomainAgain[index % categoricalDomainAgain.length];
 
-      if (category === "A") {
-        return {
-          ...line,
-          points: line.points.map(p => ({ ...p, y: 0 })),
-          metadata: { category },
-        }
-      }
-
-      if (category === "B") {
-        return {
-          ...line,
-          points: line.points.map((p, pi) => ({ ...p, y: pi * 2000 })),
-          metadata: { category },
-        }
-      }
-
-      console.warn("category", category);
-
       return {
         ...line,
         metadata: { category },

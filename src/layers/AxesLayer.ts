@@ -48,24 +48,18 @@ export class AxesLayer extends OptionalLayer {
       .style("stroke-opacity", 0);
     let axisLineY: D3Selection<SVGLineElement> | null = null;
     if (!logScale.y) {
-      axisLineY = baseLayer.append("g").append("line")
-        .attr("x1", margin.left)
-        .attr("x2", width - margin.right)
-        .attr("y1", scaleY(0))
-        .attr("y2", scaleY(0))
-        .style("stroke", "black")
-        .style("stroke-width", 0.5);
+      const categoryThickness = layerArgs.scaleConfig.scaleYCategorical.bandwidth();
+      layerArgs.scaleConfig.scaleYCategorical.domain().forEach(cat => {
+        const bandStartYSC = layerArgs.scaleConfig.scaleYCategorical!(cat)!
+        baseLayer.append("g").append("line")
+          .attr("x1", scaleX(0))
+          .attr("x2", scaleX(1))
+          .attr("y1", bandStartYSC + (categoryThickness / 2))
+          .attr("y2", bandStartYSC + (categoryThickness / 2))
+          .style("stroke", "black")
+          .style("stroke-width", 0.5);
+      });
     }
-
-    layerArgs.scaleConfig.scaleYCategorical.domain().forEach(cat => {
-      baseLayer.append("g").append("line")
-        .attr("x1", scaleX(0))
-        .attr("x2", scaleX(1))
-        .attr("y1", layerArgs.scaleConfig.scaleYCategorical!(cat)!)
-        .attr("y2", layerArgs.scaleConfig.scaleYCategorical!(cat)!)
-        .style("stroke", "red")
-        .style("stroke-width", 2);
-    });
 
     if (this.labels.y) {
       layerArgs.coreLayers[LayerType.Svg].append("text")
