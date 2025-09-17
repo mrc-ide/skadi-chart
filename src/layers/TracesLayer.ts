@@ -1,4 +1,4 @@
-import { D3Selection, LayerArgs, Lines, NumericZoomExtents, Point, ZoomExtents } from "@/types";
+import { BandLines, D3Selection, LayerArgs, Lines, NumericZoomExtents, Point, ZoomExtents } from "@/types";
 import { LayerType, OptionalLayer } from "./Layer";
 
 export type TracesOptions = {
@@ -97,7 +97,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
   private lowResLinesSC: Point[][] = [];
   private getNewPoint: null | ((x: number, y: number, t: number) => Point) = null;
 
-  constructor(public linesDC: Lines<Metadata>, public options: TracesOptions, public categoricalLinesDC: Lines<Metadata> = []) {
+  constructor(public linesDC: Lines<Metadata>, public options: TracesOptions, public ridgelineLinesDC: BandLines<Metadata> = []) {
     super();
   };
 
@@ -172,6 +172,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
   draw = (layerArgs: LayerArgs, currentExtentsDC: NumericZoomExtents) => {
     this.updateLowResLinesSC(layerArgs);
     const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
+    const { x: ridgelineScaleX, y: ridgelineScaleY } = layerArgs.scaleConfig.ridgelineScales;
     const currentExtentsSC: NumericZoomExtents = {
       x: [scaleX(currentExtentsDC.x[0]), scaleX(currentExtentsDC.x[1])],
       y: [scaleY(currentExtentsDC.y[0]), scaleY(currentExtentsDC.y[1])],
@@ -190,28 +191,52 @@ export class TracesLayer<Metadata> extends OptionalLayer {
         .attr("d", linePathSC);
     });
 
-    const categoricalDomain = layerArgs.scaleConfig.scaleYCategorical.domain();
-    const categoryThickness = layerArgs.scaleConfig.scaleYCategorical.step();
+    if (ridgelineScaleY) {
+      const ridgelineDomain = ridgelineScaleY.domain();
+      const bandThickness = ridgelineScaleY.step();
 
-    this.categoricalLinesDC.map((line, index) => {
-      const category = line.metadata?.category;
-      const categoryIndex = categoricalDomain.findIndex(c => c === category);
-      // Centering 0 within the ridge. TODO: Alternative (for lines with no negative values) would put 0 at bottom of ridge.
-      let translation = (((categoricalDomain.length - 1) / 2) - categoryIndex) * categoryThickness;
+      this.ridgelineLinesDC.map((line, index) => {
+        const bandIndex = ridgelineDomain.findIndex(c => c === line.bands.y);
+        // Centering 0 within the ridge. TODO: Alternative (for lines with no negative values) would put 0 at bottom of ridge.
+        let translation = (((ridgelineDomain.length - 1) / 2) - bandIndex) * bandThickness;
 
-      const linePathSC = layerArgs.scaleConfig.lineGen(line.points);
-      const baseLayer = layerArgs.coreLayers[LayerType.BaseLayer];
-      baseLayer.append("path")
-        .attr("id", `${layerArgs.getHtmlId(LayerType.Trace)}-${index}`)
-        .attr("pointer-events", "none")
-        .attr("fill", "none")
-        .attr("stroke", line.style.color || "black")
-        .attr("opacity", 1)
-        .attr("stroke-width", 1)
-        .attr("stroke-dasharray", line.style.strokeDasharray || "")
-        .attr("d", linePathSC)
-        .attr("transform", `translate(0, ${translation})`)
-    });
+        const linePathSC = layerArgs.scaleConfig.lineGen(line.points);
+        const baseLayer = layerArgs.coreLayers[LayerType.BaseLayer];
+        baseLayer.append("path")
+          .attr("id", `${layerArgs.getHtmlId(LayerType.Trace)}-${index}`)
+          .attr("pointer-events", "none")
+          .attr("fill", "none")
+          .attr("stroke", line.style.color || "black")
+          .attr("opacity", 1)
+          .attr("stroke-width", 1)
+          .attr("stroke-dasharray", line.style.strokeDasharray || "")
+          .attr("d", linePathSC)
+          .attr("transform", `translate(0, ${translation})`)
+      });
+    }
+
+    if (ridgelineScaleX) {
+      const ridgelineDomain = ridgelineScaleX.domain();
+      const bandThickness = ridgelineScaleX.step();
+
+      this.ridgelineLinesDC.map((line, index) => {
+        const bandIndex = ridgelineDomain.findIndex(c => c === line.bands.x);
+        let translation = bandIndex * bandThickness;
+
+        const linePathSC = layerArgs.scaleConfig.lineGen(line.points);
+        const baseLayer = layerArgs.coreLayers[LayerType.BaseLayer];
+        baseLayer.append("path")
+          .attr("id", `${layerArgs.getHtmlId(LayerType.Trace)}-${index}`)
+          .attr("pointer-events", "none")
+          .attr("fill", "none")
+          .attr("stroke", line.style.color || "black")
+          .attr("opacity", 1)
+          .attr("stroke-width", 1)
+          .attr("stroke-dasharray", line.style.strokeDasharray || "")
+          .attr("d", linePathSC)
+          .attr("transform", `translate(${translation}, 0)`)
+      });
+    }
 
     this.beforeZoom = (zoomExtentsDC: NumericZoomExtents) => {
       const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;

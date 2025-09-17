@@ -12,20 +12,15 @@ export class AxesLayer extends OptionalLayer {
   draw = (layerArgs: LayerArgs) => {
     const { width, height, margin } = layerArgs.bounds;
     const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
+    const { x: ridgelineScaleX, y: ridgelineScaleY } = layerArgs.scaleConfig.ridgelineScales;
     const svgLayer = layerArgs.coreLayers[LayerType.Svg];
     const baseLayer = layerArgs.coreLayers[LayerType.BaseLayer];
     const { getHtmlId } = layerArgs;
     const { animationDuration, ticks } = layerArgs.globals;
     const { logScale } = layerArgs.chartOptions;
 
-    const axisX = d3.axisBottom(scaleX).ticks(ticks.x).tickSize(0).tickPadding(12);
-    const axisLayerX = svgLayer.append("g")
-      .attr("id", `${getHtmlId(LayerType.Axes)}-x`)
-      .style("font-size", "0.75rem")
-      .attr("transform", `translate(0,${height - margin.bottom})`)
-      .call(axisX);
-    axisLayerX.select(".domain")
-      .style("stroke-opacity", 0);
+    let axisX: d3.Axis<d3.NumberValue> | d3.Axis<string>;
+    let axisLayerX: D3Selection<SVGGElement>;
     let axisLineX: D3Selection<SVGLineElement> | null = null;
     if (!logScale.x) {
       axisLineX = baseLayer.append("g").append("line")
@@ -36,29 +31,77 @@ export class AxesLayer extends OptionalLayer {
         .style("stroke", "black")
         .style("stroke-width", 0.5);
     }
+    if (ridgelineScaleX) {
+      axisX = d3.axisBottom(ridgelineScaleX).ticks(ticks.x).tickSize(0).tickPadding(12);
 
-    // SI-prefix with 2 significant figures and no trailing zeros, 42e6 -> 42M
-    const axisY = d3.axisLeft(layerArgs.scaleConfig.scaleYCategorical).ticks(ticks.y, ".2~s").tickSize(0).tickPadding(12);
-    const axisLayerY = svgLayer.append("g")
-      .attr("id", `${getHtmlId(LayerType.Axes)}-y`)
+      if (!logScale.x) {
+        const bandThickness = ridgelineScaleX.step();
+        ridgelineScaleX.domain().forEach(cat => {
+          const bandStartSC = ridgelineScaleX(cat)!
+          baseLayer.append("g").append("line")
+            .attr("x1", bandStartSC + bandThickness)
+            .attr("x2", bandStartSC + bandThickness)
+            .attr("y1", height - margin.bottom)
+            .attr("y2", margin.top)
+            .style("stroke", "black")
+            .style("stroke-width", 0.5);
+        });
+      }
+    } else {
+      axisX = d3.axisBottom(scaleX).ticks(ticks.x).tickSize(0).tickPadding(12);
+    }
+    axisLayerX = svgLayer.append("g")
+      .attr("id", `${getHtmlId(LayerType.Axes)}-x`)
       .style("font-size", "0.75rem")
-      .attr("transform", `translate(${margin.left},0)`)
-      .call(axisY);
-    axisLayerY.select(".domain")
+      .attr("transform", `translate(0,${height - margin.bottom})`)
+      .call(axisX);
+    axisLayerX.select(".domain")
       .style("stroke-opacity", 0);
+
     let axisLineY: D3Selection<SVGLineElement> | null = null;
-    if (!logScale.y) {
-      const categoryThickness = layerArgs.scaleConfig.scaleYCategorical.bandwidth();
-      layerArgs.scaleConfig.scaleYCategorical.domain().forEach(cat => {
-        const bandStartYSC = layerArgs.scaleConfig.scaleYCategorical!(cat)!
-        baseLayer.append("g").append("line")
-          .attr("x1", scaleX(0))
-          .attr("x2", scaleX(1))
-          .attr("y1", bandStartYSC + (categoryThickness / 2))
-          .attr("y2", bandStartYSC + (categoryThickness / 2))
+    let axisY: d3.Axis<d3.NumberValue> | d3.Axis<string>;
+    if (ridgelineScaleY) {
+      axisY = d3.axisLeft(ridgelineScaleY).tickSize(0).tickPadding(12);
+      const axisLayerY = svgLayer.append("g")
+        .attr("id", `${getHtmlId(LayerType.Axes)}-y`)
+        .style("font-size", "0.75rem")
+        .attr("transform", `translate(${margin.left},0)`)
+        .call(axisY);
+      axisLayerY.select(".domain")
+        .style("stroke-opacity", 0);
+      if (!logScale.y) {
+        const bandThickness = ridgelineScaleY.bandwidth();
+        ridgelineScaleY.domain().forEach(cat => {
+          const bandStartSC = ridgelineScaleY(cat)!
+          // horizontal lines
+          baseLayer.append("g").append("line")
+            .attr("x1", scaleX(0))
+            .attr("x2", scaleX(1))
+            .attr("y1", bandStartSC + (bandThickness / 2))
+            .attr("y2", bandStartSC + (bandThickness / 2))
+            .style("stroke", "black")
+            .style("stroke-width", 0.5);
+        });
+      }
+    } else {
+      axisY = d3.axisLeft(scaleY).ticks(ticks.y, ".2~s").tickSize(0).tickPadding(12);
+      const axisLayerY = svgLayer.append("g")
+        .attr("id", `${getHtmlId(LayerType.Axes)}-y`)
+        .style("font-size", "0.75rem")
+        .attr("transform", `translate(${margin.left},0)`)
+        .call(axisY);
+      axisLayerY.select(".domain")
+        .style("stroke-opacity", 0);
+      let axisLineY: D3Selection<SVGLineElement> | null = null;
+      if (!logScale.y) {
+        axisLineY = baseLayer.append("g").append("line")
+          .attr("x1", margin.left)
+          .attr("x2", width - margin.right)
+          .attr("y1", scaleY(0))
+          .attr("y2", scaleY(0))
           .style("stroke", "black")
           .style("stroke-width", 0.5);
-      });
+      }
     }
 
     if (this.labels.y) {

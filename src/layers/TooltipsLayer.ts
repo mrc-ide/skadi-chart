@@ -1,11 +1,11 @@
 import * as d3 from "@/d3";
 import { LayerType, OptionalLayer } from "./Layer";
 import { TracesLayer } from "./TracesLayer";
-import { D3Selection, LayerArgs, Point, PointWithMetadata, XY } from "@/types";
+import { D3Selection, LayerArgs, Point, PointWithBand, PointWithMetadata, XY } from "@/types";
 import { ScatterLayer } from "./ScatterLayer";
 
 export type TooltipHtmlCallback<Metadata> =
-  (pointWithMetadata: PointWithMetadata<Metadata>, bandName?: string) => string
+  (pointWithMetadata: PointWithBand<Metadata>, bandName?: string) => string
 
 // this file uses variable naming conventions that follow the coordinate systems
 // section outlined in the README. If DC, SC and CC don't make sense to you please
@@ -45,30 +45,31 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     eventCC: d3.ClientPointEvent,
     layerArgs: LayerArgs,
     tooltip: D3Selection<HTMLDivElement>,
-    flatPointsDC: PointWithMetadata<Metadata>[],
+    flatPointsDC: PointWithBand<Metadata>[],
     rangeDC: XY<number>
   ) => {
     // d3.pointer converts coords from CC to SC
     const [clientXSC, clientYSC] = d3.pointer(eventCC);
     const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
+    const { x: ridgelineScaleX, y: ridgelineScaleY } = layerArgs.scaleConfig.ridgelineScales;
+
+    if (!ridgelineScaleY) {
+      return;
+    }
 
     // To get DC coordinates from SC coordinates in the case of band scales,
     // we must first work out which band we are in. Then we must transform the
-    // distance from the band's zero-line into a nominal distance from the graph's
-    // zero-line as if the band took the full height of the graph.
-    const categoryDomain = layerArgs.scaleConfig.scaleYCategorical.domain();
-    const categoriesWithBandStarts = categoryDomain.map(c => {
-      return { name: c, startSC: layerArgs.scaleConfig.scaleYCategorical(c) }
-    });
-    const band = categoriesWithBandStarts.find(band => clientYSC >= band.startSC!);
+    // distance from the band's zero-line into a _nominal_ distance from the graph's
+    // zero-line _as if the band took the full height of the graph_.
+    const yBand = ridgelineScaleY.domain().find(c => clientYSC >= ridgelineScaleY(c)!);
 
     // This code bakes in the assumption that the zero (DC) line is in the center (SC) of the band / the graph.
     // Use bandwidth() instead of step() to exclude inter-band padding. (Not sure this excludes the pre-band padding but it does exclude post-band padding)
-    const bandZeroLineSC = band?.startSC! + (layerArgs.scaleConfig.scaleYCategorical.bandwidth() / 2);
+    const bandZeroLineSC = ridgelineScaleY(yBand!)! + (ridgelineScaleY.bandwidth() / 2);
     const distanceFromBandZeroLineSC = clientYSC - bandZeroLineSC;
     // Undo squashing.
     // TODO: squashFactor does not take into account any padding between bands
-    const squashFactor = categoryDomain.length;
+    const squashFactor = ridgelineScaleY.domain().length;
     const distanceFromBandZeroLineAsIfFullHeightSC = distanceFromBandZeroLineSC * squashFactor;
     const zeroLineAsIfFullHeightSC = scaleY(0);
     const clientYSCAsIfFullHeight = zeroLineAsIfFullHeightSC + distanceFromBandZeroLineAsIfFullHeightSC;
@@ -93,29 +94,25 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     // compute a proportional distance since we only care about the minimum
     // point
     let fastMinDistanceSC = Infinity;
-    const minPointDC = flatPointsDC
-      .filter(point => band ? point.metadata?.category! === band.name : true) // Only look for points in the right category
+    let minPointDC = flatPointsDC
+      .filter(point => yBand ? point.bands.y! === yBand : true) // Only look for points in the correct band
       .reduce((minPDC, pDC) => {
         const distanceSC = this.getFastDistanceSC(coordsDC, pDC, rangeDC);
         if (distanceSC >= fastMinDistanceSC) return minPDC;
         fastMinDistanceSC = distanceSC;
         return pDC;
-      }, { x: 0, y: 0 });
+      }, { x: 0, y: 0, bands: { y: yBand } });
 
-
-    // From TraceLayer:
-    const categoryIndex = categoryDomain.findIndex(c => c === band!.name);
-    const categoryThickness = layerArgs.scaleConfig.scaleYCategorical.step();
+    const bandIndex = ridgelineScaleY.domain().findIndex(c => c === yBand);
+    const bandThickness = ridgelineScaleY.step();
     // Centering 0 within the ridge. TODO: Alternative (for lines with no negative values) would put 0 at bottom of ridge.
-    const adjustmentIfCenteringZero = 1;
-    const translation = categoryThickness * (categoryIndex + ((adjustmentIfCenteringZero - categoryDomain.length) / 2));
-
+    let translationSC = (((ridgelineScaleY.domain().length - 1) / 2) - bandIndex) * bandThickness;
 
     // scaleY converts DC to SC.
     // SC distance will be the same as pixel distance
     const minPointSC = {
       x: scaleX(minPointDC.x),
-      y: scaleY(minPointDC.y / squashFactor) - translation // Solves tooltipRadius check AND positions tooltip correctly on y axis
+      y: scaleY(minPointDC.y / squashFactor) + translationSC, // Solves tooltipRadius check AND positions tooltip correctly on y axis
     };
     const minDistanceSC = this.getDistance({ x: clientXSC, y: clientYSC }, minPointSC);
 
@@ -146,7 +143,7 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
       // tooltips can be accurate to the user data and we translate the tooltip
       // so it is on top of the closest data point for which we need client
       // coordinates of the point (absolute position of the min point)
-      tooltip.html(this.tooltipHtmlCallback(minPointDC, band?.name))
+      tooltip.html(this.tooltipHtmlCallback(minPointDC, yBand))
         .style("left", `${minPointCC.x}px`)
         .style("top", `${minPointCC.y}px`)
         .style("opacity", 1)
@@ -169,14 +166,17 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
       .style("pointer-events", "none") as any as D3Selection<HTMLDivElement>;
 
     let flatPointsDC = traceLayers.reduce((pointsWithMetadata, layer) => {
-      const layerPointsWithMetadata = layer.categoricalLinesDC.flatMap(l => {
-        return l.points.map(p => ({ ...p, metadata: l.metadata }));
+      const layerPointsWithMetadata = layer.ridgelineLinesDC.flatMap(l => {
+        return l.points.map(p => ({ ...p, metadata: l.metadata, bands: l.bands }));
       });
       return [...layerPointsWithMetadata, ...pointsWithMetadata];
-    }, [] as PointWithMetadata<Metadata>[]);
+    }, [] as PointWithBand<Metadata>[]);
 
     flatPointsDC = scatterLayers.reduce((points, layer) => {
-      return [...layer.categoricalPoints.map(p => ({ x: p.x, y: p.y, metadata: p.metadata })), ...points];
+      return [
+        ...layer.ridgelinePoints.map(({ x, y, metadata, bands }) => ({ x, y, metadata, bands })),
+        ...points,
+      ];
     }, flatPointsDC);
 
     const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;

@@ -3,9 +3,11 @@ import * as d3 from "./d3";
 import { LayerType, OptionalLayer } from "./layers/Layer";
 
 export type XY<T> = { x: T, y: T }
+type BandConfig = { bands: Partial<XY<string>> }
 
 export type Point = XY<number>
 export type PointWithMetadata<Metadata> = Point & { metadata?: Metadata }
+export type PointWithBand<Metadata> = PointWithMetadata<Metadata> & BandConfig
 
 export type XYLabel = Partial<XY<string>>
 
@@ -41,7 +43,7 @@ export type LayerArgs = {
   },
   scaleConfig: {
     linearScales: XY<d3.ScaleLinear<number, number, never>>,
-    scaleYCategorical: d3.ScaleBand<string>,
+    ridgelineScales: Partial<XY<d3.ScaleBand<string>>>,
     scaleExtents: Scales,
     lineGen: d3.Line<Point>
   },
@@ -58,6 +60,7 @@ export type NumericZoomExtents = XY<[number, number]>
 export type ZoomExtents = NumericZoomExtents & { eventType: "brush" | "dblclick" }
 export type Scales = XY<{ start: number, end: number }>
 export type PartialScales = Partial<XY<{ start?: number, end?: number }>>
+export type RidgelineCategories = Partial<XY<string[]>>;
 
 type LineConfig<Metadata> = {
   points: Point[],
@@ -71,6 +74,9 @@ type LineConfig<Metadata> = {
 }
 export type Lines<Metadata> = LineConfig<Metadata>[]
 
+type BandLineConfig<Metadata> = LineConfig<Metadata> & BandConfig
+export type BandLines<Metadata> = BandLineConfig<Metadata>[]
+
 type ScatterPointConfig<Metadata> = {
   x: number,
   y: number,
@@ -82,3 +88,6 @@ type ScatterPointConfig<Metadata> = {
   metadata?: Metadata
 }
 export type ScatterPoints<Metadata> = ScatterPointConfig<Metadata>[];
+
+type BandScatterPointConfig<Metadata> = ScatterPointConfig<Metadata> & BandConfig
+export type BandScatterPoints<Metadata> = BandScatterPointConfig<Metadata>[];

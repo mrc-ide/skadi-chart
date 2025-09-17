@@ -3,7 +3,7 @@ import { AxesLayer } from "./layers/AxesLayer";
 import { TracesLayer, TracesOptions } from "./layers/TracesLayer";
 import { ZoomLayer, ZoomOptions } from "./layers/ZoomLayer";
 import { TooltipHtmlCallback, TooltipsLayer } from "./layers/TooltipsLayer";
-import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, NumericZoomExtents, PartialScales, Point, Scales, ScatterPoints, XY, XYLabel } from "./types";
+import { AllOptionalLayers, Bounds, RidgelineCategories, D3Selection, LayerArgs, Lines, NumericZoomExtents, PartialScales, Point, Scales, ScatterPoints, XY, XYLabel } from "./types";
 import { LayerType, LifecycleHooks, OptionalLayer } from "./layers/Layer";
 import { GridLayer } from "./layers/GridLayer";
 import html2canvas from "html2canvas";
@@ -117,12 +117,12 @@ export class Chart<Metadata = any> {
     return filteredLines;
   };
 
-  addTraces = (lines: Lines<Metadata>, options?: Partial<TracesOptions>, categoricalPoints: Lines<Metadata> = []) => {
+  addTraces = (lines: Lines<Metadata>, options?: Partial<TracesOptions>, ridgelinePoints: Lines<Metadata> = []) => {
     const optionsWithDefaults: TracesOptions = {
       RDPEpsilon: options?.RDPEpsilon ?? null
     };
     const filteredLines = this.filterLines(lines);
-    this.optionalLayers.push(new TracesLayer(filteredLines, optionsWithDefaults, categoricalPoints));
+    this.optionalLayers.push(new TracesLayer(filteredLines, optionsWithDefaults, ridgelinePoints));
     return this;
   };
 
@@ -162,9 +162,9 @@ export class Chart<Metadata = any> {
     return filteredPoints;
   }
 
-  addScatterPoints = (points: ScatterPoints<Metadata>, categoricalPoints: ScatterPoints<Metadata> = []) => {
+  addScatterPoints = (points: ScatterPoints<Metadata>, ridgelinePoints: ScatterPoints<Metadata> = []) => {
     const filteredPoints = this.filterScatterPoints(points);
-    this.optionalLayers.push(new ScatterLayer(filteredPoints, categoricalPoints));
+    this.optionalLayers.push(new ScatterLayer(filteredPoints, ridgelinePoints));
     return this;
   };
 
@@ -256,7 +256,8 @@ export class Chart<Metadata = any> {
     baseElement: HTMLDivElement,
     bounds: Bounds,
     maxExtents: PartialScales,
-    initialExtents: PartialScales
+    initialExtents: PartialScales,
+    ridgelineCategories: RidgelineCategories
   ) => {
     const getHtmlId = (layer: LayerType[keyof LayerType]) => `${layer}-${this.id}`;
     const { height, width, margin } = bounds;
@@ -282,8 +283,6 @@ export class Chart<Metadata = any> {
       .attr("id", getHtmlId(LayerType.BaseLayer))
       .attr("clip-path", `url(#${getHtmlId(LayerType.ClipPath)})`);
 
-    const categoricalDomain = ["A", "B", "C"]
-
     const { x, y } = this.autoscaledMaxExtents;
     const initialDomain: NumericZoomExtents = {
       x: [initialExtents.x?.start ?? x.start, initialExtents.x?.end ?? x.end],
@@ -297,19 +296,36 @@ export class Chart<Metadata = any> {
     const scaleY = d3ScaleY()
       .domain(initialDomain.y)
       .range([height - margin.bottom, margin.top]);
-    const scaleYCategorical = d3.scaleBand()
-      .domain(categoricalDomain)
-      .range([height - margin.bottom, margin.top]);
-    // Two y scales are required: the categorical one is mapped to the numerical one.
 
     // 'line' - a function mapping data onto a scale.
-    // scaleY converts domain coordinates (DC) to svg coordinates (SC), so
-    // in the line y function 
-    const lineGen = d3.line<Point>()
+    let lineGen = d3.line<Point>()
       .x(d => scaleX(d.x))
-      .y(d => scaleY(d.y / categoricalDomain.length)) // squashing the lines to fit within ridges.
+      .y(d => scaleY(d.y))
 
-    // Todo: allow a squashing factor other than categoricalDomain.length (though that is a good default)
+    let [yFactor, xFactor] = [1, 1];
+    let ridgelineScales: Partial<XY<d3.ScaleBand<string>>> = {};
+
+    if (ridgelineCategories.y?.length) {
+      // For a ridgeline axis, two y scales are required: the ridgeline one is mapped to the numerical one.
+      ridgelineScales.y = d3.scaleBand()
+        .domain(ridgelineCategories.y)
+        .range([height - margin.bottom, margin.top]);
+      yFactor = 1 / ridgelineCategories.y.length; // Squash y values to fit within ridgeline band
+    }
+
+    if (ridgelineCategories.x?.length) {
+      // For a ridgeline axis, two x scales are required: the ridgeline one is mapped to the numerical one.
+      ridgelineScales.x = d3.scaleBand()
+        .domain(ridgelineCategories.x)
+        .range([margin.left, width - margin.right]);
+      xFactor = 1 / ridgelineCategories.x.length; // Squash x values to fit within ridgeline band
+    }
+
+    lineGen = d3.line<Point>()
+      .x(d => scaleX(d.x * xFactor))
+      .y(d => scaleY(d.y * yFactor))
+
+    // Todo: allow a squashing factor other than ridgelineDomain.length (though that is a good default)
     // Translation logic will need to change (for the non-zero-centering case) so that values only exceed
     // the band width on one edge (the other edge being bounded by 0).
 
@@ -329,7 +345,7 @@ export class Chart<Metadata = any> {
       globals: this.globals,
       scaleConfig: {
         linearScales: { x: scaleX, y: scaleY },
-        scaleYCategorical,
+        ridgelineScales,
         lineGen,
         scaleExtents: this.autoscaledMaxExtents
       },
@@ -354,10 +370,11 @@ export class Chart<Metadata = any> {
     baseElement: HTMLDivElement,
     maxExtents: PartialScales = {},
     initialExtents: PartialScales = {},
+    ridgelineCategories: RidgelineCategories = {}
   ) => {
     const drawWithBounds = (width: number, height: number) => {
       const bounds = { width, height, margin: this.defaultMargin };
-      this.draw(baseElement, bounds, maxExtents, initialExtents);
+      this.draw(baseElement, bounds, maxExtents, initialExtents, ridgelineCategories);
     };
 
     const { width, height } = baseElement.getBoundingClientRect();

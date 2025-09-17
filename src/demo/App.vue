@@ -1,6 +1,9 @@
 <template>
-  <h1>Categorical axis</h1>
-  <div class="chart" ref="chartCategoricalAxis" id="chartCategoricalAxis"></div>
+  <h1>Ridgeline y axis</h1>
+  <div class="chart" ref="chartRidgelineYAxis" id="chartRidgelineYAxis"></div>
+
+  <h1>Ridgeline x axis</h1>
+  <div class="chart" ref="chartRidgelineXAxis" id="chartRidgelineXAxis"></div>
 
   <h1>Basic traces (spark lines)</h1>
   <div class="chart" ref="chartSparkLines" id="chartSparkLines"></div>
@@ -57,11 +60,12 @@
 </style>
 
 <script setup lang="ts">
-import { ScatterPoints } from "@/types";
+import { PointWithBand, ScatterPoints } from "@/types";
 import { Chart, LayerArgs, LayerType, Lines, OptionalLayer, Scales } from "../skadi-chart";
 import { onMounted, ref, watch } from "vue";
 
-const chartCategoricalAxis = ref<HTMLDivElement | null>(null);
+const chartRidgelineYAxis = ref<HTMLDivElement | null>(null);
+const chartRidgelineXAxis = ref<HTMLDivElement | null>(null);
 const chartSparkLines = ref<HTMLDivElement | null>(null);
 const chartOnlyAxes = ref<HTMLDivElement | null>(null);
 const chartAxesAndGrid = ref<HTMLDivElement | null>(null);
@@ -208,19 +212,22 @@ const makeRandomCurves = (props: typeof propsBasic) => {
   return lines;
 };
 
-const categoricalDomainAgain = ["A", "B", "C"]
+const ridgelineCategories = ["A", "B", "C", "D", "E"];
+const splitLeftRightCategories = ["Left", "Right"];
 
-const tooltipHtmlCallback = (point: {x: number, y: number, metadata?: Metadata}, bandName: string) => {
-  const categoryAccordingToPointMetadata = point.metadata?.category!;
-  const agreement = categoryAccordingToPointMetadata === bandName;
-  const categoryIndex = categoricalDomainAgain.findIndex(c => c === bandName);
-  const textColor = colors[categoryIndex] ?? "lightgrey";
-  return `<div style="color: ${textColor}; border: 1px solid black; padding: 5px;">
-    X: ${point.x.toFixed(3)}, Y: ${point.y.toFixed(3)}
+const tooltipHtmlCallback = (point: Partial<PointWithBand<Metadata>>, bandName: string) => {
+  const xBandAccordingToPointMetadata = point?.bands?.x!;
+  const yBandAccordingToPointMetadata = point?.bands?.y!;
+  const agreement = xBandAccordingToPointMetadata === bandName;
+  const bandIndex = ridgelineCategories.findIndex(c => c === bandName);
+  const textColor = colors[bandIndex] ?? "lightgrey";
+  return `<div style="color: ${textColor}; border: 1px solid black; padding: 5px; background: black">
+    X: ${point.x?.toFixed(3)}, Y: ${point.y?.toFixed(3)}
     <br/>
-    <span style="color: ${agreement ? "green" : "red" }">Category according to point metadata: ${categoryAccordingToPointMetadata}</span>
+    <span style="color: ${agreement ? "green" : "red" }">X Category according to point metadata: ${xBandAccordingToPointMetadata}</span>
+    <span">Y Category according to point metadata: ${yBandAccordingToPointMetadata}</span>
     <br/>Band according to tooltip layer: ${bandName ?? "none"}
-    <br/>point.metadata.category index: ${categoryIndex}
+    <br/>point.metadata.band index: ${bandIndex}
   </div>`;
 };
 
@@ -280,28 +287,52 @@ watch([logScaleY, logScaleX], () => {
 
 onMounted(async () => {
   new Chart()
-    .addAxes(axesLabels)
+    .addAxes({ x: "Time", y: "Category" })
     .addScatterPoints([], pointsPointsAxesAndZoom.map((p, index) => {
-      const category = categoricalDomainAgain[index % categoricalDomainAgain.length];
-      const color = colors[index % categoricalDomainAgain.length];
+      const band = ridgelineCategories[index % ridgelineCategories.length];
+      const color = colors[index % ridgelineCategories.length];
       return {
         ...p,
-        metadata: { category },
+        bands: { y: band },
         style: { ...p.style, color }
       }
     }))
     .addTraces([], {}, curvesSparkLines.map((line, index) => {
-      const category = categoricalDomainAgain[index % categoricalDomainAgain.length];
-      const color = colors[index % categoricalDomainAgain.length];
+      const band = ridgelineCategories[index % ridgelineCategories.length];
+      const color = colors[index % ridgelineCategories.length];
 
       return {
         ...line,
-        metadata: { category },
+        bands: { y: band },
         style: { ...line.style, color }
       }
     }))
     .addTooltips(tooltipHtmlCallback)
-    .appendTo(chartCategoricalAxis.value!, scales);
+    .appendTo(chartRidgelineYAxis.value!, scales, {}, { y: ridgelineCategories });
+
+  new Chart()
+    .addAxes({ x: "Category", y: "Value" })
+    .addScatterPoints([], pointsPointsAxesAndZoom.map((p, index) => {
+      const band = splitLeftRightCategories[index % splitLeftRightCategories.length];
+      const color = colors[index % splitLeftRightCategories.length];
+      return {
+        ...p,
+        bands: { x: band },
+        style: { ...p.style, color }
+      }
+    }))
+    .addTraces([], {}, curvesSparkLines.map((line, index) => {
+      const band = splitLeftRightCategories[index % splitLeftRightCategories.length];
+      const color = colors[index % splitLeftRightCategories.length];
+
+      return {
+        ...line,
+        bands: { x: band },
+        style: { ...line.style, color }
+      }
+    }))
+    .addTooltips(tooltipHtmlCallback)
+    .appendTo(chartRidgelineXAxis.value!, scales, {}, { x: splitLeftRightCategories });
 
   new Chart()
     .addTraces(curvesSparkLines)
