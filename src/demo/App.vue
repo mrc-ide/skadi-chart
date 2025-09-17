@@ -215,19 +215,22 @@ const makeRandomCurves = (props: typeof propsBasic) => {
 const ridgelineCategories = ["A", "B", "C", "D", "E"];
 const splitLeftRightCategories = ["Left", "Right"];
 
-const tooltipHtmlCallback = (point: Partial<PointWithBand<Metadata>>, bandName: string) => {
+const tooltipHtmlCallback = (point: Partial<PointWithBand<Metadata>>, xBandName?: string, yBandName?: string, debugString?: string) => {
   const xBandAccordingToPointMetadata = point?.bands?.x!;
   const yBandAccordingToPointMetadata = point?.bands?.y!;
-  const agreement = xBandAccordingToPointMetadata === bandName;
-  const bandIndex = ridgelineCategories.findIndex(c => c === bandName);
-  const textColor = colors[bandIndex] ?? "lightgrey";
+  const xBandIndex = splitLeftRightCategories.findIndex(c => c === xBandName);
+  const yBandIndex = ridgelineCategories.findIndex(c => c === yBandName);
+  const textColor = colors[yBandIndex] ?? "lightgrey";
   return `<div style="color: ${textColor}; border: 1px solid black; padding: 5px; background: black">
     X: ${point.x?.toFixed(3)}, Y: ${point.y?.toFixed(3)}
     <br/>
-    <span style="color: ${agreement ? "green" : "red" }">X Category according to point metadata: ${xBandAccordingToPointMetadata}</span>
-    <span">Y Category according to point metadata: ${yBandAccordingToPointMetadata}</span>
-    <br/>Band according to tooltip layer: ${bandName ?? "none"}
-    <br/>point.metadata.band index: ${bandIndex}
+    <span style="color: ${xBandAccordingToPointMetadata === xBandName ? "green" : "red" }">X Category according to point metadata: ${xBandAccordingToPointMetadata}</span>
+    <span style="color: ${yBandAccordingToPointMetadata === yBandName ? "green" : "red" }">Y Category according to point metadata: ${yBandAccordingToPointMetadata}</span>
+    <br/>X Band according to tooltip layer: ${xBandName ?? "none"}
+    <br/>Y Band according to tooltip layer: ${yBandName ?? "none"}
+    <br/>X Band index: ${xBandIndex}
+    <br/>Y Band index: ${yBandIndex}
+    <br/>Debug: ${debugString}
   </div>`;
 };
 

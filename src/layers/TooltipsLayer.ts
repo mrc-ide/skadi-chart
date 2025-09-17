@@ -5,7 +5,7 @@ import { D3Selection, LayerArgs, Point, PointWithBand, PointWithMetadata, XY } f
 import { ScatterLayer } from "./ScatterLayer";
 
 export type TooltipHtmlCallback<Metadata> =
-  (pointWithMetadata: PointWithBand<Metadata>, bandName?: string) => string
+  (pointWithMetadata: PointWithBand<Metadata>, xBandName?: string, yBandName?: string, debugString?: string) => string
 
 // this file uses variable naming conventions that follow the coordinate systems
 // section outlined in the README. If DC, SC and CC don't make sense to you please
@@ -17,6 +17,106 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
   constructor(public tooltipHtmlCallback: TooltipHtmlCallback<Metadata>) {
     super();
   };
+
+  // Axis-agnostic function to derive the band name on axis N given a CC on axis N.
+  private getBand = (clientSC: number, bandScale?: d3.ScaleBand<string>) => {
+    if (!bandScale) {
+      return undefined;
+    }
+
+    return bandScale.domain().find((currentBand) => {
+      const bandStartSC = bandScale(currentBand)!;
+      const bandEndSC = bandStartSC + bandScale.bandwidth();
+      return clientSC >= bandStartSC && clientSC <= bandEndSC;
+    });
+  }
+
+  // Axis-agnostic function to derive the start of a band on axis N given a CC on axis N.
+  private getBandStartSC = (clientSC: number, bandScale?: d3.ScaleBand<string>) => {
+    if (!bandScale) {
+      return undefined;
+    }
+
+    const band = this.getBand(clientSC, bandScale);
+    return band ? bandScale(band) : undefined;
+  }
+
+  // Axis-agnostic function to derive the squash factor from a band scale
+  // TODO: squashFactor does not take into account any padding between bands
+  private getSquashFactor = (bandScale?: d3.ScaleBand<string>) => bandScale?.domain().length ?? 1;
+
+  private getXTranslationSC = (bandScaleX?: d3.ScaleBand<string>, xBand?: string) => {
+    if (!bandScaleX) {
+      return 0;
+    }
+    const ridgelineDomain = bandScaleX.domain();
+    const bandIndex = ridgelineDomain.findIndex(c => c === xBand);
+    return bandIndex * bandScaleX.step();
+  }
+
+  private getYTranslationSC = (bandScaleY?: d3.ScaleBand<string>, yBand?: string) => {
+    if (!bandScaleY) {
+      return 0;
+    }
+    const yBandIndex = bandScaleY.domain().findIndex(c => c === yBand);
+    // Centering 0 within the ridge. TODO: Alternative (for lines with no negative values) would put 0 at bottom of ridge.
+    return (((bandScaleY.domain().length - 1) / 2) - yBandIndex) * bandScaleY.step();
+  }
+
+  // Converts an x-position in SC to DC, taking into account band scale if it exists
+  private getXCoordDC = (
+    linearScaleX: d3.ScaleLinear<number, number, never>,
+    clientXSC: number,
+    bandScaleX?: d3.ScaleBand<string>,
+  ) => {
+    if (!bandScaleX) {
+      // `scale.invert` functions convert SC to DC, whereas applying just `scale` converts from
+      // DC to SC
+      return linearScaleX.invert(clientXSC)
+    }
+    // To get DC coordinates from SC coordinates in the case of band scales on the X axis,
+    // we must first work out which band we are in. Then we must transform the
+    // distance from the band's start coordinates into a _nominal_ x coordinate (SC)
+    // _as if the band took the full width of the graph_, so that we can take
+    // advantage of the `scale.invert` function on the linear scale to get back to DC.
+
+    const xBandStartSC = this.getBandStartSC(clientXSC, bandScaleX);
+    const distanceFromBandStartSC = clientXSC - xBandStartSC!;
+    // Undo squashing
+    const clientXAsIfFullWidthSC = (distanceFromBandStartSC * this.getSquashFactor(bandScaleX)) + linearScaleX(0);
+    return linearScaleX.invert(clientXAsIfFullWidthSC);
+  }
+
+  // Converts a y-position in SC to DC, taking into account band scale if it exists
+  private getYCoordDC = (
+    linearScaleY: d3.ScaleLinear<number, number, never>,
+    clientYSC: number,
+    bandScaleY?: d3.ScaleBand<string>,
+  ) => {
+    if (!bandScaleY) {
+      // `scale.invert` functions convert SC to DC, whereas applying just `scale` converts from
+      // DC to SC
+      return linearScaleY.invert(clientYSC)
+    }
+    // To get DC coordinates from SC coordinates in the case of band scales on the Y axis,
+    // we must first work out which band we are in. Then we must transform the
+    // distance from the band's zero-line into a _nominal_ distance from the graph's
+    // zero-line _as if the band took the full height of the graph_, so that we can take
+    // advantage of the `scale.invert` function on the linear scale to get back to DC.
+
+    // This code bakes in the assumption that the zero (DC) line is
+    // in the center (SC) of the band / the graph.
+    const yBandStartSC = this.getBandStartSC(clientYSC, bandScaleY);
+    // Use bandwidth() instead of step() to exclude inter-band padding
+    // (Not sure this excludes the pre-band padding but it does exclude post-band padding)
+    const bandZeroLineSC = yBandStartSC! + (bandScaleY.bandwidth() / 2);
+    const distanceFromBandZeroLineSC = clientYSC - bandZeroLineSC;
+    // Undo squashing.
+    const distanceFromBandZeroLineAsIfFullHeightSC = distanceFromBandZeroLineSC * this.getSquashFactor(bandScaleY);
+    const zeroLineAsIfFullHeightSC = linearScaleY(0);
+    const clientYAsIfFullHeightSC = zeroLineAsIfFullHeightSC + distanceFromBandZeroLineAsIfFullHeightSC;
+    return linearScaleY.invert(clientYAsIfFullHeightSC);
+  }
 
   // this function returns the straight line distance squared between two points
   // and doesn't care about coordinates since it is just distance so you can give
@@ -53,30 +153,15 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
     const { x: ridgelineScaleX, y: ridgelineScaleY } = layerArgs.scaleConfig.ridgelineScales;
 
-    if (!ridgelineScaleY) {
-      return;
-    }
+    console.warn("ridgelineScaleX", ridgelineScaleX);
 
-    // To get DC coordinates from SC coordinates in the case of band scales,
-    // we must first work out which band we are in. Then we must transform the
-    // distance from the band's zero-line into a _nominal_ distance from the graph's
-    // zero-line _as if the band took the full height of the graph_.
-    const yBand = ridgelineScaleY.domain().find(c => clientYSC >= ridgelineScaleY(c)!);
+    const xBand = this.getBand(clientXSC, ridgelineScaleX);
+    const yBand = this.getBand(clientYSC, ridgelineScaleY);
 
-    // This code bakes in the assumption that the zero (DC) line is in the center (SC) of the band / the graph.
-    // Use bandwidth() instead of step() to exclude inter-band padding. (Not sure this excludes the pre-band padding but it does exclude post-band padding)
-    const bandZeroLineSC = ridgelineScaleY(yBand!)! + (ridgelineScaleY.bandwidth() / 2);
-    const distanceFromBandZeroLineSC = clientYSC - bandZeroLineSC;
-    // Undo squashing.
-    // TODO: squashFactor does not take into account any padding between bands
-    const squashFactor = ridgelineScaleY.domain().length;
-    const distanceFromBandZeroLineAsIfFullHeightSC = distanceFromBandZeroLineSC * squashFactor;
-    const zeroLineAsIfFullHeightSC = scaleY(0);
-    const clientYSCAsIfFullHeight = zeroLineAsIfFullHeightSC + distanceFromBandZeroLineAsIfFullHeightSC;
-
-    // scale.invert functions convert SC to DC, applying just scale converts from
-    // DC to SC
-    const coordsDC = { x: scaleX.invert(clientXSC), y: scaleY.invert(clientYSCAsIfFullHeight) };
+    const coordsDC = {
+      x: this.getXCoordDC(scaleX, clientXSC, ridgelineScaleX),
+      y: this.getYCoordDC(scaleY, clientYSC, ridgelineScaleY)
+    };
 
     // notice that the min point we want is DC because data points are always
     // going to use data coordinates but the minimum distance that we compare
@@ -95,24 +180,24 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     // point
     let fastMinDistanceSC = Infinity;
     let minPointDC = flatPointsDC
-      .filter(point => yBand ? point.bands.y! === yBand : true) // Only look for points in the correct band
-      .reduce((minPDC, pDC) => {
+      .filter(({ bands }) => {
+        return bands.y === yBand && bands.x === xBand;
+      }).reduce((minPDC, pDC) => {
         const distanceSC = this.getFastDistanceSC(coordsDC, pDC, rangeDC);
         if (distanceSC >= fastMinDistanceSC) return minPDC;
         fastMinDistanceSC = distanceSC;
         return pDC;
-      }, { x: 0, y: 0, bands: { y: yBand } });
-
-    const bandIndex = ridgelineScaleY.domain().findIndex(c => c === yBand);
-    const bandThickness = ridgelineScaleY.step();
-    // Centering 0 within the ridge. TODO: Alternative (for lines with no negative values) would put 0 at bottom of ridge.
-    let translationSC = (((ridgelineScaleY.domain().length - 1) / 2) - bandIndex) * bandThickness;
+      }, { x: 0, y: 0, bands: { x: xBand, y: yBand } });
 
     // scaleY converts DC to SC.
     // SC distance will be the same as pixel distance
     const minPointSC = {
-      x: scaleX(minPointDC.x),
-      y: scaleY(minPointDC.y / squashFactor) + translationSC, // Solves tooltipRadius check AND positions tooltip correctly on y axis
+      x: scaleX(
+        minPointDC.x / this.getSquashFactor(ridgelineScaleX)
+      ) + this.getXTranslationSC(ridgelineScaleX, xBand),
+      y: scaleY(
+        minPointDC.y / this.getSquashFactor(ridgelineScaleY)
+      ) + this.getYTranslationSC(ridgelineScaleY, yBand),
     };
     const minDistanceSC = this.getDistance({ x: clientXSC, y: clientYSC }, minPointSC);
 
@@ -121,6 +206,14 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     if (minDistanceSC > tooltipRadius * tooltipRadius) {
       tooltip.style("opacity", 0);
     } else {
+      // Add a circle to the line (for debugging only)
+      layerArgs.coreLayers[LayerType.Svg].append("circle")
+        .attr("cx", minPointSC.x)
+        .attr("cy", minPointSC.y)
+        .attr("r", 5)
+        .attr("fill", "white")
+        .attr("stroke", "black")
+
       const funcSCtoCC = layerArgs.coreLayers[LayerType.Svg].node()!.getScreenCTM()!;
       // these equations represent a matrix multiplication + offset vector
       // 
@@ -139,11 +232,13 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
         y: (b * minPointSC.x) + (d * minPointSC.y) + f
       };
 
+      const debugString = ``;
+
       // the tooltip html callback receives the actual data coordinates so the
       // tooltips can be accurate to the user data and we translate the tooltip
       // so it is on top of the closest data point for which we need client
       // coordinates of the point (absolute position of the min point)
-      tooltip.html(this.tooltipHtmlCallback(minPointDC, yBand))
+      tooltip.html(this.tooltipHtmlCallback(minPointDC, xBand, yBand, debugString))
         .style("left", `${minPointCC.x}px`)
         .style("top", `${minPointCC.y}px`)
         .style("opacity", 1)

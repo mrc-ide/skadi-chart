@@ -297,11 +297,6 @@ export class Chart<Metadata = any> {
       .domain(initialDomain.y)
       .range([height - margin.bottom, margin.top]);
 
-    // 'line' - a function mapping data onto a scale.
-    let lineGen = d3.line<Point>()
-      .x(d => scaleX(d.x))
-      .y(d => scaleY(d.y))
-
     let [yFactor, xFactor] = [1, 1];
     let ridgelineScales: Partial<XY<d3.ScaleBand<string>>> = {};
 
@@ -321,7 +316,8 @@ export class Chart<Metadata = any> {
       xFactor = 1 / ridgelineCategories.x.length; // Squash x values to fit within ridgeline band
     }
 
-    lineGen = d3.line<Point>()
+    // 'line' - a function mapping data onto a scale.
+    const lineGen = d3.line<Point>()
       .x(d => scaleX(d.x * xFactor))
       .y(d => scaleY(d.y * yFactor))
 

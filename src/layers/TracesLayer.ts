@@ -191,52 +191,35 @@ export class TracesLayer<Metadata> extends OptionalLayer {
         .attr("d", linePathSC);
     });
 
-    if (ridgelineScaleY) {
-      const ridgelineDomain = ridgelineScaleY.domain();
-      const bandThickness = ridgelineScaleY.step();
+    this.ridgelineLinesDC.map((line, index) => {
+      let [xTranslation, yTranslation] = [0, 0];
 
-      this.ridgelineLinesDC.map((line, index) => {
+      if (ridgelineScaleY) {
+        const ridgelineDomain = ridgelineScaleY.domain();
         const bandIndex = ridgelineDomain.findIndex(c => c === line.bands.y);
         // Centering 0 within the ridge. TODO: Alternative (for lines with no negative values) would put 0 at bottom of ridge.
-        let translation = (((ridgelineDomain.length - 1) / 2) - bandIndex) * bandThickness;
+        yTranslation = (((ridgelineDomain.length - 1) / 2) - bandIndex) * ridgelineScaleY.step();
+      }
 
-        const linePathSC = layerArgs.scaleConfig.lineGen(line.points);
-        const baseLayer = layerArgs.coreLayers[LayerType.BaseLayer];
-        baseLayer.append("path")
-          .attr("id", `${layerArgs.getHtmlId(LayerType.Trace)}-${index}`)
-          .attr("pointer-events", "none")
-          .attr("fill", "none")
-          .attr("stroke", line.style.color || "black")
-          .attr("opacity", 1)
-          .attr("stroke-width", 1)
-          .attr("stroke-dasharray", line.style.strokeDasharray || "")
-          .attr("d", linePathSC)
-          .attr("transform", `translate(0, ${translation})`)
-      });
-    }
-
-    if (ridgelineScaleX) {
-      const ridgelineDomain = ridgelineScaleX.domain();
-      const bandThickness = ridgelineScaleX.step();
-
-      this.ridgelineLinesDC.map((line, index) => {
+      if (ridgelineScaleX) {
+        const ridgelineDomain = ridgelineScaleX.domain();
         const bandIndex = ridgelineDomain.findIndex(c => c === line.bands.x);
-        let translation = bandIndex * bandThickness;
+        xTranslation = bandIndex * ridgelineScaleX.step();
+      }
 
-        const linePathSC = layerArgs.scaleConfig.lineGen(line.points);
-        const baseLayer = layerArgs.coreLayers[LayerType.BaseLayer];
-        baseLayer.append("path")
-          .attr("id", `${layerArgs.getHtmlId(LayerType.Trace)}-${index}`)
-          .attr("pointer-events", "none")
-          .attr("fill", "none")
-          .attr("stroke", line.style.color || "black")
-          .attr("opacity", 1)
-          .attr("stroke-width", 1)
-          .attr("stroke-dasharray", line.style.strokeDasharray || "")
-          .attr("d", linePathSC)
-          .attr("transform", `translate(${translation}, 0)`)
-      });
-    }
+      const linePathSC = layerArgs.scaleConfig.lineGen(line.points);
+      const baseLayer = layerArgs.coreLayers[LayerType.BaseLayer];
+      baseLayer.append("path")
+        .attr("id", `${layerArgs.getHtmlId(LayerType.Trace)}-${index}`)
+        .attr("pointer-events", "none")
+        .attr("fill", "none")
+        .attr("stroke", line.style.color || "black")
+        .attr("opacity", 1)
+        .attr("stroke-width", 1)
+        .attr("stroke-dasharray", line.style.strokeDasharray || "")
+        .attr("d", linePathSC)
+        .attr("transform", `translate(${xTranslation}, ${yTranslation})`)
+    });
 
     this.beforeZoom = (zoomExtentsDC: NumericZoomExtents) => {
       const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
