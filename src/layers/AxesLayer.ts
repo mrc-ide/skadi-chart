@@ -1,6 +1,6 @@
 import * as d3 from "@/d3";
 import { LayerType, OptionalLayer } from "./Layer";
-import { D3Selection, LayerArgs, XYLabel } from "@/types";
+import { D3Selection, LayerArgs, XY, XYLabel } from "@/types";
 
 export class AxesLayer extends OptionalLayer {
   type = LayerType.Axes;
@@ -9,132 +9,107 @@ export class AxesLayer extends OptionalLayer {
     super();
   };
 
-  draw = (layerArgs: LayerArgs) => {
+  private drawAxis = (
+    axis: 'x' | 'y',
+    baseLayer: D3Selection<SVGGElement>,
+    svgLayer: D3Selection<SVGSVGElement>,
+    layerArgs: LayerArgs,
+  ) => {
     const { width, height, margin } = layerArgs.bounds;
+    const linearScale = layerArgs.scaleConfig.linearScales[axis];
+    const logScale = layerArgs.chartOptions.logScale[axis];
+    const ridgelineScale = layerArgs.scaleConfig.ridgelineScales[axis];
+    const ticks = layerArgs.globals.ticks[axis];
+    const { getHtmlId } = layerArgs;
+
+    const otherAxis = axis === "x" ? "y" : "x";
+    const graphStartingEdgesSC = { x: margin.left, y: margin.top };
+    const graphEndingEdgeSC = { x: width - margin.right, y: height - margin.bottom };
+
+    let numericalAxis: d3.Axis<d3.NumberValue>;
+    let axisLayers: D3Selection<SVGGElement>[] = [];
+    let axisLine: D3Selection<SVGLineElement> | null = null;
+    const axisConstructor = axis === "x" ? d3.axisBottom : d3.axisLeft;
+
+    const transform = axis === "x" ? `translate(0,${graphEndingEdgeSC.y})` : `translate(${graphStartingEdgesSC.x},0)`;
+    const showNumericalAxis = !ridgelineScale || ridgelineScale.domain().length < 3;
+    // TODO: Show a (squashed) numerical axis alongside categorical axes, if there are only 2 categories.
+    if (ridgelineScale) {
+      const spaciousTickPadding = axis === "x" ? 24 : 64;
+      const ridgelineAxis = axisConstructor(ridgelineScale)
+        .ticks(ticks)
+        .tickSize(0)
+        .tickPadding(showNumericalAxis ? spaciousTickPadding : 12);
+      axisLayers.push(svgLayer.append("g")
+        .attr("id", `${getHtmlId(LayerType.Axes)}-${axis}`)
+        .style("font-size", "0.75rem")
+        .attr("transform", transform)
+        .call(ridgelineAxis));
+
+      const squashFactor = ridgelineScale.domain().length;
+      // Draw a line at [axis]=0 for each band.
+      ridgelineScale.domain().forEach(cat => {
+        const bandStartSC = ridgelineScale(cat)!;
+        const lineCoordSC = bandStartSC + ((linearScale(0) - graphStartingEdgesSC[axis]) / squashFactor);
+        baseLayer.append("g").append("line")
+          .attr(`${axis}1`, lineCoordSC)
+          .attr(`${axis}2`, lineCoordSC)
+          .attr(`${otherAxis}1`, graphStartingEdgesSC[otherAxis])
+          .attr(`${otherAxis}2`, graphEndingEdgeSC[otherAxis])
+          .style("stroke", "black").style("stroke-width", 0.5);
+      });
+    } else if (!logScale) {
+      // A horizontal line at [axis]=0
+      axisLine = baseLayer.append("g").append("line")
+        .attr(`${axis}1`, linearScale(0))
+        .attr(`${axis}2`, linearScale(0))
+        .attr(`${otherAxis}1`, graphEndingEdgeSC[otherAxis])
+        .attr(`${otherAxis}2`, graphStartingEdgesSC[otherAxis])
+        .style("stroke", "black")
+        .style("stroke-width", 0.5);
+    }
+
+    if (showNumericalAxis) {
+      const tickSpecifier = axis === "x" ? undefined : (".2~s");
+      numericalAxis = axisConstructor(linearScale).ticks(ticks, tickSpecifier).tickSize(0).tickPadding(12);
+
+      axisLayers.push(svgLayer.append("g")
+        .attr("id", `${getHtmlId(LayerType.Axes)}-${axis}`)
+        .style("font-size", "0.75rem")
+        .attr("transform", transform)
+        .call(numericalAxis));
+    }
+
+    axisLayers.forEach(layer => layer.select(".domain").style("stroke-opacity", 0));
+    let labelEls: Partial<XY<D3Selection<SVGTextElement>>> = { [axis]: null };
+
+    if (this.labels[axis]) {
+      const distanceFromSvgEdgeToAxisSC = { x: margin.bottom, y: margin.left };
+      const svgClosestEdgeSC = axis === "x" ? layerArgs.bounds.height : 0;
+      // A factor to undo the difference in direction between x and y axes (where y increases downwards in SC but upwards in DC)
+      const normalisedDirection = { x: 1, y: -1 };
+      const graphExtentSC = graphEndingEdgeSC[axis] - graphStartingEdgesSC[axis];
+
+      labelEls[axis] = svgLayer.append("text")
+        .attr("id", `${getHtmlId(LayerType.Axes)}-label${axis}`)
+        .attr("x", normalisedDirection[axis] * (graphExtentSC / 2 + graphStartingEdgesSC[axis]))
+        .attr("y", svgClosestEdgeSC + (normalisedDirection[otherAxis] * distanceFromSvgEdgeToAxisSC[axis] / 3))
+        .style("font-size", "1.2rem")
+        .attr("text-anchor", "middle")
+        .text(this.labels[axis])
+    }
+
+    labelEls.y?.attr("transform", "rotate(-90)")
+  }
+
+  draw = (layerArgs: LayerArgs) => {
     const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
-    const { x: ridgelineScaleX, y: ridgelineScaleY } = layerArgs.scaleConfig.ridgelineScales;
     const svgLayer = layerArgs.coreLayers[LayerType.Svg];
     const baseLayer = layerArgs.coreLayers[LayerType.BaseLayer];
-    const { getHtmlId } = layerArgs;
-    const { animationDuration, ticks } = layerArgs.globals;
-    const { logScale } = layerArgs.chartOptions;
+    const { animationDuration } = layerArgs.globals;
 
-    let numericalXAxis: d3.Axis<d3.NumberValue>;
-    let axisLayersX: D3Selection<SVGGElement>[] = [];
-    let axisLineX: D3Selection<SVGLineElement> | null = null;
-    if (!logScale.x) {
-      // A vertical line at x=0
-      axisLineX = baseLayer.append("g").append("line")
-        .attr("x1", scaleX(0))
-        .attr("x2", scaleX(0))
-        .attr("y1", height - margin.bottom)
-        .attr("y2", margin.top)
-        .style("stroke", "black")
-        .style("stroke-width", 0.5);
-    }
-    const showNumericalXAxis = !ridgelineScaleX || ridgelineScaleX.domain().length < 3;
-    if (ridgelineScaleX) {
-      const ridgelineXAxis = d3.axisBottom(ridgelineScaleX).ticks(ticks.x).tickSize(0)
-        .tickPadding(showNumericalXAxis ? 24 : 12);
-      axisLayersX.push(svgLayer.append("g")
-        .attr("id", `${getHtmlId(LayerType.Axes)}-x`)
-        .style("font-size", "0.75rem")
-        .attr("transform", `translate(0,${height - margin.bottom})`)
-        .call(ridgelineXAxis));
-
-      const bandThickness = ridgelineScaleX.step();
-      ridgelineScaleX.domain().forEach(cat => {
-        const bandStartSC = ridgelineScaleX(cat)!
-        // lines between bands
-        baseLayer.append("g").append("line")
-          .attr("x1", bandStartSC + bandThickness)
-          .attr("x2", bandStartSC + bandThickness)
-          .attr("y1", height - margin.bottom)
-          .attr("y2", margin.top)
-          .style("stroke", "black")
-          .style("stroke-width", 0.5);
-      });
-    }
-
-    if (showNumericalXAxis) {
-      numericalXAxis = d3.axisBottom(scaleX).ticks(ticks.x).tickSize(0).tickPadding(12);
-      axisLayersX.push(svgLayer.append("g")
-        .attr("id", `${getHtmlId(LayerType.Axes)}-x`)
-        .style("font-size", "0.75rem")
-        .attr("transform", `translate(0,${height - margin.bottom})`)
-        .call(numericalXAxis));
-    }
-
-    axisLayersX.forEach(layer => layer.select(".domain").style("stroke-opacity", 0));
-
-    let numericalYAxis: d3.Axis<d3.NumberValue>;
-    let axisLayersY: D3Selection<SVGGElement>[] = [];
-    let axisLineY: D3Selection<SVGLineElement> | null = null;
-    if (!logScale.y) {
-      axisLineY = baseLayer.append("g").append("line")
-        .attr("x1", margin.left)
-        .attr("x2", width - margin.right)
-        .attr("y1", scaleY(0))
-        .attr("y2", scaleY(0))
-        .style("stroke", "black")
-        .style("stroke-width", 0.5);
-    }
-    const showNumericalYAxis = !ridgelineScaleY || ridgelineScaleY.domain().length < 3;
-    if (ridgelineScaleY) {
-      const ridgelineYAxis = d3.axisLeft(ridgelineScaleY).tickSize(0)
-        .tickPadding(showNumericalYAxis ? 64 : 12);
-      axisLayersY.push(svgLayer.append("g")
-        .attr("id", `${getHtmlId(LayerType.Axes)}-y`)
-        .style("font-size", "0.75rem")
-        .attr("transform", `translate(${margin.left},0)`)
-        .call(ridgelineYAxis));
-
-      const bandThickness = ridgelineScaleY.bandwidth();
-      ridgelineScaleY.domain().forEach(cat => {
-        const bandStartSC = ridgelineScaleY(cat)!
-        // lines between bands
-        baseLayer.append("g").append("line")
-          .attr("x1", scaleX(0))
-          .attr("x2", scaleX(1))
-          .attr("y1", bandStartSC + (bandThickness / 2))
-          .attr("y2", bandStartSC + (bandThickness / 2))
-          .style("stroke", "black")
-          .style("stroke-width", 0.5);
-      });
-    }
-
-    if (showNumericalYAxis) {
-      numericalYAxis = d3.axisLeft(scaleY).ticks(ticks.y, ".2~s").tickSize(0).tickPadding(12);
-
-      axisLayersY.push(svgLayer.append("g")
-        .attr("id", `${getHtmlId(LayerType.Axes)}-y`)
-        .style("font-size", "0.75rem")
-        .attr("transform", `translate(${margin.left},0)`)
-        .call(numericalYAxis));
-    }
-
-    axisLayersY.forEach(layer => layer.select(".domain").style("stroke-opacity", 0));
-
-    if (this.labels.y) {
-      layerArgs.coreLayers[LayerType.Svg].append("text")
-        .attr("id", `${getHtmlId(LayerType.Axes)}-labely`)
-        .style("font-size", "1.2rem")
-        .attr("text-anchor", "middle")
-        .attr("x", - (height - margin.top - margin.bottom) / 2 - margin.top)
-        .attr("y", margin.left / 3)
-        .attr("transform", "rotate(-90)")
-        .text(this.labels.y)
-    }
-
-    if (this.labels.x) {
-      layerArgs.coreLayers[LayerType.Svg].append("text")
-        .attr("id", `${getHtmlId(LayerType.Axes)}-labelx`)
-        .style("font-size", "1.2rem")
-        .attr("text-anchor", "middle")
-        .attr("x", (width - margin.left - margin.right) / 2 + margin.left)
-        .attr("y", layerArgs.bounds.height - margin.bottom / 3)
-        .text(this.labels.x)
-    }
+    this.drawAxis('x', baseLayer, svgLayer, layerArgs);
+    this.drawAxis('y', baseLayer, svgLayer, layerArgs);
 
     // The zoom layer (if added) will update the scaleX and scaleY
     // so axisY and axisX, which are constructed from these will
