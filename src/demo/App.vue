@@ -290,6 +290,7 @@ watch([logScaleY, logScaleX], () => {
 
 onMounted(async () => {
   new Chart()
+    .addZoom({ lockAxis: "y" })
     .addAxes({ x: "Time", y: "Category" })
     .addScatterPoints([], pointsPointsAxesAndZoom.map((p, index) => {
       const band = ridgelineCategories[index % ridgelineCategories.length];
@@ -314,6 +315,7 @@ onMounted(async () => {
     .appendTo(chartRidgelineYAxis.value!, scales, {}, { y: ridgelineCategories });
 
   new Chart()
+    .addZoom({ lockAxis: "x" })
     .addAxes({ x: "Category", y: "Value" })
     .addScatterPoints([], pointsPointsAxesAndZoom.map((p, index) => {
       const band = splitLeftRightCategories[index % splitLeftRightCategories.length];

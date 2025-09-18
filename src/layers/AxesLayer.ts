@@ -30,6 +30,8 @@ export class AxesLayer extends OptionalLayer {
     const distanceFromSvgEdgeToAxisSC = { x: margin.bottom, y: margin.left };
     const svgClosestEdgeSC = axis === "x" ? height : 0;
 
+    let zoomableAxis: d3.Axis<d3.NumberValue> | null = null;
+    let zoomableAxisLayer: D3Selection<SVGGElement> | null = null;
     let numericalAxis: d3.Axis<d3.NumberValue>;
     let axisLayers: D3Selection<SVGGElement>[] = [];
     let axisLine: D3Selection<SVGLineElement> | null = null;
@@ -77,11 +79,13 @@ export class AxesLayer extends OptionalLayer {
     const tickSpecifier = axis === "x" ? undefined : (".2~s");
     if (!ridgelineScale) {
       numericalAxis = axisConstructor(linearScale).ticks(ticks, tickSpecifier).tickSize(0).tickPadding(12);
-      axisLayers.push(svgLayer.append("g")
+      zoomableAxisLayer = svgLayer.append("g")
         .attr("id", `${getHtmlId(LayerType.Axes)}-${axis}`)
         .style("font-size", "0.75rem")
         .attr("transform", `translate(${transformTranslate.x},${transformTranslate.y})`)
-        .call(numericalAxis));
+        .call(numericalAxis);
+      axisLayers.push(zoomableAxisLayer);
+      zoomableAxis = numericalAxis;
     } else if (showNumericalAxis) {
       ridgelineScale.domain().forEach(cat => {
         const bandStartSC = ridgelineScale(cat)!;
@@ -115,6 +119,8 @@ export class AxesLayer extends OptionalLayer {
     }
 
     labelEls.y?.attr("transform", "rotate(-90)")
+
+    return { zoomableAxisLayer, zoomableAxis, axisLine };
   }
 
   draw = (layerArgs: LayerArgs) => {
@@ -123,37 +129,42 @@ export class AxesLayer extends OptionalLayer {
     const baseLayer = layerArgs.coreLayers[LayerType.BaseLayer];
     const { animationDuration } = layerArgs.globals;
 
-    this.drawAxis('x', baseLayer, svgLayer, layerArgs);
-    this.drawAxis('y', baseLayer, svgLayer, layerArgs);
+    const axisZoomX = this.drawAxis("x", baseLayer, svgLayer, layerArgs);
+    const axisZoomY = this.drawAxis("y", baseLayer, svgLayer, layerArgs);
 
     // The zoom layer (if added) will update the scaleX and scaleY
-    // so axisY and axisX, which are constructed from these will
+    // so axisY and axisX, which are constructed from these, will
     // also update. This function just specifies a smooth transition
     // between the old and new values of the scales
     this.zoom = async () => {
-      const promiseX = axisLayerX.transition()
-        .duration(animationDuration)
-        .call(axisX)
-        .end();
+      const promises = [];
+      if (axisZoomX.zoomableAxis) {
+        promises.push(axisZoomX.zoomableAxisLayer?.transition()
+          .duration(animationDuration)
+          .call(axisZoomX.zoomableAxis)
+          .end());
+      }
 
-      const promiseY = axisLayerY.transition()
-        .duration(animationDuration)
-        .call(axisY)
-        .end();
+      if (axisZoomY.zoomableAxis) {
+        promises.push(axisZoomY.zoomableAxisLayer?.transition()
+          .duration(animationDuration)
+          .call(axisZoomY.zoomableAxis)
+          .end());
+      }
 
-      const promiseAxisLineX = axisLineX?.transition()
+      const promiseAxisLineX = axisZoomX.axisLine?.transition()
         .duration(animationDuration)
         .attr("x1", scaleX(0))
         .attr("x2", scaleX(0))
         .end();
 
-      const promiseAxisLineY = axisLineY?.transition()
+      const promiseAxisLineY = axisZoomY.axisLine?.transition()
         .duration(animationDuration)
         .attr("y1", scaleY(0))
         .attr("y2", scaleY(0))
         .end();
 
-      await Promise.all([promiseX, promiseY, promiseAxisLineX, promiseAxisLineY]);
+      await Promise.all([...promises, promiseAxisLineX, promiseAxisLineY]);
     };
   };
 }

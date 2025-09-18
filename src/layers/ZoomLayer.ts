@@ -113,9 +113,19 @@ export class ZoomLayer extends OptionalLayer {
   };
 
   draw = (layerArgs: LayerArgs) => {
+    Object.entries(layerArgs.scaleConfig.ridgelineScales).forEach(([axis]) => {
+      if (this.options.lockAxis !== axis) {
+        console.warn(
+          `You have tried to use zoom with a categorical scale (\`d3.scaleBand\`) but this is not supported. `
+          + `Zoom is only available for numerical scales (\`d3.scaleLinear\` or \`d3.scaleLog\`). `
+          + `Lock the categorical axis ${axis} explicitly using the \`lockAxis\` option to enable zooming on the numerical axis only.`
+        );
+      }
+    });
+
     const { width, height, margin } = layerArgs.bounds;
     const svg = layerArgs.coreLayers[LayerType.Svg];
-    
+
     // brushX allows the user to click and draw a rectangle that will
     // select a particular x interval and it will then fire an end event
     const d3Brush = d3.brush<Point>()
@@ -187,6 +197,6 @@ export class ZoomLayer extends OptionalLayer {
     }
 
     layerArgs.coreLayers[LayerType.Svg]
-      .on("dblclick",() => this.handleZoom(dblClickZoomExtents, layerArgs));
+      .on("dblclick", () => this.handleZoom(dblClickZoomExtents, layerArgs));
   };
 };
