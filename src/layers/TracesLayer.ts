@@ -94,6 +94,7 @@ const RDPAlgorithm = (linesSC: Point[][], epsilon: number) => {
 export class TracesLayer<Metadata> extends OptionalLayer {
   type = LayerType.Trace;
   private traces: D3Selection<SVGPathElement>[] = [];
+  private ridgelineTraces: D3Selection<SVGPathElement>[] = [];
   private lowResLinesSC: Point[][] = [];
   private getNewPoint: null | ((x: number, y: number, t: number) => Point) = null;
 
@@ -191,8 +192,14 @@ export class TracesLayer<Metadata> extends OptionalLayer {
         .attr("d", linePathSC);
     });
 
-    this.ridgelineLinesDC.map((line, index) => {
+    this.ridgelineTraces = this.ridgelineLinesDC.map((line, index) => {
       let [xTranslation, yTranslation] = [0, 0];
+
+      if (ridgelineScaleX) {
+        const ridgelineDomain = ridgelineScaleX.domain();
+        const bandIndex = ridgelineDomain.findIndex(c => c === line.bands.x);
+        xTranslation = bandIndex * ridgelineScaleX.step();
+      }
 
       if (ridgelineScaleY) {
         const ridgelineDomain = ridgelineScaleY.domain();
@@ -201,15 +208,8 @@ export class TracesLayer<Metadata> extends OptionalLayer {
         yTranslation = (((ridgelineDomain.length - 1) / 2) - bandIndex) * ridgelineScaleY.step();
       }
 
-      if (ridgelineScaleX) {
-        const ridgelineDomain = ridgelineScaleX.domain();
-        const bandIndex = ridgelineDomain.findIndex(c => c === line.bands.x);
-        xTranslation = bandIndex * ridgelineScaleX.step();
-      }
-
       const linePathSC = layerArgs.scaleConfig.lineGen(line.points);
-      const baseLayer = layerArgs.coreLayers[LayerType.BaseLayer];
-      baseLayer.append("path")
+      return layerArgs.coreLayers[LayerType.BaseLayer].append("path")
         .attr("id", `${layerArgs.getHtmlId(LayerType.Trace)}-${index}`)
         .attr("pointer-events", "none")
         .attr("fill", "none")
@@ -260,21 +260,48 @@ export class TracesLayer<Metadata> extends OptionalLayer {
     // the zoom layer updates scaleX and scaleY which change our customLineGen function
     this.zoom = async zoomExtentsDC => {
       const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
+      const { animationDuration } = layerArgs.globals;
+
       const zoomExtentsSC: NumericZoomExtents = {
         x: [scaleX(zoomExtentsDC.x[0]), scaleX(zoomExtentsDC.x[1])],
         y: [scaleY(zoomExtentsDC.y[0]), scaleY(zoomExtentsDC.y[1])],
       };
 
       const promises: Promise<void>[] = [];
-      for (let i = 0; i < this.linesDC.length; i++) {
-        const promise = this.traces[i]
-          .transition()
-          .duration(layerArgs.globals.animationDuration)
+      this.linesDC.forEach((_line, i) => {
+        const promise = this.traces[i].transition()
+          .duration(animationDuration)
           // we do a custom animation because it is faster than d3's default
           .attrTween("d", () => this.customTween(i, zoomExtentsSC))
           .end();
         promises.push(promise);
-      };
+      });
+
+      this.ridgelineLinesDC.forEach((line, index) => {
+        let [xTranslation, yTranslation] = [0, 0];
+
+        if (ridgelineScaleX) {
+          const ridgelineDomain = ridgelineScaleX.domain();
+          const bandIndex = ridgelineDomain.findIndex(c => c === line.bands.x);
+          xTranslation = bandIndex * ridgelineScaleX.step();
+        }
+
+        if (ridgelineScaleY) {
+          const ridgelineDomain = ridgelineScaleY.domain();
+          const bandIndex = ridgelineDomain.findIndex(c => c === line.bands.y);
+          // Centering 0 within the ridge. TODO: Alternative (for lines with no negative values) would put 0 at bottom of ridge.
+          yTranslation = (((ridgelineDomain.length - 1) / 2) - bandIndex) * ridgelineScaleY.step();
+        }
+
+        // using d3 default animation instead of custom tween because I don't know how the latter works
+        const promise = this.ridgelineTraces[index].transition()
+          .duration(animationDuration)
+          .attr("d", layerArgs.scaleConfig.lineGen(line.points))
+          .attr("transform", `translate(${xTranslation}, ${yTranslation})`)
+          .end();
+        promises.push(promise);
+      });
+
       await Promise.all(promises);
 
       // after zoom animation, calculate appropriate resolution lines again and replace

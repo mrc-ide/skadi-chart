@@ -348,12 +348,24 @@ onMounted(async () => {
     .addScatterPoints([], pointsPointsAxesAndZoom.map((p, index) => {
       const xBand = splitLeftRightCategories[index % splitLeftRightCategories.length];
       const xColor = xBand === "Left" ? "red" : "blue"
-      const yColor = colors[index % ridgelineCategories.length];
       const yBand = ridgelineCategories[index % ridgelineCategories.length];
+      const yColor = colors[index % ridgelineCategories.length];
       return {
         ...p,
-        bands: { y: yBand, x: xBand },
+        bands: { x: xBand, y: yBand },
         style: { ...p.style, color: xColor }
+      }
+    }))
+    .addTraces([], {}, curvesSparkLines.map((line, index) => {
+      const xBand = splitLeftRightCategories[index % splitLeftRightCategories.length];
+      const xColor = xBand === "Left" ? "red" : "blue"
+      const yBand = ridgelineCategories[index % ridgelineCategories.length];
+      const yColor = colors[index % ridgelineCategories.length];
+
+      return {
+        ...line,
+        bands: { x: xBand, y: yBand },
+        style: { ...line.style, color: yColor }
       }
     }))
     .addTooltips(tooltipHtmlCallback)
