@@ -153,8 +153,6 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
     const { x: ridgelineScaleX, y: ridgelineScaleY } = layerArgs.scaleConfig.ridgelineScales;
 
-    console.warn("ridgelineScaleX", ridgelineScaleX);
-
     const xBand = this.getBand(clientXSC, ridgelineScaleX);
     const yBand = this.getBand(clientYSC, ridgelineScaleY);
 

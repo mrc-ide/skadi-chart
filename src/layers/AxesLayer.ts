@@ -22,16 +22,24 @@ export class AxesLayer extends OptionalLayer {
     const ticks = layerArgs.globals.ticks[axis];
     const { getHtmlId } = layerArgs;
 
+    // A factor to undo the difference in direction between x and y axes (where y increases downwards in SC but upwards in DC)
+    const normalisedDirection = { x: 1, y: -1 };
     const otherAxis = axis === "x" ? "y" : "x";
     const graphStartingEdgesSC = { x: margin.left, y: margin.top };
     const graphEndingEdgeSC = { x: width - margin.right, y: height - margin.bottom };
+    const distanceFromSvgEdgeToAxisSC = { x: margin.bottom, y: margin.left };
+    const svgClosestEdgeSC = axis === "x" ? height : 0;
 
     let numericalAxis: d3.Axis<d3.NumberValue>;
     let axisLayers: D3Selection<SVGGElement>[] = [];
     let axisLine: D3Selection<SVGLineElement> | null = null;
     const axisConstructor = axis === "x" ? d3.axisBottom : d3.axisLeft;
 
-    const transform = axis === "x" ? `translate(0,${graphEndingEdgeSC.y})` : `translate(${graphStartingEdgesSC.x},0)`;
+    const transformTranslate = {
+      [axis]: 0,
+      [otherAxis]: svgClosestEdgeSC + (normalisedDirection[otherAxis] * distanceFromSvgEdgeToAxisSC[axis]),
+    };
+
     const showNumericalAxis = !ridgelineScale || ridgelineScale.domain().length < 3;
     // TODO: Show a (squashed) numerical axis alongside categorical axes, if there are only 2 categories.
     if (ridgelineScale) {
@@ -43,7 +51,7 @@ export class AxesLayer extends OptionalLayer {
       axisLayers.push(svgLayer.append("g")
         .attr("id", `${getHtmlId(LayerType.Axes)}-${axis}`)
         .style("font-size", "0.75rem")
-        .attr("transform", transform)
+        .attr("transform", `translate(${transformTranslate.x},${transformTranslate.y})`)
         .call(ridgelineAxis));
 
       const squashFactor = ridgelineScale.domain().length;
@@ -76,7 +84,7 @@ export class AxesLayer extends OptionalLayer {
       axisLayers.push(svgLayer.append("g")
         .attr("id", `${getHtmlId(LayerType.Axes)}-${axis}`)
         .style("font-size", "0.75rem")
-        .attr("transform", transform)
+        .attr("transform", `translate(${transformTranslate.x},${transformTranslate.y})`)
         .call(numericalAxis));
     }
 
@@ -84,10 +92,6 @@ export class AxesLayer extends OptionalLayer {
     let labelEls: Partial<XY<D3Selection<SVGTextElement>>> = { [axis]: null };
 
     if (this.labels[axis]) {
-      const distanceFromSvgEdgeToAxisSC = { x: margin.bottom, y: margin.left };
-      const svgClosestEdgeSC = axis === "x" ? layerArgs.bounds.height : 0;
-      // A factor to undo the difference in direction between x and y axes (where y increases downwards in SC but upwards in DC)
-      const normalisedDirection = { x: 1, y: -1 };
       const graphExtentSC = graphEndingEdgeSC[axis] - graphStartingEdgesSC[axis];
 
       labelEls[axis] = svgLayer.append("text")
