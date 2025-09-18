@@ -137,16 +137,16 @@ export class AxesLayer extends OptionalLayer {
     // also update. This function just specifies a smooth transition
     // between the old and new values of the scales
     this.zoom = async () => {
-      const promises = [];
-      if (axisZoomX.zoomableAxis) {
-        promises.push(axisZoomX.zoomableAxisLayer?.transition()
+      const promises: Promise<void>[] = [];;
+      if (axisZoomX.zoomableAxis && axisZoomX.zoomableAxisLayer) {
+        promises.push(axisZoomX.zoomableAxisLayer.transition()
           .duration(animationDuration)
           .call(axisZoomX.zoomableAxis)
           .end());
       }
 
-      if (axisZoomY.zoomableAxis) {
-        promises.push(axisZoomY.zoomableAxisLayer?.transition()
+      if (axisZoomY.zoomableAxis && axisZoomY.zoomableAxisLayer) {
+        promises.push(axisZoomY.zoomableAxisLayer.transition()
           .duration(animationDuration)
           .call(axisZoomY.zoomableAxis)
           .end());
