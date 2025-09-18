@@ -174,7 +174,6 @@ export class ZoomLayer extends OptionalLayer {
       .style("display", "none")
       .style("mask-image", `url(#${overlayMaskId}), url(#${selectionMaskId})`)
       .style("mask-composite", "subtract") as any as D3Selection<SVGRectElement>;
-    
 
     d3Brush.on("start", () => layerArgs.optionalLayers.forEach(l => l.brushStart()));
     d3Brush.on("brush", e => this.handleBrushMove(e, layerArgs));
