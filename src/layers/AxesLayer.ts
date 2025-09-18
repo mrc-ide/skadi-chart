@@ -41,12 +41,9 @@ export class AxesLayer extends OptionalLayer {
     };
 
     const showNumericalAxis = !ridgelineScale || ridgelineScale.domain().length < 3;
-    // TODO: Show a (squashed) numerical axis alongside categorical axes, if there are only 2 categories.
     if (ridgelineScale) {
-      const spaciousTickPadding = axis === "x" ? 24 : 64;
-      const ridgelineAxis = axisConstructor(ridgelineScale)
-        .ticks(ticks)
-        .tickSize(0)
+      const spaciousTickPadding = axis === "x" ? 32 : 64;
+      const ridgelineAxis = axisConstructor(ridgelineScale).ticks(ticks).tickSize(0)
         .tickPadding(showNumericalAxis ? spaciousTickPadding : 12);
       axisLayers.push(svgLayer.append("g")
         .attr("id", `${getHtmlId(LayerType.Axes)}-${axis}`)
@@ -77,15 +74,29 @@ export class AxesLayer extends OptionalLayer {
         .style("stroke-width", 0.5);
     }
 
-    if (showNumericalAxis) {
-      const tickSpecifier = axis === "x" ? undefined : (".2~s");
+    const tickSpecifier = axis === "x" ? undefined : (".2~s");
+    if (!ridgelineScale) {
       numericalAxis = axisConstructor(linearScale).ticks(ticks, tickSpecifier).tickSize(0).tickPadding(12);
-
       axisLayers.push(svgLayer.append("g")
         .attr("id", `${getHtmlId(LayerType.Axes)}-${axis}`)
         .style("font-size", "0.75rem")
         .attr("transform", `translate(${transformTranslate.x},${transformTranslate.y})`)
         .call(numericalAxis));
+    } else if (showNumericalAxis) {
+      ridgelineScale.domain().forEach(cat => {
+        const bandStartSC = ridgelineScale(cat)!;
+        const squashedLinearScale = linearScale.copy()
+        squashedLinearScale.range([bandStartSC, bandStartSC + ridgelineScale.bandwidth()]);
+        numericalAxis = axisConstructor(squashedLinearScale).ticks(ticks, tickSpecifier).tickSize(0).tickPadding(12);
+        const axisLayer = svgLayer.append("g")
+          .attr("id", `${getHtmlId(LayerType.Axes)}-${axis}`)
+          .style("font-size", "0.75rem")
+          .attr("transform", `translate(${transformTranslate.x},${transformTranslate.y})`)
+          .call(numericalAxis);
+        // const tickEls = axisLayer.selectAll(".tick");
+        // tickEls.filter((_d, i) => i === 0 || i === tickEls.size() - 1).remove();
+        axisLayers.push(axisLayer);
+      })
     }
 
     axisLayers.forEach(layer => layer.select(".domain").style("stroke-opacity", 0));
