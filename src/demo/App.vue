@@ -348,6 +348,7 @@ onMounted(async () => {
     .addScatterPoints([], pointsPointsAxesAndZoom.map((p, index) => {
       const xBand = splitLeftRightCategories[index % splitLeftRightCategories.length];
       const xColor = xBand === "Left" ? "red" : "blue"
+      const yColor = colors[index % ridgelineCategories.length];
       const yBand = ridgelineCategories[index % ridgelineCategories.length];
       return {
         ...p,
