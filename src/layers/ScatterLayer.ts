@@ -27,29 +27,41 @@ export class ScatterLayer<Metadata> extends OptionalLayer {
     });
 
     const ridgelineScatterPoints = Object.entries(layerArgs.scaleConfig.ridgelineScales).reduce((obj, [a, bandScale]) => {
-      const ridgelineDomain = bandScale.domain();
-      const bandThickness = bandScale.step();
-      const squashFactor = ridgelineDomain.length;
+      const { x: ridgelineScaleX, y: ridgelineScaleY } = layerArgs.scaleConfig.ridgelineScales;
+
+      const squashFactors = {
+        x: ridgelineScaleX?.domain().length || 1,
+        y: ridgelineScaleY?.domain().length || 1,
+      };
       const axis = a as "x" | "y";
       const otherAxis = a === "x" ? "y" : "x";
 
       obj[axis] = this.ridgelinePoints.map((p, index) => {
-        const bandIndex = ridgelineDomain.findIndex(c => c === p.bands[axis]);
         const linearScales = layerArgs.scaleConfig.linearScales;
+        let [xTranslation, yTranslation] = [0, 0];
 
-        let translation = axis === "x"
-          ? `translate(${bandIndex * bandThickness}, 0)`
-          : `translate(0, ${(((ridgelineDomain.length - 1) / 2) - bandIndex) * bandThickness})`;
+        if (ridgelineScaleX) {
+          const ridgelineDomain = ridgelineScaleX.domain();
+          const bandIndex = ridgelineDomain.findIndex(c => c === p.bands.x);
+          xTranslation = bandIndex * ridgelineScaleX.step();
+        }
+
+        if (ridgelineScaleY) {
+          const ridgelineDomain = ridgelineScaleY.domain();
+          const bandIndex = ridgelineDomain.findIndex(c => c === p.bands.y);
+          // Centering 0 within the ridge. TODO: Alternative (for lines with no negative values) would put 0 at bottom of ridge.
+          yTranslation = (((ridgelineDomain.length - 1) / 2) - bandIndex) * ridgelineScaleY.step();
+        }
 
         return scatter.append("circle")
           .attr("id", `${getHtmlId(LayerType.Scatter)}-${index}`)
           .attr("pointer-events", "none")
-          .attr(`c${axis}`, linearScales[axis](p[axis] / squashFactor))
-          .attr(`c${otherAxis}`, linearScales[otherAxis](p[otherAxis]))
+          .attr(`c${axis}`, linearScales[axis](p[axis] / squashFactors[axis]!))
+          .attr(`c${otherAxis}`, linearScales[otherAxis](p[otherAxis] / squashFactors[otherAxis]!))
           .attr("r", p.style?.radius || "0.2%")
           .attr("fill", p.style?.color || "black")
           .style("opacity", p.style?.opacity || 1)
-          .attr("transform", translation)
+          .attr("transform", `translate(${xTranslation}, ${yTranslation})`)
       });
       return obj;
     }, {} as Partial<XY<D3Selection<SVGCircleElement>[]>>);

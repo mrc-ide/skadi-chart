@@ -1,9 +1,12 @@
 <template>
-  <h1>Ridgeline y axis</h1>
+  <h1>Categorical y axis</h1>
   <div class="chart" ref="chartRidgelineYAxis" id="chartRidgelineYAxis"></div>
 
-  <h1>Ridgeline x axis</h1>
+  <h1>Categorical x axis</h1>
   <div class="chart" ref="chartRidgelineXAxis" id="chartRidgelineXAxis"></div>
+
+  <h1>Categorical x and y axis</h1>
+  <div class="chart" ref="chartRidgelineBothAxes" id="chartRidgelineBothAxes"></div>
 
   <h1>Basic traces (spark lines)</h1>
   <div class="chart" ref="chartSparkLines" id="chartSparkLines"></div>
@@ -66,6 +69,7 @@ import { onMounted, ref, watch } from "vue";
 
 const chartRidgelineYAxis = ref<HTMLDivElement | null>(null);
 const chartRidgelineXAxis = ref<HTMLDivElement | null>(null);
+const chartRidgelineBothAxes = ref<HTMLDivElement | null>(null);
 const chartSparkLines = ref<HTMLDivElement | null>(null);
 const chartOnlyAxes = ref<HTMLDivElement | null>(null);
 const chartAxesAndGrid = ref<HTMLDivElement | null>(null);
@@ -338,6 +342,21 @@ onMounted(async () => {
     }))
     .addTooltips(tooltipHtmlCallback)
     .appendTo(chartRidgelineXAxis.value!, scales, {}, { x: splitLeftRightCategories });
+
+  new Chart()
+    .addAxes({ x: "Side", y: "Letter" })
+    .addScatterPoints([], pointsPointsAxesAndZoom.map((p, index) => {
+      const xBand = splitLeftRightCategories[index % splitLeftRightCategories.length];
+      const xColor = xBand === "Left" ? "red" : "blue"
+      const yBand = ridgelineCategories[index % ridgelineCategories.length];
+      return {
+        ...p,
+        bands: { y: yBand, x: xBand },
+        style: { ...p.style, color: xColor }
+      }
+    }))
+    .addTooltips(tooltipHtmlCallback)
+    .appendTo(chartRidgelineBothAxes.value!, scales, {}, { x: splitLeftRightCategories, y: ridgelineCategories });
 
   new Chart()
     .addTraces(curvesSparkLines)
