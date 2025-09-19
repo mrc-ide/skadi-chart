@@ -1,4 +1,4 @@
-import { D3Selection, LayerArgs, Lines, NumericZoomExtents, Point, ZoomExtents } from "@/types";
+import { D3Selection, LayerArgs, Lines, Point, ZoomExtents } from "@/types";
 import { LayerType, OptionalLayer } from "./Layer";
 
 export type TracesOptions = {
@@ -104,7 +104,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
   // d3 feeds the function we return from this function with t, which goes from
   // 0 to 1 with different jumps based on your ease, t = 0 is the start state of
   // your animation, t = 1 is the end state of your animation
-  private customTween = (index: number, zoomExtents: NumericZoomExtents) => {
+  private customTween = (index: number, zoomExtents: ZoomExtents) => {
     const currLineSC = this.lowResLinesSC[index];
     return (t: number) => {
       const intermediateLineSC = currLineSC.map(({x, y}) => this.getNewPoint!(x, y, t));
@@ -114,7 +114,11 @@ export class TracesLayer<Metadata> extends OptionalLayer {
 
   private round = (num: number) => Math.floor(num * 10) / 10;
 
-  private customLineGen = (lineSC: Point[], zoomExtents: NumericZoomExtents) => {
+  private getNewSvgPoint = (p: Point, moveOrLine: "M" | "L") => {
+    return moveOrLine + this.round(p.x) + "," + this.round(p.y);
+  }
+
+  private customLineGen = (lineSC: Point[], zoomExtents: ZoomExtents) => {
     let retStr = "";
     const { x, y } = lineSC[0];
     let wasLastPointInRange = zoomExtents.x[0] <= x && x <= zoomExtents.x[1]
@@ -133,23 +137,13 @@ export class TracesLayer<Metadata> extends OptionalLayer {
       // at the start of a new line segment so add the previous point too
       // because we want the line to go off the left edge of the svg
       if (wasLastPointInRange) {
-        retStr += retStr ? "L" : "M";
-        retStr += this.round(x);
-        retStr += ",";
-        retStr += this.round(y);
+        retStr += this.getNewSvgPoint(lineSC[i], retStr ? "L" : "M");
       } else if (isPointInRange) {
         // prev point will always exist, i.e. i will never be 0 in this branch
-        // because wasLastPointInRange will always match isCurrPointInRange for
+        // because wasLastPointInRange will always match isPointInRange for
         // i = 0 so we have to fall into the previous branch
-        const { x: prevX, y: prevY } = lineSC[i - 1];
-        retStr += "M";
-        retStr += this.round(prevX);
-        retStr += ",";
-        retStr += this.round(prevY);
-        retStr += "L";
-        retStr += this.round(x);
-        retStr += ",";
-        retStr += this.round(y);
+        retStr += this.getNewSvgPoint(lineSC[i - 1], "M");
+        retStr += this.getNewSvgPoint(lineSC[i], "L");
       }
       wasLastPointInRange = isPointInRange;
     }
@@ -169,10 +163,10 @@ export class TracesLayer<Metadata> extends OptionalLayer {
     }
   };
 
-  draw = (layerArgs: LayerArgs, currentExtentsDC: NumericZoomExtents) => {
+  draw = (layerArgs: LayerArgs, currentExtentsDC: ZoomExtents) => {
     this.updateLowResLinesSC(layerArgs);
     const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
-    const currentExtentsSC: NumericZoomExtents = {
+    const currentExtentsSC: ZoomExtents = {
       x: [scaleX(currentExtentsDC.x[0]), scaleX(currentExtentsDC.x[1])],
       y: [scaleY(currentExtentsDC.y[0]), scaleY(currentExtentsDC.y[1])],
     };
@@ -190,7 +184,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
         .attr("d", linePathSC);
     });
 
-    this.beforeZoom = (zoomExtentsDC: NumericZoomExtents) => {
+    this.beforeZoom = (zoomExtentsDC: ZoomExtents) => {
       const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
 
       // we have to convert the extents to SC from DC to find out what pixel
@@ -229,7 +223,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
     // the zoom layer updates scaleX and scaleY which change our customLineGen function
     this.zoom = async zoomExtentsDC => {
       const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
-      const zoomExtentsSC: NumericZoomExtents = {
+      const zoomExtentsSC: ZoomExtents = {
         x: [scaleX(zoomExtentsDC.x[0]), scaleX(zoomExtentsDC.x[1])],
         y: [scaleY(zoomExtentsDC.y[0]), scaleY(zoomExtentsDC.y[1])],
       };
