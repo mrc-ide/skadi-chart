@@ -254,18 +254,18 @@ const logScaleX = ref<boolean>(false);
 
 watch([logScaleY, logScaleX], () => {
   new Chart({ logScale: { y: logScaleY.value, x: logScaleX.value }})
-    .addTraces(curvesAxesLabelGridZoomAndLogScale)
+    .addTraces(curvesAxesLabelGridZoomAndLogScale.map((l, i) => ({...l, key: i % 2 === 0 ? "hey" : "yo"})))
     .addScatterPoints(pointsAxesLabelGridZoomAndLogScale)
     .addAxes(axesLabels)
     .addGridLines()
     .addZoom()
-    .appendTo(chartAxesLabelGridZoomAndLogScale.value!);
+    .appendTo(chartAxesLabelGridZoomAndLogScale.value!, {}, {}, ["hey", "yo"]);
 });
 
 onMounted(async () => {
   new Chart()
-    .addTraces(curvesSparkLines)
-    .appendTo(chartSparkLines.value!);
+    .addTraces(curvesSparkLines.map((l, i) => ({...l, key: i % 2 === 0 ? "hey" : "yo"})))
+    .appendTo(chartSparkLines.value!, {}, {}, ["hey", "yo"]);
 
   new Chart()
     .addTraces(curvesOnlyAxes)
@@ -293,12 +293,12 @@ onMounted(async () => {
   exportToPng.value = chart.exportToPng!;
 
   new Chart({ logScale: { y: logScaleY.value, x: logScaleX.value } })
-    .addTraces(curvesAxesLabelGridZoomAndLogScale)
+    .addTraces(curvesAxesLabelGridZoomAndLogScale.map((l, i) => ({...l, key: i % 2 === 0 ? "hey" : "yo"})))
     .addScatterPoints(pointsAxesLabelGridZoomAndLogScale)
     .addAxes(axesLabels)
     .addGridLines()
     .addZoom()
-    .appendTo(chartAxesLabelGridZoomAndLogScale.value!);
+    .appendTo(chartAxesLabelGridZoomAndLogScale.value!, {}, {}, ["hey", "yo"]);
 
   new Chart()
     .addScatterPoints(pointsPointsAxesAndZoom)

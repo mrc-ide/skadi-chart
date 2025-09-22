@@ -166,14 +166,20 @@ export class TracesLayer<Metadata> extends OptionalLayer {
   draw = (layerArgs: LayerArgs, currentExtentsDC: ZoomExtents) => {
     this.updateLowResLinesSC(layerArgs);
     const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
+    const { cat } = layerArgs.scaleConfig;
+    const { height, width, margin } = layerArgs.bounds;
     const currentExtentsSC: ZoomExtents = {
       x: [scaleX(currentExtentsDC.x[0]), scaleX(currentExtentsDC.x[1])],
       y: [scaleY(currentExtentsDC.y[0]), scaleY(currentExtentsDC.y[1])],
     };
 
+    const usableHeight = height - margin.top - margin.bottom;
+
+    console.log(cat)
     this.traces = this.linesDC.map((l, index) => {
+      if (l.key) console.log(cat.scale(l.key));
       const linePathSC = this.customLineGen(this.lowResLinesSC[index], currentExtentsSC);
-      return layerArgs.coreLayers[LayerType.BaseLayer].append("path")
+      let line = layerArgs.coreLayers[LayerType.BaseLayer].append("path")
         .attr("id", `${layerArgs.getHtmlId(LayerType.Trace)}-${index}`)
         .attr("pointer-events", "none")
         .attr("fill", "none")
@@ -182,6 +188,11 @@ export class TracesLayer<Metadata> extends OptionalLayer {
         .attr("stroke-width", l.style.strokeWidth || 0.5)
         .attr("stroke-dasharray", l.style.strokeDasharray || "")
         .attr("d", linePathSC);
+      if (l.key) {
+        line = line
+          .attr("transform", `translate(0, ${cat.scale(l.key) - usableHeight / (cat.categories.length * 2)})`)
+      }
+      return line
     });
 
     this.beforeZoom = (zoomExtentsDC: ZoomExtents) => {

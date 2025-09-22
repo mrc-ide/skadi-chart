@@ -92,14 +92,14 @@ export class Chart<Metadata = any> {
           lineSegment.points.push(currLine.points[j]);
           isLastCoordinatePositive = true;
         } else if (isLastCoordinatePositive) {
-          filteredPoints.push(lineSegment);
+          filteredPoints.push({...lineSegment, key: currLine?.key});
           lineSegment = { points: [], style: currLine.style };
           isLastCoordinatePositive = false;
         }
       }
 
       if (isLastCoordinatePositive) {
-        filteredPoints.push(lineSegment);
+        filteredPoints.push({...lineSegment, key: currLine?.key});
       }
     }
     if (warningMsg) console.warn(warningMsg);
@@ -256,7 +256,8 @@ export class Chart<Metadata = any> {
     baseElement: HTMLDivElement,
     bounds: Bounds,
     maxExtents: PartialScales,
-    initialExtents: PartialScales
+    initialExtents: PartialScales,
+    categories?: string[]
   ) => {
     const getHtmlId = (layer: LayerType[keyof LayerType]) => `${layer}-${this.id}`;
     const { height, width, margin } = bounds;
@@ -295,6 +296,13 @@ export class Chart<Metadata = any> {
     const scaleY = d3ScaleY()
       .domain(initialDomain.y)
       .range([ height - margin.bottom, margin.top ]);
+
+    const categoriesCfg = categories ? {
+      scale: d3.scaleBand()
+        .domain(categories)
+        .range([height - margin.bottom, margin.top]),
+      categories
+    } : undefined;
     
     const lineGen = d3.line<Point>()
       .x(d => scaleX(d.x))
@@ -317,7 +325,8 @@ export class Chart<Metadata = any> {
       scaleConfig: {
         linearScales: { x: scaleX, y: scaleY },
         lineGen,
-        scaleExtents: this.autoscaledMaxExtents
+        scaleExtents: this.autoscaledMaxExtents,
+        cat: categoriesCfg
       },
       coreLayers: {
         [LayerType.Svg]: svg,
@@ -340,10 +349,11 @@ export class Chart<Metadata = any> {
     baseElement: HTMLDivElement,
     maxExtents: PartialScales = {},
     initialExtents: PartialScales = {},
+    cat?: string[]
   ) => {
     const drawWithBounds = (width: number, height: number) => {
       const bounds = { width, height, margin: this.defaultMargin };
-      this.draw(baseElement, bounds, maxExtents, initialExtents);
+      this.draw(baseElement, bounds, maxExtents, initialExtents, cat);
     };
 
     const { width, height } = baseElement.getBoundingClientRect();
