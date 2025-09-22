@@ -1,26 +1,50 @@
 # Skadi Chart
 
-Simple d3 graphing library used by Skadi (Static [Wodin](https://github.com/smrc-ide/wodin))
+This charting library provides a structured and thin wrapper around [d3](https://d3js.org)
+to provide an fully flexible and extensible interface to plot customised graphs that
+out-of-the-box solutions haven't prepared for.
 
-# Basic commands
+There are many examples in [src/demo/App.vue](./src/demo/App.vue) which are used in a Vue context
+however this library will work with base Javascript too.
 
-* `npm run build` - build project
-* `npm run test:unit` - unit tests
-* `npm run test:e2e` - end to end tests
-* `npm run coverage` - coverage with v8 as provider
-* `npm run dev` - start demo app in [./src/demo](./src/demo/)
+# Installation
 
-# Coordinate systems
+```
+npm i skadi-chart
+```
 
-Some layers in this project deal with multiple coordinate systems and the code got quite confusing as we were not sure about which coordinate system certain variables were in. So we have tried to standardise some variables names to avoid confusion in some layer such as the [TooltipsLayer](./src/layers/TooltipsLayer.ts). We deal with 3 coordinate systems:
+# Usage
 
-![coordinate systems](./assets/coords.png)
+## Base chart class
 
-Each coordinate system has its origin highlighted with the circle, and x and y axes shown. Details for each color:
+All charts start with the `Chart` class that takes in `ChartOptions` (e.g. `animationDuration`
+in ms or `logScale`):
 
-* Red: These are the client coordinates that keep track of where elements in the DOM are relative to the red origin in the top left hand corner of the webpage. These coordinates are measured in pixels. Variables in this coordinate system will be suffixed with `CC` (client coordinates).
+```ts
+const chart = new Chart({ animationDuration: 500 });
+```
 
-* Green: The svg we generate has a view box equal to the width and height of the svg element, which means we have a 1 to 1 mapping of svg coordinates and client pixels (see [this](https://developer.mozilla.org/en-US/docs/Web/SVG/Tutorials/SVG_from_scratch/Positions) for more details). The green axes then represent the position of elements of the svg relative to its top left corner. These are also measured in pixels. Variables in this coordinate system will be suffixed with `SC` (svg coordinates).
+## Layers
 
-* Blue: We draw axes on the svg itself that represent the data coordinates of the traces the user puts in. These are measured with units equal to the user data which is not the same as pixels. Variables in this coordinate system will be suffixed with `DC` (data coordinates).
+Skadi chart works in layers. Each layer "adds" something to the graph but also is completely
+optional. To add a layer to the chart you have to call one of the methods below. These methods
+can also take some arguments that configure how the layers appear and examples of each can
+be found in [src/demo/App.vue](./src/demo/App.vue). For now, this is just an overview of the
+methods `Chart` class provides for adding layers:
 
+* `addAxes` will draw axes with tick marks, the axes can be autoscaled based on your
+data or you can provide a fixed scale in the `appendTo` function below. Example:
+  ```ts
+  chart.addAxes();
+  ```
+* `addTraces` will add traces to the graph. This data will also be used for autoscaling the
+axes if you haven't provided a fixed scale. Example:
+  ```ts
+  // must be of type Lines<Metadata> where Metadata can be null if you don't use any
+  // Custom Metadata will be provided to the tooltips layer mentioned below
+  declare const lines: Lines<Metadata>;
+
+  chart.addTraces(lines);
+  ```
+* `addScatterPoints`
+* `addGridLines` will add gridlines to the graph.
