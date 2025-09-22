@@ -5,6 +5,8 @@ import { D3Selection, LayerArgs, XY, XYLabel } from "@/types";
 export class AxesLayer extends OptionalLayer {
   type = LayerType.Axes;
 
+  // todo - cope with y axes that have a 0 at the bottom of the graph not the middle.
+
   constructor(public labels: XYLabel) {
     super();
   };
@@ -22,7 +24,8 @@ export class AxesLayer extends OptionalLayer {
     const ticks = layerArgs.globals.ticks[axis];
     const { getHtmlId } = layerArgs;
 
-    // A factor to undo the difference in direction between x and y axes (where y increases downwards in SC but upwards in DC)
+    // normalisedDirection is a factor to undo the difference in direction between x and y axes
+    // (whereby y increases downwards in SC but upwards in DC)
     const normalisedDirection = { x: 1, y: -1 };
     const otherAxis = axis === "x" ? "y" : "x";
     const graphStartingEdgesSC = { x: margin.left, y: margin.top };
@@ -87,6 +90,7 @@ export class AxesLayer extends OptionalLayer {
       axisLayers.push(zoomableAxisLayer);
       zoomableAxis = numericalAxis;
     } else if (showNumericalAxis) {
+      // Create a smaller numerical axis within each category.
       ridgelineScale.domain().forEach(cat => {
         const bandStartSC = ridgelineScale(cat)!;
         const squashedLinearScale = linearScale.copy()

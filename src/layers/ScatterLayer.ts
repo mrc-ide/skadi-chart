@@ -1,5 +1,4 @@
-import * as d3 from "@/d3";
-import { BandScatterPoints, D3Selection, LayerArgs, ScaleConfig, ScatterPoints, XY } from "@/types";
+import { BandScatterPoints, LayerArgs, ScaleConfig, ScatterPoints } from "@/types";
 import { LayerType, OptionalLayer } from "./Layer";
 export class ScatterLayer<Metadata> extends OptionalLayer {
   type = LayerType.Scatter;
@@ -38,7 +37,7 @@ export class ScatterLayer<Metadata> extends OptionalLayer {
       translation: `translate(${xTranslation}, ${yTranslation})`,
       center: {
         x: linearScaleX(pointDC.x / squashFactors.x),
-        y: linearScaleY(pointDC.y / squashFactors.y)
+        y: linearScaleY(pointDC.y / squashFactors.y),
       }
     };
   };

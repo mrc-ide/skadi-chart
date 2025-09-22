@@ -1,12 +1,18 @@
 <template>
   <h1>Categorical y axis</h1>
   <div class="chart" ref="chartRidgelineYAxis" id="chartRidgelineYAxis"></div>
+  <button @click="() => logScaleX = !logScaleX">Toggle log scale X</button>
+  <button @click="() => logScaleY = !logScaleY">Toggle log scale Y</button>
 
   <h1>Categorical x axis</h1>
   <div class="chart" ref="chartRidgelineXAxis" id="chartRidgelineXAxis"></div>
+  <button @click="() => logScaleX = !logScaleX">Toggle log scale X</button>
+  <button @click="() => logScaleY = !logScaleY">Toggle log scale Y</button>
 
   <h1>Categorical x and y axis</h1>
   <div class="chart" ref="chartRidgelineBothAxes" id="chartRidgelineBothAxes"></div>
+  <button @click="() => logScaleX = !logScaleX">Toggle log scale X</button>
+  <button @click="() => logScaleY = !logScaleY">Toggle log scale Y</button>
 
   <h1>Basic traces (spark lines)</h1>
   <div class="chart" ref="chartSparkLines" id="chartSparkLines"></div>
@@ -282,7 +288,7 @@ const exportToPng = ref<(name?: string) => void>();
 const logScaleY = ref<boolean>(false);
 const logScaleX = ref<boolean>(false);
 
-watch([logScaleY, logScaleX], () => {
+const drawChartAxesLabelGridZoomAndLogScale = () => {
   new Chart({ logScale: { y: logScaleY.value, x: logScaleX.value }})
     .addTraces(curvesAxesLabelGridZoomAndLogScale)
     .addScatterPoints(pointsAxesLabelGridZoomAndLogScale)
@@ -290,10 +296,10 @@ watch([logScaleY, logScaleX], () => {
     .addGridLines()
     .addZoom()
     .appendTo(chartAxesLabelGridZoomAndLogScale.value!);
-});
+}
 
-onMounted(async () => {
-  new Chart()
+const drawChartRidgelineYAxis = () => {
+  new Chart({ logScale: { x: logScaleX.value, y: logScaleY.value }})
     .addZoom({ lockAxis: "y" })
     .addAxes({ x: "Time", y: "Category" })
     .addScatterPoints([], pointsPointsAxesAndZoom.map((p, index) => {
@@ -305,20 +311,22 @@ onMounted(async () => {
         style: { ...p.style, color }
       }
     }))
-    .addTraces([], {}, curvesSparkLines.map((line, index) => {
-      const band = ridgelineCategories[index % ridgelineCategories.length];
-      const color = colors[index % ridgelineCategories.length];
+    // .addTraces([], {}, curvesSparkLines.map((line, index) => {
+    //   const band = ridgelineCategories[index % ridgelineCategories.length];
+    //   const color = colors[index % ridgelineCategories.length];
 
-      return {
-        ...line,
-        bands: { y: band },
-        style: { ...line.style, color }
-      }
-    }))
+    //   return {
+    //     ...line,
+    //     bands: { y: band },
+    //     style: { ...line.style, color }
+    //   }
+    // }))
     .addTooltips(tooltipHtmlCallback)
-    .appendTo(chartRidgelineYAxis.value!, scales, {}, { y: ridgelineCategories });
+    .appendTo(chartRidgelineYAxis.value!, {}, {}, { y: ridgelineCategories });
+};
 
-  new Chart()
+const drawChartRidgelineXAxis = () => {
+  new Chart({ logScale: { x: logScaleX.value, y: logScaleY.value }})
     .addZoom({ lockAxis: "x" })
     .addAxes({ x: "Category", y: "Value" })
     .addScatterPoints([], pointsPointsAxesAndZoom.map((p, index) => {
@@ -330,19 +338,31 @@ onMounted(async () => {
         style: { ...p.style, color }
       }
     }))
-    .addTraces([], {}, curvesSparkLines.map((line, index) => {
-      const band = splitLeftRightCategories[index % splitLeftRightCategories.length];
-      const color = colors[index % splitLeftRightCategories.length];
+    // .addTraces([], {}, curvesSparkLines.map((line, index) => {
+    //   const band = splitLeftRightCategories[index % splitLeftRightCategories.length];
+    //   const color = colors[index % splitLeftRightCategories.length];
 
-      return {
-        ...line,
-        bands: { x: band },
-        style: { ...line.style, color }
-      }
-    }))
+    //   return {
+    //     ...line,
+    //     bands: { x: band },
+    //     style: { ...line.style, color }
+    //   }
+    // }))
     .addTooltips(tooltipHtmlCallback)
     .appendTo(chartRidgelineXAxis.value!, scales, {}, { x: splitLeftRightCategories });
+}
 
+watch([logScaleY, logScaleX], () => {
+  // drawChartAxesLabelGridZoomAndLogScale();
+  drawChartRidgelineYAxis();
+  drawChartRidgelineXAxis();
+});
+
+onMounted(async () => {
+  drawChartRidgelineYAxis();
+  drawChartRidgelineXAxis();
+
+  return;
   new Chart()
     .addAxes({ x: "Side", y: "Letter" })
     .addScatterPoints([], pointsPointsAxesAndZoom.map((p, index) => {

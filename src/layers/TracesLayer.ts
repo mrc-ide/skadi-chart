@@ -208,7 +208,6 @@ export class TracesLayer<Metadata> extends OptionalLayer {
         yTranslation = (((ridgelineDomain.length - 1) / 2) - bandIndex) * ridgelineScaleY.step();
       }
 
-      const linePathSC = layerArgs.scaleConfig.lineGen(line.points);
       return layerArgs.coreLayers[LayerType.BaseLayer].append("path")
         .attr("id", `${layerArgs.getHtmlId(LayerType.Trace)}-${index}`)
         .attr("pointer-events", "none")
@@ -217,7 +216,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
         .attr("opacity", 1)
         .attr("stroke-width", 1)
         .attr("stroke-dasharray", line.style.strokeDasharray || "")
-        .attr("d", linePathSC)
+        .attr("d", layerArgs.scaleConfig.lineGen(line.points))
         .attr("transform", `translate(${xTranslation}, ${yTranslation})`)
     });
 
