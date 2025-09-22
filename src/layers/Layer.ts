@@ -1,4 +1,4 @@
-import { LayerArgs, NumericZoomExtents, ZoomExtents } from "@/types";
+import { LayerArgs, ZoomExtents, ZoomProperties } from "@/types";
 
 /*
   These are the various different types of layer types
@@ -25,16 +25,16 @@ export abstract class OptionalLayer<Properties = null> {
 
   constructor() {};
 
-  abstract draw(layerArgs: LayerArgs, currentExtents: NumericZoomExtents): void;
+  abstract draw(layerArgs: LayerArgs, currentExtents: ZoomExtents): void;
 
   // brush lifecycle hooks
   // note: brushEnd is the same as beforeZoom
   brushStart() {};
 
   // zoom lifecycle hooks
-  beforeZoom(_zoomExtents: ZoomExtents) {};
-  async zoom(_zoomExtents: ZoomExtents) {};
-  afterZoom(_zoomExtents: ZoomExtents | null) {};
+  beforeZoom(_zoomProperties: ZoomProperties) {};
+  async zoom(_zoomProperties: ZoomProperties) {};
+  afterZoom(_zoomProperties: ZoomProperties | null) {};
 };
 
 export type LifecycleHooks = Omit<OptionalLayer, "type" | "properties" | "draw">;
