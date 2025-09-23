@@ -1,3 +1,5 @@
+import * as d3 from "@/d3";
+
 import { BandLines, D3Selection, LayerArgs, Lines, NumericZoomExtents, Point, ZoomExtents } from "@/types";
 import { LayerType, OptionalLayer } from "./Layer";
 
@@ -193,20 +195,31 @@ export class TracesLayer<Metadata> extends OptionalLayer {
     });
 
     this.ridgelineTraces = this.ridgelineLinesDC.map((line, index) => {
+      // 'line' - a function mapping data onto a scale.
+      const lineGen = d3.line<Point>()
+        .x(d => scaleX(d.x))
+        .y(d => scaleY(d.y))
+
       let [xTranslation, yTranslation] = [0, 0];
 
       if (ridgelineScaleX) {
-        const ridgelineDomain = ridgelineScaleX.domain();
-        const bandIndex = ridgelineDomain.findIndex(c => c === line.bands.x);
-        xTranslation = bandIndex * ridgelineScaleX.step();
+        lineGen.x((d) => {
+          return (scaleY(d.x) - layerArgs.bounds.margin.left) / ridgelineScaleX.domain().length
+        });
+        // xTranslation -= marginLeft;
+        // xTranslation = (bandStart * squashFactorX) - (((squashFactorX - 1) / squashFactorX) * layerArgs.bounds.margin.left);
+        xTranslation = ridgelineScaleX(line.bands.x!)!;
       }
 
       if (ridgelineScaleY) {
-        const ridgelineDomain = ridgelineScaleY.domain();
-        const bandIndex = ridgelineDomain.findIndex(c => c === line.bands.y);
-        // Centering 0 within the ridge. TODO: Alternative (for lines with no negative values) would put 0 at bottom of ridge.
-        yTranslation = (((ridgelineDomain.length - 1) / 2) - bandIndex) * ridgelineScaleY.step();
+        lineGen.y((d) => {
+          return (scaleY(d.y) - layerArgs.bounds.margin.top) / ridgelineScaleY.domain().length
+        });
+        // yTranslation = (bandStart - (4 * margin)) / squashFactorY
+        yTranslation = ridgelineScaleY(line.bands.y!)!;
       }
+      // yTranslation = (bandStart * squashFactorY) - (((squashFactorY - 1) / squashFactorY) * layerArgs.bounds.margin.top);
+      // const otherYTranslation = (-0.8 * layerArgs.bounds.margin.top) + (bandStart * 5);
 
       return layerArgs.coreLayers[LayerType.BaseLayer].append("path")
         .attr("id", `${layerArgs.getHtmlId(LayerType.Trace)}-${index}`)
@@ -216,8 +229,9 @@ export class TracesLayer<Metadata> extends OptionalLayer {
         .attr("opacity", 1)
         .attr("stroke-width", 1)
         .attr("stroke-dasharray", line.style.strokeDasharray || "")
-        .attr("d", layerArgs.scaleConfig.lineGen(line.points))
-        .attr("transform", `translate(${xTranslation}, ${yTranslation})`)
+        .attr("d", lineGen(line.points))
+        .attr("transform", `translate(${xTranslation}, ${yTranslation})`);
+      // .attr("transform", `scale(${1 / squashFactorX}, ${1 / squashFactorY}) translate(${xTranslation}, ${yTranslation})`)
     });
 
     this.beforeZoom = (zoomExtentsDC: NumericZoomExtents) => {

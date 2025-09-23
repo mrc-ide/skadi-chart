@@ -73,7 +73,7 @@ export class Chart<Metadata = any> {
   // segments, missing out the points with values <= 0. Here we create a line
   // segment and iterate down the points of a line and once we hit a negative
   // coordinate we push that line segment and start a new one
-  private filterLinesForLogAxis = (lines: Lines<Metadata>, axis: "x" | "y") => {
+  private filterLinesForLogAxis = (lines: Lines<Metadata> | BandLines<Metadata>, axis: "x" | "y") => {
     let warningMsg = "";
     const filteredPoints: Lines<Metadata> = [];
     for (let i = 0; i < lines.length; i++) {
@@ -92,14 +92,14 @@ export class Chart<Metadata = any> {
           lineSegment.points.push(currLine.points[j]);
           isLastCoordinatePositive = true;
         } else if (isLastCoordinatePositive) {
-          filteredPoints.push(lineSegment);
+          filteredPoints.push({ ...lineSegment, bands: currLine.bands });
           lineSegment = { points: [], style: currLine.style };
           isLastCoordinatePositive = false;
         }
       }
 
       if (isLastCoordinatePositive) {
-        filteredPoints.push(lineSegment);
+        filteredPoints.push({ ...lineSegment, bands: currLine.bands });
       }
     }
     if (warningMsg) console.warn(warningMsg);
@@ -117,12 +117,13 @@ export class Chart<Metadata = any> {
     return filteredLines;
   };
 
-  addTraces = (lines: Lines<Metadata>, options?: Partial<TracesOptions>, ridgelinePoints: BandLines<Metadata> = []) => {
+  addTraces = (lines: Lines<Metadata>, options?: Partial<TracesOptions>, ridgelineLines: BandLines<Metadata> = []) => {
     const optionsWithDefaults: TracesOptions = {
       RDPEpsilon: options?.RDPEpsilon ?? null
     };
     const filteredLines = this.filterLines(lines);
-    this.optionalLayers.push(new TracesLayer(filteredLines, optionsWithDefaults, ridgelinePoints));
+    const ridgelineLinesFiltered = this.filterLines(ridgelineLines);
+    this.optionalLayers.push(new TracesLayer(filteredLines, optionsWithDefaults, ridgelineLinesFiltered));
     return this;
   };
 
@@ -164,7 +165,8 @@ export class Chart<Metadata = any> {
 
   addScatterPoints = (points: ScatterPoints<Metadata>, ridgelinePoints: BandScatterPoints<Metadata> = []) => {
     const filteredPoints = this.filterScatterPoints(points);
-    this.optionalLayers.push(new ScatterLayer(filteredPoints, ridgelinePoints));
+    const filteredRidgelinePoints = this.filterScatterPoints(ridgelinePoints);
+    this.optionalLayers.push(new ScatterLayer(filteredPoints, filteredRidgelinePoints));
     return this;
   };
 
@@ -224,10 +226,10 @@ export class Chart<Metadata = any> {
       const axis = a as "x" | "y";
       if (this.options.logScale[axis] && extents[axis]) {
         if (extents[axis].start === 0) {
-          extents[axis].start = Number.EPSILON;
+          extents[axis].start = 0.01 // || Number.EPSILON;
         }
         if (extents[axis].end === 0) {
-          extents[axis].end = -Number.EPSILON;
+          extents[axis].end = 0.01 // -Number.EPSILON;
         }
       }
     });
@@ -275,7 +277,7 @@ export class Chart<Metadata = any> {
       }
     };
 
-    return this.safeExtents(extents) as Scales;
+    return extents;
   };
 
   private draw = (
@@ -310,14 +312,15 @@ export class Chart<Metadata = any> {
       .attr("clip-path", `url(#${getHtmlId(LayerType.ClipPath)})`);
 
     const { x, y } = this.autoscaledMaxExtents;
-    const safeInitialExtents = this.safeExtents(initialExtents);
+
+    // const safeInitialExtents = this.safeExtents(initialExtents);
     const initialDomain: NumericZoomExtents = {
-      x: [safeInitialExtents.x?.start ?? x.start, safeInitialExtents.x?.end ?? x.end],
-      y: [safeInitialExtents.y?.start ?? y.start, safeInitialExtents.y?.end ?? y.end],
+      x: [initialExtents.x?.start ?? x.start, initialExtents.x?.end ?? x.end],
+      y: [initialExtents.y?.start ?? y.start, initialExtents.y?.end ?? y.end],
     };
     // Disallow zeros for log-scale domains
     if (this.options.logScale.x) {
-      initialDomain.x[0] = initialDomain.x[0] || Number.EPSILON;
+      initialDomain.x[0] = initialDomain.x[0] || 0.01;
     }
 
     const d3ScaleX = this.options.logScale.x ? d3.scaleLog : d3.scaleLinear;
@@ -348,18 +351,11 @@ export class Chart<Metadata = any> {
     }
 
 
-
-
     // NB: I got rid of squashfactors here intending to re-implement them in the layers themselves, as I thought that might be more correct for log sclaes
 
 
 
 
-
-    // 'line' - a function mapping data onto a scale.
-    const lineGen = d3.line<Point>()
-      .x(d => scaleX(d.x)) // * xFactor))
-      .y(d => scaleY(d.y)) // * yFactor))
 
     // Todo: allow a squashing factor other than ridgelineDomain.length (though that is a good default)
     // Translation logic will need to change (for the non-zero-centering case) so that values only exceed
@@ -382,7 +378,6 @@ export class Chart<Metadata = any> {
       scaleConfig: {
         linearScales: { x: scaleX, y: scaleY },
         ridgelineScales,
-        lineGen,
         scaleExtents: this.autoscaledMaxExtents
       },
       coreLayers: {
@@ -408,7 +403,6 @@ export class Chart<Metadata = any> {
     initialExtents: PartialScales = {},
     ridgelineCategories: RidgelineCategories = {}
   ) => {
-    console.log("Append to max extents is: ", maxExtents);
     const drawWithBounds = (width: number, height: number) => {
       const bounds = { width, height, margin: this.defaultMargin };
       this.draw(baseElement, bounds, maxExtents, initialExtents, ridgelineCategories);

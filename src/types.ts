@@ -27,7 +27,6 @@ export type ScaleConfig = {
   linearScales: XY<d3.ScaleLinear<number, number, never>>,
   ridgelineScales: Partial<XY<d3.ScaleBand<string>>>,
   scaleExtents: Scales,
-  lineGen: d3.Line<Point>
 }
 
 export type D3Selection<Element extends d3.BaseType> = d3.Selection<Element, Point, null, undefined>

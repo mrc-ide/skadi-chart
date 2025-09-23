@@ -57,10 +57,12 @@ export class AxesLayer extends OptionalLayer {
         .call(ridgelineAxis));
 
       const squashFactor = ridgelineScale.domain().length;
-      // Draw a line at [axis]=0 for each band.
+      // Draw a line at [axis]=0 for each band (or the band edge if in log scale).
       ridgelineScale.domain().forEach(cat => {
         const bandStartSC = ridgelineScale(cat)!;
-        const lineCoordSC = bandStartSC + ((linearScale(0) - graphStartingEdgesSC[axis]) / squashFactor);
+        const lineCoordSC = logScale
+          ? bandStartSC
+          : bandStartSC + ((linearScale(0) - graphStartingEdgesSC[axis]) / squashFactor);
         baseLayer.append("g").append("line")
           .attr(`${axis}1`, lineCoordSC)
           .attr(`${axis}2`, lineCoordSC)
@@ -91,20 +93,20 @@ export class AxesLayer extends OptionalLayer {
       zoomableAxis = numericalAxis;
     } else if (showNumericalAxis) {
       // Create a smaller numerical axis within each category.
-      ridgelineScale.domain().forEach(cat => {
-        const bandStartSC = ridgelineScale(cat)!;
-        const squashedLinearScale = linearScale.copy()
-        squashedLinearScale.range([bandStartSC, bandStartSC + ridgelineScale.bandwidth()]);
-        numericalAxis = axisConstructor(squashedLinearScale).ticks(ticks, tickSpecifier).tickSize(0).tickPadding(12);
-        const axisLayer = svgLayer.append("g")
-          .attr("id", `${getHtmlId(LayerType.Axes)}-${axis}`)
-          .style("font-size", "0.75rem")
-          .attr("transform", `translate(${transformTranslate.x},${transformTranslate.y})`)
-          .call(numericalAxis);
-        // const tickEls = axisLayer.selectAll(".tick");
-        // tickEls.filter((_d, i) => i === 0 || i === tickEls.size() - 1).remove();
-        axisLayers.push(axisLayer);
-      })
+      // ridgelineScale.domain().forEach(cat => {
+      //   const bandStartSC = ridgelineScale(cat)!;
+      //   const squashedLinearScale = linearScale.copy()
+      //   squashedLinearScale.range([bandStartSC, bandStartSC + ridgelineScale.bandwidth()]);
+      //   numericalAxis = axisConstructor(squashedLinearScale).ticks(ticks, tickSpecifier).tickSize(0).tickPadding(12);
+      //   const axisLayer = svgLayer.append("g")
+      //     .attr("id", `${getHtmlId(LayerType.Axes)}-${axis}`)
+      //     .style("font-size", "0.75rem")
+      //     .attr("transform", `translate(${transformTranslate.x},${transformTranslate.y})`)
+      //     .call(numericalAxis);
+      //   // const tickEls = axisLayer.selectAll(".tick");
+      //   // tickEls.filter((_d, i) => i === 0 || i === tickEls.size() - 1).remove();
+      //   axisLayers.push(axisLayer);
+      // })
     }
 
     axisLayers.forEach(layer => layer.select(".domain").style("stroke-opacity", 0));

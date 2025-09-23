@@ -311,16 +311,16 @@ const drawChartRidgelineYAxis = () => {
         style: { ...p.style, color }
       }
     }))
-    // .addTraces([], {}, curvesSparkLines.map((line, index) => {
-    //   const band = ridgelineCategories[index % ridgelineCategories.length];
-    //   const color = colors[index % ridgelineCategories.length];
+    .addTraces([], {}, curvesSparkLines.map((line, index) => {
+      const band = ridgelineCategories[index % ridgelineCategories.length];
+      const color = colors[index % ridgelineCategories.length];
 
-    //   return {
-    //     ...line,
-    //     bands: { y: band },
-    //     style: { ...line.style, color }
-    //   }
-    // }))
+      return {
+        ...line,
+        bands: { y: band },
+        style: { ...line.style, color }
+      }
+    }))
     .addTooltips(tooltipHtmlCallback)
     .appendTo(chartRidgelineYAxis.value!, {}, {}, { y: ridgelineCategories });
 };
@@ -338,16 +338,16 @@ const drawChartRidgelineXAxis = () => {
         style: { ...p.style, color }
       }
     }))
-    // .addTraces([], {}, curvesSparkLines.map((line, index) => {
-    //   const band = splitLeftRightCategories[index % splitLeftRightCategories.length];
-    //   const color = colors[index % splitLeftRightCategories.length];
+    .addTraces([], {}, curvesSparkLines.map((line, index) => {
+      const band = splitLeftRightCategories[index % splitLeftRightCategories.length];
+      const color = colors[index % splitLeftRightCategories.length];
 
-    //   return {
-    //     ...line,
-    //     bands: { x: band },
-    //     style: { ...line.style, color }
-    //   }
-    // }))
+      return {
+        ...line,
+        bands: { x: band },
+        style: { ...line.style, color }
+      }
+    }))
     .addTooltips(tooltipHtmlCallback)
     .appendTo(chartRidgelineXAxis.value!, scales, {}, { x: splitLeftRightCategories });
 }
