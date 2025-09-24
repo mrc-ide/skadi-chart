@@ -194,6 +194,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
         .attr("d", linePathSC);
     });
 
+    // todo: Implement scatter points too and then check if this logic should be shared (e.g. the chart has a common linegen)
     this.ridgelineTraces = this.ridgelineLinesDC.map((line, index) => {
       const lineGen = d3.line<Point>()
 

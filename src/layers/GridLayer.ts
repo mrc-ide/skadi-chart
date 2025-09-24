@@ -1,6 +1,8 @@
 import { D3Selection, LayerArgs } from "@/types";
 import { LayerType, OptionalLayer } from "./Layer";
 
+// TODO: make this layer integrate with categorical axes. One for a separate PR!
+
 export class GridLayer extends OptionalLayer {
   type = LayerType.Grid;
 

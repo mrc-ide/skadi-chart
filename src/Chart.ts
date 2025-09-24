@@ -123,6 +123,8 @@ export class Chart<Metadata = any> {
     };
     const filteredLines = this.filterLines(lines);
     const ridgelineLinesFiltered = this.filterLines(ridgelineLines);
+    // MYSTERY: why does the filtered length INCREASE when we turn on log scale on y axis?
+    console.warn("ridgelineLinesFiltered.length", ridgelineLinesFiltered.length);
     this.optionalLayers.push(new TracesLayer(filteredLines, optionsWithDefaults, ridgelineLinesFiltered));
     return this;
   };
