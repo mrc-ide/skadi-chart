@@ -55,8 +55,9 @@ data or you can provide a fixed scale in the `appendTo` function below.
 * `addTraces` will add traces to the graph. This data will also be used for autoscaling the
 axes if you haven't provided a fixed scale.
   ```ts
-  // must be of type Lines<Metadata> where Metadata can be null if you don't use any.
-  // Custom Metadata will be provided to the tooltips layer mentioned below
+  // must be of type Lines<Metadata> where Metadata can be null if you don't
+  // use any. Custom Metadata will be provided to the tooltips layer
+  // mentioned below
   declare const lines: Lines<Metadata>;
 
   chart.addTraces(lines);
@@ -64,8 +65,9 @@ axes if you haven't provided a fixed scale.
 * `addScatterPoints` will add scatter points to the graph. This data will also be used for
 autoscaling the axes if you haven't provided a fixed scale.
   ```ts
-  // must be of type ScatterPoints<Metadata> where Metadata can be null if you don't use any.
-  // Custom Metadata will be provided to the tooltips layer mentioned below
+  // must be of type ScatterPoints<Metadata> where Metadata can be null if
+  // you don't use any. Custom Metadata will be provided to the tooltips
+  // layer mentioned below
   declare const points: ScatterPoints<Metadata>;
 
   chart.addScatterPoints(points);
