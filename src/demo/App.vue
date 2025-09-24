@@ -302,21 +302,32 @@ const drawChartRidgelineYAxis = () => {
   new Chart({ logScale: { x: logScaleX.value, y: logScaleY.value }})
     .addZoom({ lockAxis: "y" })
     .addAxes({ x: "Time", y: "Category" })
-    .addScatterPoints([], pointsPointsAxesAndZoom.map((p, index) => {
-      const band = ridgelineCategories[index % ridgelineCategories.length];
-      const color = colors[index % ridgelineCategories.length];
-      return {
-        ...p,
-        bands: { y: band },
-        style: { ...p.style, color }
-      }
-    }))
+    // .addScatterPoints([], pointsPointsAxesAndZoom.map((p, index) => {
+    //   const band = ridgelineCategories[index % ridgelineCategories.length];
+    //   const color = colors[index % ridgelineCategories.length];
+    //   return {
+    //     ...p,
+    //     bands: { y: band },
+    //     style: { ...p.style, color }
+    //   }
+    // }))
     .addTraces([], {}, curvesSparkLines.map((line, index) => {
       const band = ridgelineCategories[index % ridgelineCategories.length];
       const color = colors[index % ridgelineCategories.length];
 
       return {
-        ...line,
+        ...{ ...line, points:
+          // Make one line be an increasing line in the positive part of the band, to ensure that the positive part
+          // is on the right side of 0, and so are the axis ticks, and that the scale increases in the expected diretion.
+          // Make another line near 0 to check that the scale/ticks are
+          // in the right place.
+          line.points.map((p, i) => ({
+            ...p,
+            y: (index === 0)
+              ? (1e3 * i)
+              : ((index === 1) ? 1 : p.y)
+          }))
+        },
         bands: { y: band },
         style: { ...line.style, color }
       }
@@ -329,27 +340,41 @@ const drawChartRidgelineXAxis = () => {
   new Chart({ logScale: { x: logScaleX.value, y: logScaleY.value }})
     .addZoom({ lockAxis: "x" })
     .addAxes({ x: "Category", y: "Value" })
-    .addScatterPoints([], pointsPointsAxesAndZoom.map((p, index) => {
-      const band = splitLeftRightCategories[index % splitLeftRightCategories.length];
-      const color = colors[index % splitLeftRightCategories.length];
-      return {
-        ...p,
-        bands: { x: band },
-        style: { ...p.style, color }
-      }
-    }))
+    // .addScatterPoints([], pointsPointsAxesAndZoom.map((p, index) => {
+    //   const band = splitLeftRightCategories[index % splitLeftRightCategories.length];
+    //   const color = colors[index % splitLeftRightCategories.length];
+    //   return {
+    //     ...p,
+    //     bands: { x: band },
+    //     style: { ...p.style, color }
+    //   }
+    // }))
     .addTraces([], {}, curvesSparkLines.map((line, index) => {
       const band = splitLeftRightCategories[index % splitLeftRightCategories.length];
       const color = colors[index % splitLeftRightCategories.length];
 
+      // Make one line be a straight line in the positive part of the band, to ensure that the positive part
+      // is on the right side of 0, and so are the axis ticks.
       return {
-        ...line,
+        ...{ ...line, points:
+          // Make one line be an increasing line in the positive part of the band, to ensure that the positive part
+          // is on the right side of 0, and so are the axis ticks, and that the scale increases in the expected diretion.
+          // Make another line near 0 to check that the scale/ticks are
+          // in the right place.
+          line.points.map((p, i) => ({
+            ...p,
+            y: (index === 0)
+              ? (1e3 * i)
+              : ((index === 1) ? 1 : p.y)
+          }))
+        },
         bands: { x: band },
         style: { ...line.style, color }
       }
     }))
     .addTooltips(tooltipHtmlCallback)
-    .appendTo(chartRidgelineXAxis.value!, scales, {}, { x: splitLeftRightCategories });
+    // todo - add user-specified 'scales' back in here and see if it breaks log scales
+    .appendTo(chartRidgelineXAxis.value!, {}, {}, { x: splitLeftRightCategories });
 }
 
 watch([logScaleY, logScaleX], () => {

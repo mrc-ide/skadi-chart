@@ -195,31 +195,28 @@ export class TracesLayer<Metadata> extends OptionalLayer {
     });
 
     this.ridgelineTraces = this.ridgelineLinesDC.map((line, index) => {
-      // 'line' - a function mapping data onto a scale.
       const lineGen = d3.line<Point>()
-        .x(d => scaleX(d.x))
-        .y(d => scaleY(d.y))
 
       let [xTranslation, yTranslation] = [0, 0];
 
       if (ridgelineScaleX) {
-        lineGen.x((d) => {
-          return (scaleY(d.x) - layerArgs.bounds.margin.left) / ridgelineScaleX.domain().length
-        });
-        // xTranslation -= marginLeft;
-        // xTranslation = (bandStart * squashFactorX) - (((squashFactorX - 1) / squashFactorX) * layerArgs.bounds.margin.left);
+        const usableWidth = layerArgs.bounds.width - layerArgs.bounds.margin.left - layerArgs.bounds.margin.right;
+        const squashFactorX = usableWidth / ridgelineScaleX.bandwidth(); // takes into account band padding.
+        lineGen.x(d => (scaleX(d.x) - layerArgs.bounds.margin.left) / squashFactorX);
         xTranslation = ridgelineScaleX(line.bands.x!)!;
+      } else {
+        lineGen.x(d => scaleX(d.x));
       }
 
       if (ridgelineScaleY) {
-        lineGen.y((d) => {
-          return (scaleY(d.y) - layerArgs.bounds.margin.top) / ridgelineScaleY.domain().length
-        });
-        // yTranslation = (bandStart - (4 * margin)) / squashFactorY
+        const usableHeight = layerArgs.bounds.height - layerArgs.bounds.margin.top - layerArgs.bounds.margin.bottom;
+        const squashFactorY = usableHeight / ridgelineScaleY.bandwidth(); // takes into account band padding.
+        console.warn("squashFactorY")
+        lineGen.y(d => (scaleY(d.y) - layerArgs.bounds.margin.top) / squashFactorY);
         yTranslation = ridgelineScaleY(line.bands.y!)!;
+      } else {
+        lineGen.y(d => scaleY(d.y));
       }
-      // yTranslation = (bandStart * squashFactorY) - (((squashFactorY - 1) / squashFactorY) * layerArgs.bounds.margin.top);
-      // const otherYTranslation = (-0.8 * layerArgs.bounds.margin.top) + (bandStart * 5);
 
       return layerArgs.coreLayers[LayerType.BaseLayer].append("path")
         .attr("id", `${layerArgs.getHtmlId(LayerType.Trace)}-${index}`)
@@ -231,7 +228,6 @@ export class TracesLayer<Metadata> extends OptionalLayer {
         .attr("stroke-dasharray", line.style.strokeDasharray || "")
         .attr("d", lineGen(line.points))
         .attr("transform", `translate(${xTranslation}, ${yTranslation})`);
-      // .attr("transform", `scale(${1 / squashFactorX}, ${1 / squashFactorY}) translate(${xTranslation}, ${yTranslation})`)
     });
 
     this.beforeZoom = (zoomExtentsDC: NumericZoomExtents) => {
@@ -290,30 +286,30 @@ export class TracesLayer<Metadata> extends OptionalLayer {
         promises.push(promise);
       });
 
-      this.ridgelineLinesDC.forEach((line, index) => {
-        let [xTranslation, yTranslation] = [0, 0];
+      // this.ridgelineLinesDC.forEach((line, index) => {
+      //   let [xTranslation, yTranslation] = [0, 0];
 
-        if (ridgelineScaleX) {
-          const ridgelineDomain = ridgelineScaleX.domain();
-          const bandIndex = ridgelineDomain.findIndex(c => c === line.bands.x);
-          xTranslation = bandIndex * ridgelineScaleX.step();
-        }
+      //   if (ridgelineScaleX) {
+      //     const ridgelineDomain = ridgelineScaleX.domain();
+      //     const bandIndex = ridgelineDomain.findIndex(c => c === line.bands.x);
+      //     xTranslation = bandIndex * ridgelineScaleX.step();
+      //   }
 
-        if (ridgelineScaleY) {
-          const ridgelineDomain = ridgelineScaleY.domain();
-          const bandIndex = ridgelineDomain.findIndex(c => c === line.bands.y);
-          // Centering 0 within the ridge. TODO: Alternative (for lines with no negative values) would put 0 at bottom of ridge.
-          yTranslation = (((ridgelineDomain.length - 1) / 2) - bandIndex) * ridgelineScaleY.step();
-        }
+      //   if (ridgelineScaleY) {
+      //     const ridgelineDomain = ridgelineScaleY.domain();
+      //     const bandIndex = ridgelineDomain.findIndex(c => c === line.bands.y);
+      //     // Centering 0 within the ridge. TODO: Alternative (for lines with no negative values) would put 0 at bottom of ridge.
+      //     yTranslation = (((ridgelineDomain.length - 1) / 2) - bandIndex) * ridgelineScaleY.step();
+      //   }
 
-        // using d3 default animation instead of custom tween because I don't know how the latter works
-        const promise = this.ridgelineTraces[index].transition()
-          .duration(animationDuration)
-          .attr("d", layerArgs.scaleConfig.lineGen(line.points))
-          .attr("transform", `translate(${xTranslation}, ${yTranslation})`)
-          .end();
-        promises.push(promise);
-      });
+      //   // using d3 default animation instead of custom tween because I don't know how the latter works
+      //   const promise = this.ridgelineTraces[index].transition()
+      //     .duration(animationDuration)
+      //     .attr("d", layerArgs.scaleConfig.lineGen(line.points))
+      //     .attr("transform", `translate(${xTranslation}, ${yTranslation})`)
+      //     .end();
+      //   promises.push(promise);
+      // });
 
       await Promise.all(promises);
 

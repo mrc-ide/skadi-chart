@@ -14,7 +14,7 @@ export class GridLayer extends OptionalLayer {
     const svgLayer = layerArgs.coreLayers[LayerType.Svg];
     const { animationDuration, ticks } = layerArgs.globals;
     const { getHtmlId } = layerArgs;
-  
+
     const gridOpacity = 0.15;
     const gridStrokeWidth = 0.5;
 

@@ -75,7 +75,7 @@ export class Chart<Metadata = any> {
   // coordinate we push that line segment and start a new one
   private filterLinesForLogAxis = (lines: Lines<Metadata> | BandLines<Metadata>, axis: "x" | "y") => {
     let warningMsg = "";
-    const filteredPoints: Lines<Metadata> = [];
+    const filteredLines: Lines<Metadata> = [];
     for (let i = 0; i < lines.length; i++) {
       const currLine = lines[i];
       let isLastCoordinatePositive = currLine.points[0] && currLine.points[0][axis] > 0;
@@ -92,21 +92,21 @@ export class Chart<Metadata = any> {
           lineSegment.points.push(currLine.points[j]);
           isLastCoordinatePositive = true;
         } else if (isLastCoordinatePositive) {
-          filteredPoints.push({ ...lineSegment, bands: currLine.bands });
+          filteredLines.push({ ...lineSegment, bands: currLine.bands });
           lineSegment = { points: [], style: currLine.style };
           isLastCoordinatePositive = false;
         }
       }
 
       if (isLastCoordinatePositive) {
-        filteredPoints.push({ ...lineSegment, bands: currLine.bands });
+        filteredLines.push({ ...lineSegment, bands: currLine.bands });
       }
     }
     if (warningMsg) console.warn(warningMsg);
-    return filteredPoints;
+    return filteredLines;
   };
 
-  private filterLines = (lines: Lines<Metadata>) => {
+  private filterLines = (lines: Lines<Metadata> | BandLines<Metadata>,) => {
     let filteredLines = lines;
     if (this.options.logScale.x) {
       filteredLines = this.filterLinesForLogAxis(filteredLines, "x");
@@ -220,22 +220,6 @@ export class Chart<Metadata = any> {
     };
   };
 
-  // Disallow zeros in log-scale extents
-  private safeExtents = (extents: PartialScales) => {
-    ["x", "y"].forEach((a) => {
-      const axis = a as "x" | "y";
-      if (this.options.logScale[axis] && extents[axis]) {
-        if (extents[axis].start === 0) {
-          extents[axis].start = 0.01 // || Number.EPSILON;
-        }
-        if (extents[axis].end === 0) {
-          extents[axis].end = 0.01 // -Number.EPSILON;
-        }
-      }
-    });
-    return extents;
-  };
-
   private processScales = (partialScales: PartialScales): Scales => {
     const traceLayers = this.optionalLayers
       .filter(l => l.type === LayerType.Trace) as TracesLayer<Metadata>[];
@@ -266,7 +250,7 @@ export class Chart<Metadata = any> {
     const paddedX = paddingFuncX(minMax.x, paddingFactorX);
     const paddedY = paddingFuncY(minMax.y, paddingFactorY);
 
-    const extents = {
+    return ({
       x: {
         start: partialScales.x?.start ?? paddedX.start,
         end: partialScales.x?.end ?? paddedX.end
@@ -275,9 +259,7 @@ export class Chart<Metadata = any> {
         start: partialScales.y?.start ?? paddedY.start,
         end: partialScales.y?.end ?? paddedY.end
       }
-    };
-
-    return extents;
+    });
   };
 
   private draw = (
@@ -313,14 +295,17 @@ export class Chart<Metadata = any> {
 
     const { x, y } = this.autoscaledMaxExtents;
 
-    // const safeInitialExtents = this.safeExtents(initialExtents);
     const initialDomain: NumericZoomExtents = {
       x: [initialExtents.x?.start ?? x.start, initialExtents.x?.end ?? x.end],
       y: [initialExtents.y?.start ?? y.start, initialExtents.y?.end ?? y.end],
     };
     // Disallow zeros for log-scale domains
-    if (this.options.logScale.x) {
-      initialDomain.x[0] = initialDomain.x[0] || 0.01;
+    if ((this.options.logScale.x && initialDomain.x.some(bound => bound <= 0))
+      || (this.options.logScale.y && initialDomain.y.some(bound => bound <= 0))
+    ) {
+      throw new Error(`You have tried to use a log scale axis but the initial extents includes 0.`
+        + ` Please set the initial extents to a range that does not include 0, or pass {} to try the auto-scale.`
+      );
     }
 
     const d3ScaleX = this.options.logScale.x ? d3.scaleLog : d3.scaleLinear;
@@ -349,13 +334,6 @@ export class Chart<Metadata = any> {
         .domain(ridgelineCategories.y)
         .range([height - margin.bottom, margin.top]);
     }
-
-
-    // NB: I got rid of squashfactors here intending to re-implement them in the layers themselves, as I thought that might be more correct for log sclaes
-
-
-
-
 
     // Todo: allow a squashing factor other than ridgelineDomain.length (though that is a good default)
     // Translation logic will need to change (for the non-zero-centering case) so that values only exceed
