@@ -17,9 +17,9 @@ export class AxesLayer extends OptionalLayer {
     const scale = layerArgs.scaleConfig.linearScales[axis];
     const axisConstructor = axis === "x" ? d3.axisBottom : d3.axisLeft;
     const { count: tickCount, specifier: tickSpecifier } = layerArgs.globals.tickConfig[axis];
-    const svgStartToAxisSC = axis === "x" ? height - margin.bottom : margin.left;
+    const svgStartToAxis = axis === "x" ? height - margin.bottom : margin.left;
     const otherAxis = axis === "x" ? "y" : "x";
-    const translate = { [axis]: 0, [otherAxis]: svgStartToAxisSC }
+    const translate = { [axis]: 0, [otherAxis]: svgStartToAxis }
 
     const numericalAxis = axisConstructor(scale).ticks(tickCount, tickSpecifier).tickSize(0).tickPadding(12);
     const axisLayer = svgLayer.append("g")
@@ -35,7 +35,7 @@ export class AxesLayer extends OptionalLayer {
       axisLine = baseLayer.append("g").append("line")
         .attr(`${axis}1`, scale(0))
         .attr(`${axis}2`, scale(0))
-        .attr(`${otherAxis}1`, svgStartToAxisSC)
+        .attr(`${otherAxis}1`, svgStartToAxis)
         .attr(`${otherAxis}2`, axis === "x" ? margin.top : width - margin.right)
         .style("stroke", "black")
         .style("stroke-width", 0.5);
@@ -48,13 +48,13 @@ export class AxesLayer extends OptionalLayer {
         .attr("text-anchor", "middle")
         .text(this.labels[axis])
       if (axis === "y") {
-        const usableHeightSC = height - margin.top - margin.bottom;
-        label.attr("x", - usableHeightSC / 2 - margin.top)
+        const usableHeight = height - margin.top - margin.bottom;
+        label.attr("x", - usableHeight / 2 - margin.top)
           .attr("y", margin.left / 3)
           .attr("transform", "rotate(-90)")
       } else {
-        const usableWidthSC = width - margin.left - margin.right;
-        label.attr("x", usableWidthSC / 2 + margin.left)
+        const usableWidth = width - margin.left - margin.right;
+        label.attr("x", usableWidth / 2 + margin.left)
           .attr("y", height - margin.bottom / 3)
       }
     }
