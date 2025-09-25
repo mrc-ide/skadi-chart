@@ -3,9 +3,10 @@ import * as d3 from "./d3";
 import { LayerType, OptionalLayer } from "./layers/Layer";
 
 export type XY<T> = { x: T, y: T }
-
+type BandConfig = { bands: Partial<XY<string>> }
 export type Point = XY<number>
 export type PointWithMetadata<Metadata> = Point & { metadata?: Metadata }
+export type BandPoint<Metadata> = PointWithMetadata<Metadata> & BandConfig
 
 export type XYLabel = Partial<XY<string>>
 
@@ -42,7 +43,6 @@ export type LayerArgs = {
   scaleConfig: {
     linearScales: XY<d3.ScaleLinear<number, number, never>>,
     scaleExtents: Scales,
-    lineGen: d3.Line<Point>
   },
   coreLayers: {
     [LayerType.Svg]: D3Selection<SVGSVGElement>,
@@ -57,6 +57,7 @@ export type ZoomExtents = XY<[number, number]>
 export type ZoomProperties = ZoomExtents & { eventType: "brush" | "dblclick" }
 export type Scales = XY<{ start: number, end: number }>
 export type PartialScales = Partial<XY<{ start?: number, end?: number }>>
+export type CategoricalScales = Partial<XY<string[]>>;
 
 export type LineStyle = {
   color?: string,
@@ -70,6 +71,9 @@ type LineConfig<Metadata> = {
   metadata?: Metadata
 }
 export type Lines<Metadata> = LineConfig<Metadata>[]
+
+type BandLineConfig<Metadata> = LineConfig<Metadata> & BandConfig
+export type BandLines<Metadata> = BandLineConfig<Metadata>[]
 
 export type ScatterPointStyle = {
   radius?: number,

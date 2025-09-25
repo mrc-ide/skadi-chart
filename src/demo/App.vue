@@ -26,6 +26,16 @@
   <h1>Chart with tooltips</h1>
   <div class="chart" ref="chartTooltips" id="chartTooltips"></div>
 
+  <h1>Categorical y axis with traces and log scales</h1>
+  <div class="chart" ref="chartCategoricalYAxis" id="chartCategoricalYAxis"></div>
+  <button @click="() => logScaleX = !logScaleX">Toggle log scale X</button>
+  <button @click="() => logScaleY = !logScaleY">Toggle log scale Y</button>
+
+  <h1>Categorical x axis with traces and log scales</h1>
+  <div class="chart" ref="chartCategoricalXAxis" id="chartCategoricalXAxis"></div>
+  <button @click="() => logScaleX = !logScaleX">Toggle log scale X</button>
+  <button @click="() => logScaleY = !logScaleY">Toggle log scale Y</button>
+
   <h1>Responsive chart (and dashed lines)</h1>
   <div class="chart-responsive" ref="chartResponsive" id="chartResponsive"></div>
 
@@ -54,7 +64,7 @@
 </style>
 
 <script setup lang="ts">
-import { ScatterPoints } from "@/types";
+import { BandLines, BandPoint, PointWithMetadata, ScatterPoints } from "@/types";
 import { Chart, LayerArgs, LayerType, Lines, OptionalLayer, Scales } from "../skadi-chart";
 import { onMounted, ref, watch } from "vue";
 
@@ -204,10 +214,46 @@ const makeRandomCurves = (props: typeof propsBasic) => {
   return lines;
 };
 
-const tooltipHtmlCallback = (point: {x: number, y: number, metadata?: Metadata}) => {
-  return `<div style="color: ${point.metadata?.color};">X: ${point.x.toFixed(3)}, Y: ${point.y.toFixed(3)}</div>`;
+const makeRandomCurvesForCategoricalAxis = (axis: string[]): BandLines<Metadata> => {
+  return makeRandomCurves(propsBasic).map((line, index) => {
+    const band = axis[index % axis.length];
+    const color = colors[index % axis.length];
+
+    return {
+      ...line,
+      points: line.points.map((p, i) => {
+        let y = p.y;
+        // Make one line be an increasing line in the positive part of the band, to ensure that the positive part
+        // is on the right side of 0, and so are the axis ticks, and that the scale increases in the expected direction.
+        if (index === 0) { y = 1e3 * i; }
+        // Make another line near 0 to check that the scale/ticks are in the right place.
+        else if (index === 1) { y = 1; }
+        return { ...p, y };
+      }),
+      bands: { y: band },
+      style: { ...line.style, color }
+    }
+  })
 };
 
+// TODO: Decide whether tooltips are part of this pr
+const tooltipHtmlCallback = (point: PointWithMetadata<Metadata> | BandPoint<Metadata>) => {
+  const numericalValues = `X: ${point.x.toFixed(3)}, Y: ${point.y.toFixed(3)}`;
+  if (Object.keys(point).includes("bands")) {
+    return `<div style="color: ${point.metadata?.color};">${numericalValues}</div>`
+  } else {
+    const bands = (point as BandPoint<Metadata>).bands;
+    return `<div style="color: ${point.metadata?.color};">${numericalValues}`
+    + `<br/>Band X: ${bands.x}, Band Y: ${bands.y}`
+    + `</div>`
+  }
+};
+
+
+const categoricalYAxis = ["A", "B", "C", "D", "E"];
+const categoricalXAxis = ["Left", "Right"];
+const chartCategoricalYAxis = ref<HTMLDivElement | null>(null);
+const chartCategoricalXAxis = ref<HTMLDivElement | null>(null);
 const curvesSparkLines = makeRandomCurves(propsBasic);
 const curvesOnlyAxes = makeRandomCurves(propsBasic);
 const curvesAxesAndGrid = makeRandomCurves(propsBasic);
@@ -222,6 +268,7 @@ const curvesTooltips = makeRandomCurves(propsBasic);
 const pointsTooltips = makeRandomPoints(pointPropsTooltips);
 const curvesResponsive = makeRandomCurves(propsBasic);
 const curvesCustom = makeRandomCurves(propsBasic);
+const curvesCategoricalYAxis = makeRandomCurvesForCategoricalAxis(categoricalYAxis);
 
 const scales: Scales = { x: {start: 0, end: 1}, y: {start: -3e6, end: 3e6} };
 
@@ -260,6 +307,11 @@ watch([logScaleY, logScaleX], () => {
     .addGridLines()
     .addZoom()
     .appendTo(chartAxesLabelGridZoomAndLogScale.value!);
+
+  new Chart({ logScale: { x: logScaleX.value, y: logScaleY.value }})
+    .addAxes({ x: "Time", y: "Category" })
+    .addTraces(curvesCategoricalYAxis)
+    .appendTo(chartCategoricalXAxis.value!, {}, {}, { y: categoricalYAxis });
 });
 
 onMounted(async () => {
