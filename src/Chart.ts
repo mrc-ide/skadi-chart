@@ -31,7 +31,13 @@ export class Chart<Metadata = any> {
   isResponsive: boolean = false;
   globals = {
     animationDuration: 350,
-    ticks: { x: 0, y: 0 }
+    tickConfig: {
+      x: { count: 0 },
+      y: {
+        count: 0,
+        specifier: ".2~s", // an SI-prefix with 2 significant figures and no trailing zeros, 42e6 -> 42M
+      }
+    }
   };
   defaultMargin = { top: 20, bottom: 35, left: 50, right: 20 };
   exportToPng: ((name?: string) => void) | null = null;
@@ -307,7 +313,8 @@ export class Chart<Metadata = any> {
     if (height < 400) ticksY = 6;
     if (height < 200) ticksY = 3;
 
-    this.globals.ticks = { x: ticksX, y: ticksY };
+    this.globals.tickConfig.x.count = ticksX;
+    this.globals.tickConfig.y.count = ticksY;
 
     const layerArgs: LayerArgs = {
       id: this.id,

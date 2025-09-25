@@ -15,16 +15,13 @@ export class AxesLayer extends OptionalLayer {
     const { width, height, margin } = layerArgs.bounds;
     const { getHtmlId } = layerArgs;
     const scale = layerArgs.scaleConfig.linearScales[axis];
-    const ticks = layerArgs.globals.ticks[axis];
     const axisConstructor = axis === "x" ? d3.axisBottom : d3.axisLeft;
-    const tickSpecifier = axis === "x"
-      ? undefined
-      : (".2~s"); // an SI-prefix with 2 significant figures and no trailing zeros, 42e6 -> 42M
+    const { count: tickCount, specifier: tickSpecifier } = layerArgs.globals.tickConfig[axis];
     const svgStartToAxisSC = axis === "x" ? height - margin.bottom : margin.left;
     const otherAxis = axis === "x" ? "y" : "x";
     const translate = { [axis]: 0, [otherAxis]: svgStartToAxisSC }
 
-    const numericalAxis = axisConstructor(scale).ticks(ticks, tickSpecifier).tickSize(0).tickPadding(12);
+    const numericalAxis = axisConstructor(scale).ticks(tickCount, tickSpecifier).tickSize(0).tickPadding(12);
     const axisLayer = svgLayer.append("g")
       .attr("id", `${getHtmlId(LayerType.Axes)}-${axis}`)
       .style("font-size", "0.75rem")
