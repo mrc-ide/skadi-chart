@@ -3,7 +3,7 @@ import { AxesLayer } from "./layers/AxesLayer";
 import { TracesLayer, TracesOptions } from "./layers/TracesLayer";
 import { ZoomLayer, ZoomOptions } from "./layers/ZoomLayer";
 import { TooltipHtmlCallback, TooltipsLayer } from "./layers/TooltipsLayer";
-import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, NumericZoomExtents, PartialScales, Point, Scales, ScatterPoints, XY, XYLabel } from "./types";
+import { AllOptionalLayers, Bounds, CategoricalScales, D3Selection, LayerArgs, Lines, NumericZoomExtents, PartialScales, Point, Scales, ScatterPoints, XY, XYLabel } from "./types";
 import { LayerType, LifecycleHooks, OptionalLayer } from "./layers/Layer";
 import { GridLayer } from "./layers/GridLayer";
 import html2canvas from "html2canvas";
@@ -13,7 +13,7 @@ import { ScatterLayer } from "./layers/ScatterLayer";
 class CustomHooksLayer extends OptionalLayer {
   type = LayerType.Custom;
   constructor() { super() };
-  draw() {};
+  draw() { };
 }
 
 export type ChartOptions = {
@@ -90,8 +90,8 @@ export class Chart<Metadata = any> {
       for (let j = 0; j < currLine.points.length; j++) {
         if (currLine.points[j][axis] <= 0) {
           warningMsg = `You have tried to use ${axis} axis `
-                     + `log scale but there are traces with `
-                     + `${axis} coordinates that are <= 0`;
+            + `log scale but there are traces with `
+            + `${axis} coordinates that are <= 0`;
         }
 
         if (currLine.points[j][axis] > 0) {
@@ -150,8 +150,8 @@ export class Chart<Metadata = any> {
     if (filteredPoints.length !== points.length) {
       console.warn(
         `You have tried to use ${axis} axis `
-         + `log scale but there are points with `
-         + `${axis} coordinates that are <= 0`
+        + `log scale but there are points with `
+        + `${axis} coordinates that are <= 0`
       );
     }
     return filteredPoints;
@@ -239,10 +239,10 @@ export class Chart<Metadata = any> {
     const minMax = this.getXYMinMax(flatPointsDC);
     const paddingFactorX = 0.02;
     const paddingFactorY = 0.03;
-  
+
     const paddingFuncX = this.options.logScale.x ? this.addLogPadding : this.addLinearPadding;
     const paddingFuncY = this.options.logScale.y ? this.addLogPadding : this.addLinearPadding;
-    
+
     const paddedX = paddingFuncX(minMax.x, paddingFactorX);
     const paddedY = paddingFuncY(minMax.y, paddingFactorY);
 
@@ -267,7 +267,7 @@ export class Chart<Metadata = any> {
     const getHtmlId = (layer: LayerType[keyof LayerType]) => `${layer}-${this.id}`;
     const { height, width, margin } = bounds;
     this.autoscaledMaxExtents = this.processScales(maxExtents);
- 
+
     const svg = d3.create("svg")
       .attr("id", getHtmlId(LayerType.Svg))
       .attr("width", "100%")
@@ -296,12 +296,12 @@ export class Chart<Metadata = any> {
     const d3ScaleX = this.options.logScale.x ? d3.scaleLog : d3.scaleLinear;
     const scaleX = d3ScaleX()
       .domain(initialDomain.x)
-      .range([ margin.left, width - margin.right ]);
+      .range([margin.left, width - margin.right]);
     const d3ScaleY = this.options.logScale.y ? d3.scaleLog : d3.scaleLinear;
     const scaleY = d3ScaleY()
       .domain(initialDomain.y)
-      .range([ height - margin.bottom, margin.top ]);
-    
+      .range([height - margin.bottom, margin.top]);
+
     const lineGen = d3.line<Point>()
       .x(d => scaleX(d.x))
       .y(d => scaleY(d.y));
@@ -323,7 +323,6 @@ export class Chart<Metadata = any> {
       globals: this.globals,
       scaleConfig: {
         linearScales: { x: scaleX, y: scaleY },
-        lineGen,
         scaleExtents: this.autoscaledMaxExtents
       },
       coreLayers: {
@@ -347,6 +346,7 @@ export class Chart<Metadata = any> {
     baseElement: HTMLDivElement,
     maxExtents: PartialScales = {},
     initialExtents: PartialScales = {},
+    categoricalScales: CategoricalScales = {},
   ) => {
     const drawWithBounds = (width: number, height: number) => {
       const bounds = { width, height, margin: this.defaultMargin };

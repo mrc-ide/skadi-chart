@@ -2,8 +2,12 @@ import * as d3 from "@/d3";
 import { LayerType, OptionalLayer } from "./Layer";
 import { D3Selection, LayerArgs, XYLabel } from "@/types";
 
+// todo - make sure we cope with y axes that have a 0 at the bottom of the graph not the middle.
+
 export class AxesLayer extends OptionalLayer {
   type = LayerType.Axes;
+
+  // todo - first PR should actually just refactor axeslayer to treat x and y the same. Then the diff for categorical axes will be much clearer.
 
   constructor(public labels: XYLabel) {
     super();
