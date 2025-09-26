@@ -5,7 +5,8 @@ to provide an fully flexible and extensible interface to plot customised graphs 
 out-of-the-box solutions haven't prepared for.
 
 There are many examples in [src/demo/App.vue](./src/demo/App.vue) which are used in a Vue context
-however this library will work with base Javascript too.
+however this library will work with base Javascript too. Developer facing docs are in
+[DEV_README](./DEV_README.md).
 
 # Installation
 
@@ -42,7 +43,7 @@ selects an area to zoom into.
 
 ### Adding layers
 
-To add a layer to the chart you have to call one of the methods below. These methods
+To add a ready-made layer to the chart, call one of the methods below. These methods
 can also take some arguments that configure how the layers appear and examples of each can
 be found in [src/demo/App.vue](./src/demo/App.vue). For now, this is just an overview of the
 methods `Chart` class provides for adding layers:
@@ -93,32 +94,38 @@ threshold). You must provide a callback returning HTML to render the tooltip.
 
   chart.addTooltips(tooltipHtmlCallback);
   ```
-* `addCustomLayer` adds your own layer that extends `OptionalLayer`. You can fully customise
-this layer and extend Skadi chart to suit your needs.
-  ```ts
-  // must extend optional layer
-  declare class CustomLayer extends OptionalLayer {...};
-
-  chart.addCustomLayer(new CustomLayer());
-  ```
-* `addCustomLifecycleHooks` is a convenience wrapper around `addCustomLayer` for when you
-just want to hook into our lifecycle hooks.
-  ```ts
-  chart.addCustomLifecycleHooks({
-    beforeZoom() { console.log("triggering before zoom") }
-  });
-  ```
 * `makeResponsive` is not really a layer but will make your graph responsive (redraw on change
 to container bounds and changes to window size).
   ```ts
   chart.makeResponsive();
   ```
 
+#### Extending Skadi chart with custom layers
+
+You can extend Skadi chart's functionality to suit your needs by defining a `CustomLayer`, as
+long as it fulfils the contract of the class `OptionalLayer`.
+
+```ts
+// must extend optional layer
+declare class CustomLayer extends OptionalLayer {...};
+
+chart.addCustomLayer(new CustomLayer());
+```
+
+`addCustomLifecycleHooks` is a convenience wrapper around `addCustomLayer` for when you
+just want to hook into our lifecycle hooks.
+  ```ts
+  chart.addCustomLifecycleHooks({
+    beforeZoom() { console.log("triggering before zoom") }
+  });
+  ```
+
 ## Drawing chart with all the layers
 
 Once we have added all the layers, we must call `appendTo` function to draw the layers to the
 screen. Without calling this function, nothing will be drawn to the screen. Here we can also
-provide the scales to the graph if we want it to display a fixed scale.
+provide the scales to the graph if we want it to display a fixed scale rather than
+automatically choosing a scale based on your data.
 
 ```ts
 declare const element: HTMLDivElement;
