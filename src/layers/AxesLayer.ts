@@ -9,74 +9,65 @@ export class AxesLayer extends OptionalLayer {
     super();
   };
 
-  draw = (layerArgs: LayerArgs) => {
-    const { width, height, margin } = layerArgs.bounds;
-    const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
+  private drawAxis = (axis: 'x' | 'y', layerArgs: LayerArgs) => {
     const svgLayer = layerArgs.coreLayers[LayerType.Svg];
     const baseLayer = layerArgs.coreLayers[LayerType.BaseLayer];
+    const { width, height, margin } = layerArgs.bounds;
     const { getHtmlId } = layerArgs;
-    const { animationDuration, ticks } = layerArgs.globals;
-    const { logScale } = layerArgs.chartOptions;
+    const scale = layerArgs.scaleConfig.linearScales[axis];
+    const axisConstructor = axis === "x" ? d3.axisBottom : d3.axisLeft;
+    const { count: tickCount, specifier: tickSpecifier } = layerArgs.globals.tickConfig[axis];
+    const svgStartToAxis = axis === "x" ? height - margin.bottom : margin.left;
+    const otherAxis = axis === "x" ? "y" : "x";
+    const translate = { [axis]: 0, [otherAxis]: svgStartToAxis }
 
-    const axisX = d3.axisBottom(scaleX).ticks(ticks.x).tickSize(0).tickPadding(12);
-    const axisLayerX = svgLayer.append("g")
-      .attr("id", `${getHtmlId(LayerType.Axes)}-x`)
+    const numericalAxis = axisConstructor(scale).ticks(tickCount, tickSpecifier).tickSize(0).tickPadding(12);
+    const axisLayer = svgLayer.append("g")
+      .attr("id", `${getHtmlId(LayerType.Axes)}-${axis}`)
       .style("font-size", "0.75rem")
-      .attr("transform", `translate(0,${height - margin.bottom})`)
-      .call(axisX);
-    axisLayerX.select(".domain")
+      .attr("transform", `translate(${translate.x},${translate.y})`)
+      .call(numericalAxis);
+    axisLayer.select(".domain")
       .style("stroke-opacity", 0);
-    let axisLineX: D3Selection<SVGLineElement> | null = null;
-    if (!logScale.x) {
-      axisLineX = baseLayer.append("g").append("line")
-        .attr("x1", scaleX(0))
-        .attr("x2", scaleX(0))
-        .attr("y1", height - margin.bottom)
-        .attr("y2", margin.top)
+    let axisLine: D3Selection<SVGLineElement> | null = null;
+    if (!layerArgs.chartOptions.logScale[axis]) {
+      // A line at [axis]=0
+      axisLine = baseLayer.append("g").append("line")
+        .attr(`${axis}1`, scale(0))
+        .attr(`${axis}2`, scale(0))
+        .attr(`${otherAxis}1`, svgStartToAxis)
+        .attr(`${otherAxis}2`, axis === "x" ? margin.top : width - margin.right)
         .style("stroke", "black")
         .style("stroke-width", 0.5);
     }
 
-    // SI-prefix with 2 significant figures and no trailing zeros, 42e6 -> 42M
-    const axisY = d3.axisLeft(scaleY).ticks(ticks.y, ".2~s").tickSize(0).tickPadding(12);
-    const axisLayerY = svgLayer.append("g")
-      .attr("id", `${getHtmlId(LayerType.Axes)}-y`)
-      .style("font-size", "0.75rem")
-      .attr("transform", `translate(${margin.left},0)`)
-      .call(axisY);
-    axisLayerY.select(".domain")
-      .style("stroke-opacity", 0);
-    let axisLineY: D3Selection<SVGLineElement> | null = null;
-    if (!logScale.y) {
-      axisLineY = baseLayer.append("g").append("line")
-        .attr("x1", margin.left)
-        .attr("x2", width - margin.right)
-        .attr("y1", scaleY(0))
-        .attr("y2", scaleY(0))
-        .style("stroke", "black")
-        .style("stroke-width", 0.5);
-    }
-
-    if (this.labels.y) {
-      layerArgs.coreLayers[LayerType.Svg].append("text")
-        .attr("id", `${getHtmlId(LayerType.Axes)}-labely`)
+    if (this.labels[axis]) {
+      const label = layerArgs.coreLayers[LayerType.Svg].append("text")
+        .attr("id", `${getHtmlId(LayerType.Axes)}-label${axis}`)
         .style("font-size", "1.2rem")
         .attr("text-anchor", "middle")
-        .attr("x", - (height - margin.top - margin.bottom) / 2 - margin.top)
-        .attr("y", margin.left / 3)
-        .attr("transform", "rotate(-90)")
-        .text(this.labels.y)
+        .text(this.labels[axis])
+      if (axis === "y") {
+        const usableHeight = height - margin.top - margin.bottom;
+        label.attr("x", - usableHeight / 2 - margin.top)
+          .attr("y", margin.left / 3)
+          .attr("transform", "rotate(-90)")
+      } else {
+        const usableWidth = width - margin.left - margin.right;
+        label.attr("x", usableWidth / 2 + margin.left)
+          .attr("y", height - margin.bottom / 3)
+      }
     }
 
-    if (this.labels.x) {
-      layerArgs.coreLayers[LayerType.Svg].append("text")
-        .attr("id", `${getHtmlId(LayerType.Axes)}-labelx`)
-        .style("font-size", "1.2rem")
-        .attr("text-anchor", "middle")
-        .attr("x", (width - margin.left - margin.right) / 2 + margin.left)
-        .attr("y", layerArgs.bounds.height - margin.bottom / 3)
-        .text(this.labels.x)
-    }
+    return { layer: axisLayer, axis: numericalAxis, line: axisLine };
+  };
+
+  draw = (layerArgs: LayerArgs) => {
+    const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
+    const { animationDuration } = layerArgs.globals;
+
+    const { layer: axisLayerX, axis: axisX, line: axisLineX } = this.drawAxis("x", layerArgs);
+    const { layer: axisLayerY, axis: axisY, line: axisLineY } = this.drawAxis("y", layerArgs);
 
     // The zoom layer (if added) will update the scaleX and scaleY
     // so axisY and axisX, which are constructed from these will
