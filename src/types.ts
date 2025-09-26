@@ -37,7 +37,7 @@ export type LayerArgs = {
   bounds: Bounds,
   globals: {
     animationDuration: number,
-    tickConfig: XY<{ count: number, specifier?: string }>;
+    ticks: XY<number>
   },
   scaleConfig: {
     linearScales: XY<d3.ScaleLinear<number, number, never>>,

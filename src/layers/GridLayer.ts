@@ -12,15 +12,15 @@ export class GridLayer extends OptionalLayer {
     const { width, height, margin } = layerArgs.bounds;
     const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
     const svgLayer = layerArgs.coreLayers[LayerType.Svg];
-    const { animationDuration, tickConfig } = layerArgs.globals;
+    const { animationDuration, ticks } = layerArgs.globals;
     const { getHtmlId } = layerArgs;
-
+  
     const gridOpacity = 0.15;
     const gridStrokeWidth = 0.5;
 
     const addGridX = (g: D3Selection<SVGGElement>) => {
       g.selectAll("line")
-        .data(scaleX.ticks(tickConfig.x.count))
+        .data(scaleX.ticks(ticks.x))
         .join("line")
         .style("stroke", "black")
         .style("stroke-width", gridStrokeWidth)
@@ -33,7 +33,7 @@ export class GridLayer extends OptionalLayer {
 
     const addGridY = (g: D3Selection<SVGGElement>) => {
       g.selectAll("line")
-        .data(scaleY.ticks(tickConfig.y.count))
+        .data(scaleY.ticks(ticks.y))
         .join("line")
         .style("stroke", "black")
         .style("stroke-width", gridStrokeWidth)
