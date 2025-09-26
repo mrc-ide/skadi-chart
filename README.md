@@ -84,7 +84,7 @@ zooms so this will let the user zoom on your graph.
   ```
 * `addTooltips` adds tooltips to the chart. For traces and points this means the tooltip will
 appear pointing to the closest point in the graph to the cursor (once it is within a
-threshold).
+threshold). You must provide a callback returning HTML to render the tooltip.
   ```ts
   // Metadata can be null if you don't use it but this should return a html
   // string that will be set as the innerHTML of the tooltip div. In this function
