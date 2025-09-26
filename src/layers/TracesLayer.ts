@@ -104,27 +104,48 @@ export class TracesLayer<Metadata> extends OptionalLayer {
   // d3 feeds the function we return from this function with t, which goes from
   // 0 to 1 with different jumps based on your ease, t = 0 is the start state of
   // your animation, t = 1 is the end state of your animation
-  private customTween = (index: number) => {
+  private customTween = (index: number, zoomExtents: ZoomExtents) => {
     const currLineSC = this.lowResLinesSC[index];
     return (t: number) => {
       const intermediateLineSC = currLineSC.map(({x, y}) => this.getNewPoint!(x, y, t));
-      return this.customLineGen(intermediateLineSC);
+      return this.customLineGen(intermediateLineSC, zoomExtents);
     };
   };
 
-  private customLineGen = (lineSC: Point[]) => {
-    let retStr = "M";
-    const { x, y } = lineSC[0];
-    retStr += x;
-    retStr += ",";
-    retStr += y;
+  private round = (num: number) => Math.floor(num * 10) / 10;
 
-    for (let i = 2; i < lineSC.length; i++) {
+  private getNewSvgPoint = (p: Point, moveOrLine: "M" | "L") => {
+    return moveOrLine + this.round(p.x) + "," + this.round(p.y);
+  }
+
+  private customLineGen = (lineSC: Point[], zoomExtents: ZoomExtents) => {
+    let retStr = "";
+    const { x, y } = lineSC[0];
+    let wasLastPointInRange = zoomExtents.x[0] <= x && x <= zoomExtents.x[1]
+                           && zoomExtents.y[1] <= y && y <= zoomExtents.y[0];
+
+    for (let i = 0; i < lineSC.length; i++) {
       const { x, y } = lineSC[i];
-      retStr += "L";
-      retStr += x;
-      retStr += ",";
-      retStr += y;
+      const isPointInRange = zoomExtents.x[0] <= x && x <= zoomExtents.x[1]
+                          && zoomExtents.y[1] <= y && y <= zoomExtents.y[0];
+
+      // if last point in range we always want to add next point even if it
+      // isn't in range because we want the line to at least continue off the
+      // right edge of the svg
+      //
+      // if the last point wasn't in range but this point is, then we must be
+      // at the start of a new line segment so add the previous point too
+      // because we want the line to go off the left edge of the svg
+      if (wasLastPointInRange) {
+        retStr += this.getNewSvgPoint(lineSC[i], retStr ? "L" : "M");
+      } else if (isPointInRange) {
+        // prev point will always exist, i.e. i will never be 0 in this branch
+        // because wasLastPointInRange will always match isPointInRange for
+        // i = 0 so we have to fall into the previous branch
+        retStr += this.getNewSvgPoint(lineSC[i - 1], "M");
+        retStr += this.getNewSvgPoint(lineSC[i], "L");
+      }
+      wasLastPointInRange = isPointInRange;
     }
 
     return retStr;
@@ -142,11 +163,16 @@ export class TracesLayer<Metadata> extends OptionalLayer {
     }
   };
 
-  draw = (layerArgs: LayerArgs) => {
+  draw = (layerArgs: LayerArgs, currentExtentsDC: ZoomExtents) => {
     this.updateLowResLinesSC(layerArgs);
+    const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
+    const currentExtentsSC: ZoomExtents = {
+      x: [scaleX(currentExtentsDC.x[0]), scaleX(currentExtentsDC.x[1])],
+      y: [scaleY(currentExtentsDC.y[0]), scaleY(currentExtentsDC.y[1])],
+    };
 
     this.traces = this.linesDC.map((l, index) => {
-      const linePathSC = this.customLineGen(this.lowResLinesSC[index]);
+      const linePathSC = this.customLineGen(this.lowResLinesSC[index], currentExtentsSC);
       return layerArgs.coreLayers[LayerType.BaseLayer].append("path")
         .attr("id", `${layerArgs.getHtmlId(LayerType.Trace)}-${index}`)
         .attr("pointer-events", "none")
@@ -195,14 +221,20 @@ export class TracesLayer<Metadata> extends OptionalLayer {
     };
 
     // the zoom layer updates scaleX and scaleY which change our customLineGen function
-    this.zoom = async () => {
+    this.zoom = async zoomExtentsDC => {
+      const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
+      const zoomExtentsSC: ZoomExtents = {
+        x: [scaleX(zoomExtentsDC.x[0]), scaleX(zoomExtentsDC.x[1])],
+        y: [scaleY(zoomExtentsDC.y[0]), scaleY(zoomExtentsDC.y[1])],
+      };
+
       const promises: Promise<void>[] = [];
       for (let i = 0; i < this.linesDC.length; i++) {
         const promise = this.traces[i]
           .transition()
           .duration(layerArgs.globals.animationDuration)
           // we do a custom animation because it is faster than d3's default
-          .attrTween("d", () => this.customTween(i))
+          .attrTween("d", () => this.customTween(i, zoomExtentsSC))
           .end();
         promises.push(promise);
       };
@@ -212,7 +244,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
       // without the user knowing
       this.updateLowResLinesSC(layerArgs);
       this.traces.forEach((t, index) => {
-        t.attr("d", this.customLineGen(this.lowResLinesSC[index]))
+        t.attr("d", this.customLineGen(this.lowResLinesSC[index], zoomExtentsSC))
       });
     };
   };
