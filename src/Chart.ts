@@ -3,7 +3,7 @@ import { AxesLayer } from "./layers/AxesLayer";
 import { TracesLayer, TracesOptions } from "./layers/TracesLayer";
 import { ZoomLayer, ZoomOptions } from "./layers/ZoomLayer";
 import { TooltipHtmlCallback, TooltipsLayer } from "./layers/TooltipsLayer";
-import { AllOptionalLayers, BandLines, Bounds, D3Selection, LayerArgs, Lines, PartialScales, Point, Scales, ScatterPoints, XY, XYLabel } from "./types";
+import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, PartialScales, Point, Scales, ScatterPoints, XY, XYLabel } from "./types";
 import { LayerType, LifecycleHooks, OptionalLayer } from "./layers/Layer";
 import { GridLayer } from "./layers/GridLayer";
 import html2canvas from "html2canvas";
@@ -81,17 +81,13 @@ export class Chart<Metadata = any> {
   // segments, missing out the points with values <= 0. Here we create a line
   // segment and iterate down the points of a line and once we hit a negative
   // coordinate we push that line segment and start a new one
-  private filterLinesForLogAxis = (lines: Lines<Metadata> | BandLines<Metadata>, axis: "x" | "y") => {
+  private filterLinesForLogAxis = (lines: Lines<Metadata>, axis: "x" | "y") => {
     let warningMsg = "";
-    const filteredLines: Lines<Metadata> | BandLines<Metadata> = [];
+    const filteredLines: Lines<Metadata> = [];
     for (let i = 0; i < lines.length; i++) {
       const currLine = lines[i];
       let isLastCoordinatePositive = currLine.points[0] && currLine.points[0][axis] > 0;
-      let lineSegment: Lines<Metadata>[number] | BandLines<Metadata>[number] = {
-        points: [],
-        style: currLine.style,
-        bands: currLine.bands,
-      };
+      let lineSegment: Lines<Metadata>[number] = { ...currLine, points: [], metadata: undefined };
 
       for (let j = 0; j < currLine.points.length; j++) {
         if (currLine.points[j][axis] <= 0) {
@@ -105,11 +101,7 @@ export class Chart<Metadata = any> {
           isLastCoordinatePositive = true;
         } else if (isLastCoordinatePositive) {
           filteredLines.push(lineSegment);
-          lineSegment = {
-            points: [],
-            style: currLine.style,
-            bands: currLine.bands,
-          };
+          lineSegment = { ...currLine, points: [], metadata: undefined };
           isLastCoordinatePositive = false;
         }
       }
@@ -122,7 +114,7 @@ export class Chart<Metadata = any> {
     return filteredLines;
   };
 
-  private filterLines = (lines: Lines<Metadata> | BandLines<Metadata>) => {
+  private filterLines = (lines: Lines<Metadata>) => {
     let filteredLines = lines;
     if (this.options.logScale.x) {
       filteredLines = this.filterLinesForLogAxis(filteredLines, "x");
@@ -133,7 +125,7 @@ export class Chart<Metadata = any> {
     return filteredLines;
   };
 
-  addTraces = (lines: Lines<Metadata> | BandLines<Metadata>, options?: Partial<TracesOptions>) => {
+  addTraces = (lines: Lines<Metadata>, options?: Partial<TracesOptions>) => {
     const optionsWithDefaults: TracesOptions = {
       RDPEpsilon: options?.RDPEpsilon ?? null
     };

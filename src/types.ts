@@ -3,10 +3,9 @@ import * as d3 from "./d3";
 import { LayerType, OptionalLayer } from "./layers/Layer";
 
 export type XY<T> = { x: T, y: T }
-type BandConfig = { bands: Partial<XY<string>> }
 export type Point = XY<number>
 export type PointWithMetadata<Metadata> = Point & { metadata?: Metadata }
-export type BandPoint<Metadata> = PointWithMetadata<Metadata> & BandConfig
+export type BandPoint<Metadata> = PointWithMetadata<Metadata> & { bands: Partial<XY<string>> }
 
 export type XYLabel = Partial<XY<string>>
 
@@ -65,15 +64,13 @@ export type LineStyle = {
   strokeWidth?: number
   strokeDasharray?: string
 }
-type LineConfig<Metadata> = {
+export type LineConfig<Metadata> = {
   points: Point[],
   style: LineStyle,
-  metadata?: Metadata
+  metadata?: Metadata,
+  bands?: Partial<XY<string>>
 }
 export type Lines<Metadata> = LineConfig<Metadata>[]
-
-export type BandLineConfig<Metadata> = LineConfig<Metadata> & BandConfig
-export type BandLines<Metadata> = BandLineConfig<Metadata>[]
 
 export type ScatterPointStyle = {
   radius?: number,
