@@ -3,7 +3,7 @@ import { AxesLayer } from "./layers/AxesLayer";
 import { TracesLayer, TracesOptions } from "./layers/TracesLayer";
 import { ZoomLayer, ZoomOptions } from "./layers/ZoomLayer";
 import { TooltipHtmlCallback, TooltipsLayer } from "./layers/TooltipsLayer";
-import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, ZoomExtents, PartialScales, Point, Scales, ScatterPoints, XY, XYLabel } from "./types";
+import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, ZoomExtents, PartialScales, Point, Scales, ScatterPoints, XY, XYLabel, ScaleNumeric, AxisType } from "./types";
 import { LayerType, LifecycleHooks, OptionalLayer } from "./layers/Layer";
 import { GridLayer } from "./layers/GridLayer";
 import html2canvas from "html2canvas";

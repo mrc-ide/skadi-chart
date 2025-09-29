@@ -154,9 +154,9 @@ export class AxesLayer extends OptionalLayer {
       .attr("transform", `translate(${translate.x},${translate.y})`)
       .call(ridgelineAxis);
 
-    const bandNumericalScales = Object.values(this.layerArgs!.scaleConfig.categoricalScales[axis]!.bands);
+    const bandNumericalScales = Object.entries(this.layerArgs!.scaleConfig.categoricalScales[axis]!.bands);
     // Draw a line at [axis]=0 for each band, and at the band's edge.
-    bandNumericalScales.forEach((bandNumericalScale) => {
+    bandNumericalScales.forEach(([category, bandNumericalScale]) => {
       if (showZeroLine) {
         // Draw a line at [axis]=0 for each band
         this.drawLinePerpendicularToAxis(axis, bandNumericalScale(0), "darkgrey"); // darkgrey distinguishes from inter-band lines
@@ -172,7 +172,7 @@ export class AxesLayer extends OptionalLayer {
         }
       }
       // Each band gets a line at its ending edge
-      this.drawLinePerpendicularToAxis(axis, bandNumericalScale.range()[0] + bandwidth);
+      this.drawLinePerpendicularToAxis(axis, categoricalScale(category!)! + bandwidth);
     });
   };
 
