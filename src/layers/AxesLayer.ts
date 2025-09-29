@@ -136,7 +136,7 @@ export class AxesLayer extends OptionalLayer {
     if (!this.layerArgs) {
       throw new Error("AxesLayer.drawAxis called before layerArgs set");
     }
-    const categoricalScale = this.layerArgs.scaleConfig.categoricalScales[axis]!;
+    const categoricalScale = this.layerArgs.scaleConfig.categoricalScales[axis]!.main;
     const { margin } = this.layerArgs.bounds;
     const svgLayer = this.layerArgs.coreLayers[LayerType.Svg];
     const { getHtmlId } = this.layerArgs;
@@ -156,29 +156,25 @@ export class AxesLayer extends OptionalLayer {
       .attr("transform", `translate(${translate.x},${translate.y})`)
       .call(ridgelineAxis);
 
-    // Draw a line at [axis]=0 for each band (or the band edges if in log scale - both edges because there may be band padding).
-    categoricalScale.domain().forEach((category, index) => {
-      // todo - extract this non-squashing logic OR create a global/shared list of band scales/axes
-      const bandStartSC = categoricalScale(category)!;
-      // Create a smaller numerical axis within each category, which will not be visually shown,
-      // but will be used to plot data within the band.
-      const rangeExtents = axis === "y" ? [bandStartSC + bandwidth, bandStartSC] : [bandStartSC, bandStartSC + bandwidth];
-      const bandNumericalScale = this.layerArgs!.scaleConfig.linearScales[axis].copy()
-        .range(rangeExtents);
+    const bandNumericalScales = Object.values(this.layerArgs!.scaleConfig.categoricalScales[axis]!.bands);
+    // Draw a line at [axis]=0 for each band, and at the band's edge.
+    bandNumericalScales.forEach((bandNumericalScale) => {
       if (showZeroLine) {
         // Draw a line at [axis]=0 for each band
         this.drawLinePerpendicularToAxis(axis, bandNumericalScale(0), "darkgrey"); // darkgrey distinguishes from inter-band lines
 
-        // Add a tick and label at '0'
-        const bandNumericalAxis = axisCon(bandNumericalScale).ticks(1).tickSize(0).tickPadding(6);
-        svgLayer.append("g")
-          .attr("id", `${getHtmlId(LayerType.Axes)}-${axis}`)
-          .style("font-size", "0.75rem")
-          .attr("transform", `translate(${translate.x},${translate.y})`)
-          .call(bandNumericalAxis);
+        // Add a tick and label at y=0 for each band, if the y-axis is categorical
+        if (this.layerArgs!.scaleConfig.categoricalScales.y) {
+          const bandNumericalAxis = axisCon(bandNumericalScale).ticks(1).tickSize(0).tickPadding(6);
+          svgLayer.append("g")
+            .attr("id", `${getHtmlId(LayerType.Axes)}-${axis}`)
+            .style("font-size", "0.75rem")
+            .attr("transform", `translate(${translate.x},${translate.y})`)
+            .call(bandNumericalAxis);
+        }
       }
       // Each band gets a line at its ending edge
-      this.drawLinePerpendicularToAxis(axis, bandStartSC + bandwidth);
+      this.drawLinePerpendicularToAxis(axis, bandNumericalScale.range()[0] + bandwidth);
     });
   };
 
