@@ -83,35 +83,43 @@ export class Chart<Metadata = any> {
   // coordinate we push that line segment and start a new one
   private filterLinesForLogAxis = (lines: Lines<Metadata> | BandLines<Metadata>, axis: "x" | "y") => {
     let warningMsg = "";
-    const filteredPoints: Lines<Metadata> = [];
+    const filteredLines: Lines<Metadata> | BandLines<Metadata> = [];
     for (let i = 0; i < lines.length; i++) {
       const currLine = lines[i];
       let isLastCoordinatePositive = currLine.points[0] && currLine.points[0][axis] > 0;
-      let lineSegment: Lines<Metadata>[number] = { points: [], style: currLine.style };
+      let lineSegment: Lines<Metadata>[number] | BandLines<Metadata>[number] = {
+        points: [],
+        style: currLine.style,
+        bands: currLine.bands,
+      };
 
       for (let j = 0; j < currLine.points.length; j++) {
         if (currLine.points[j][axis] <= 0) {
           warningMsg = `You have tried to use ${axis} axis `
-                     + `log scale but there are traces with `
-                     + `${axis} coordinates that are <= 0`;
+            + `log scale but there are traces with `
+            + `${axis} coordinates that are <= 0`;
         }
 
         if (currLine.points[j][axis] > 0) {
           lineSegment.points.push(currLine.points[j]);
           isLastCoordinatePositive = true;
         } else if (isLastCoordinatePositive) {
-          filteredPoints.push(lineSegment);
-          lineSegment = { points: [], style: currLine.style };
+          filteredLines.push(lineSegment);
+          lineSegment = {
+            points: [],
+            style: currLine.style,
+            bands: currLine.bands,
+          };
           isLastCoordinatePositive = false;
         }
       }
 
       if (isLastCoordinatePositive) {
-        filteredPoints.push(lineSegment);
+        filteredLines.push(lineSegment);
       }
     }
     if (warningMsg) console.warn(warningMsg);
-    return filteredPoints;
+    return filteredLines;
   };
 
   private filterLines = (lines: Lines<Metadata> | BandLines<Metadata>) => {
