@@ -1,4 +1,5 @@
-import { D3Selection, LayerArgs, Lines, Point, ZoomExtents } from "@/types";
+import * as d3 from "@/d3";
+import { BandLineConfig, BandLines, D3Selection, LayerArgs, Lines, Point, ZoomExtents } from "@/types";
 import { LayerType, OptionalLayer } from "./Layer";
 
 export type TracesOptions = {
@@ -100,7 +101,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
   private lowResLinesSC: Point[][] = [];
   private getNewPoint: null | ((x: number, y: number, t: number) => Point) = null;
 
-  constructor(public linesDC: Lines<Metadata>, public options: TracesOptions) {
+  constructor(public linesDC: Lines<Metadata> | BandLines<Metadata>, public options: TracesOptions) {
     super();
   };
 
@@ -169,13 +170,16 @@ export class TracesLayer<Metadata> extends OptionalLayer {
   draw = (layerArgs: LayerArgs, currentExtentsDC: ZoomExtents) => {
     this.updateLowResLinesSC(layerArgs);
     const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
+    const { x: categoricalScaleX, y: categoricalScaleY } = layerArgs.scaleConfig.categoricalScales;
     const currentExtentsSC: ZoomExtents = {
       x: [scaleX(currentExtentsDC.x[0]), scaleX(currentExtentsDC.x[1])],
       y: [scaleY(currentExtentsDC.y[0]), scaleY(currentExtentsDC.y[1])],
     };
 
     this.traces = this.linesDC.map((l, index) => {
-      const linePathSC = this.customLineGen(this.lowResLinesSC[index], currentExtentsSC);
+      const linePathSC = (!categoricalScaleX && !categoricalScaleY)
+        ? this.customLineGen(this.lowResLinesSC[index], currentExtentsSC)
+        : this.categoricalLineGen(l as BandLineConfig<Metadata>, layerArgs);
       return layerArgs.coreLayers[LayerType.BaseLayer].append("path")
         .attr("id", `${layerArgs.getHtmlId(LayerType.Trace)}-${index}`)
         .attr("pointer-events", "none")
@@ -251,5 +255,37 @@ export class TracesLayer<Metadata> extends OptionalLayer {
       });
     };
   };
+
+  private categoricalLineGen = (line: BandLineConfig<Metadata>, layerArgs: LayerArgs) => {
+    const { x: numericalScaleX, y: numericalScaleY } = layerArgs.scaleConfig.linearScales;
+    const { x: categoricalScaleX, y: categoricalScaleY } = layerArgs.scaleConfig.categoricalScales;
+
+    let scaleX;
+    let scaleY;
+
+    if (categoricalScaleX) {
+      // Create a smaller numerical axis within each category, which will not be visually shown,
+      // but will be used to plot data within the band.
+      const bandwidth = categoricalScaleX.bandwidth();
+      const bandStartSC = categoricalScaleX(line.bands.x!)!;
+      scaleX = numericalScaleX.copy().range([bandStartSC, bandStartSC + bandwidth]);
+    } else {
+      scaleX = numericalScaleX;
+    }
+
+    if (categoricalScaleY) {
+      // Create a smaller numerical axis within each category, which will not be visually shown,
+      // but will be used to plot data within the band.
+      const bandwidth = categoricalScaleY.bandwidth();
+      const bandStartSC = categoricalScaleY(line.bands.y!)!;
+      scaleY = numericalScaleY.copy().range([bandStartSC + bandwidth, bandStartSC]);
+    } else {
+      scaleY = numericalScaleY;
+    }
+
+    // nb this linegen is getting created per line.
+    const lineGen = d3.line<Point>().x(d => scaleX(d.x)).y(d => scaleY(d.y));
+    return lineGen(line.points);
+  }
 }
 

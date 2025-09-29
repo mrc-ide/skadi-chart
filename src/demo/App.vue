@@ -240,12 +240,12 @@ const makeRandomCurvesForCategoricalAxis = (axis: string[]): BandLines<Metadata>
 const tooltipHtmlCallback = (point: PointWithMetadata<Metadata> | BandPoint<Metadata>) => {
   const numericalValues = `X: ${point.x.toFixed(3)}, Y: ${point.y.toFixed(3)}`;
   if (Object.keys(point).includes("bands")) {
-    return `<div style="color: ${point.metadata?.color};">${numericalValues}</div>`
-  } else {
     const bands = (point as BandPoint<Metadata>).bands;
     return `<div style="color: ${point.metadata?.color};">${numericalValues}`
     + `<br/>Band X: ${bands.x}, Band Y: ${bands.y}`
     + `</div>`
+  } else {
+    return `<div style="color: ${point.metadata?.color};">${numericalValues}</div>`
   }
 };
 
@@ -299,7 +299,7 @@ const exportToPng = ref<(name?: string) => void>();
 const logScaleY = ref<boolean>(false);
 const logScaleX = ref<boolean>(false);
 
-watch([logScaleY, logScaleX], () => {
+const drawChartAxesLabelGridZoomAndLogScale = () => {
   new Chart({ logScale: { y: logScaleY.value, x: logScaleX.value }})
     .addTraces(curvesAxesLabelGridZoomAndLogScale)
     .addScatterPoints(pointsAxesLabelGridZoomAndLogScale)
@@ -307,11 +307,18 @@ watch([logScaleY, logScaleX], () => {
     .addGridLines()
     .addZoom()
     .appendTo(chartAxesLabelGridZoomAndLogScale.value!);
+};
 
+const drawChartCategoricalYAxis = () => {
   new Chart({ logScale: { x: logScaleX.value, y: logScaleY.value }})
     .addAxes({ x: "Time", y: "Category" })
     .addTraces(curvesCategoricalYAxis)
-    .appendTo(chartCategoricalXAxis.value!, {}, {}, { y: categoricalYAxis });
+    .appendTo(chartCategoricalYAxis.value!, {}, {}, { y: categoricalYAxis });
+};
+
+watch([logScaleY, logScaleX], () => {
+  drawChartAxesLabelGridZoomAndLogScale();
+  drawChartCategoricalYAxis();
 });
 
 onMounted(async () => {
@@ -344,13 +351,7 @@ onMounted(async () => {
     .appendTo(chartAxesLabelGridAndZoom.value!);
   exportToPng.value = chart.exportToPng!;
 
-  new Chart({ logScale: { y: logScaleY.value, x: logScaleX.value } })
-    .addTraces(curvesAxesLabelGridZoomAndLogScale)
-    .addScatterPoints(pointsAxesLabelGridZoomAndLogScale)
-    .addAxes(axesLabels)
-    .addGridLines()
-    .addZoom()
-    .appendTo(chartAxesLabelGridZoomAndLogScale.value!);
+  drawChartAxesLabelGridZoomAndLogScale();
 
   new Chart()
     .addScatterPoints(pointsPointsAxesAndZoom)
@@ -363,6 +364,8 @@ onMounted(async () => {
     .addScatterPoints(pointsTooltips)
     .addTooltips(tooltipHtmlCallback)
     .appendTo(chartTooltips.value!);
+
+  drawChartCategoricalYAxis();
 
   curvesResponsive.forEach((l, i) => {
     l.style.strokeDasharray = `${i * 2} 5`
