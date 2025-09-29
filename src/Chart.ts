@@ -3,7 +3,7 @@ import { AxesLayer } from "./layers/AxesLayer";
 import { TracesLayer, TracesOptions } from "./layers/TracesLayer";
 import { ZoomLayer, ZoomOptions } from "./layers/ZoomLayer";
 import { TooltipHtmlCallback, TooltipsLayer } from "./layers/TooltipsLayer";
-import { AllOptionalLayers, AxisType, Bounds, D3Selection, LayerArgs, Lines, NumericZoomExtents, PartialScales, Point, ScaleNumeric, Scales, ScatterPoints, XY, XYLabel } from "./types";
+import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, ZoomExtents, PartialScales, Point, Scales, ScatterPoints, XY, XYLabel } from "./types";
 import { LayerType, LifecycleHooks, OptionalLayer } from "./layers/Layer";
 import { GridLayer } from "./layers/GridLayer";
 import html2canvas from "html2canvas";
@@ -294,7 +294,7 @@ export class Chart<Metadata = any> {
       .attr("clip-path", `url(#${getHtmlId(LayerType.ClipPath)})`);
 
     const { x, y } = this.autoscaledMaxExtents;
-    const initialDomain: NumericZoomExtents = {
+    const initialDomain: ZoomExtents = {
       x: [initialExtents.x?.start ?? x.start, initialExtents.x?.end ?? x.end],
       y: [initialExtents.y?.start ?? y.start, initialExtents.y?.end ?? y.end]
     };

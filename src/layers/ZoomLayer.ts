@@ -1,6 +1,6 @@
 import * as d3 from "@/d3";
 import { LayerType, OptionalLayer } from "./Layer";
-import { D3Selection, LayerArgs, Point, ZoomExtents } from "@/types";
+import { D3Selection, LayerArgs, Point, ZoomProperties } from "@/types";
 
 export type ZoomOptions = {
   lockAxis: "x" | "y" | null
@@ -26,6 +26,7 @@ export class ZoomLayer extends OptionalLayer {
     const distX = Math.abs(x0 - x1);
     const distY = Math.abs(y0 - y1);
 
+    // the return value is in the form [topLeftCoord, bottomRightCoord]
     if (this.options.lockAxis === "y") {
       return [[x0, margin.top], [x1, height - margin.bottom]];
     } else if (this.options.lockAxis === "x") {
@@ -39,24 +40,24 @@ export class ZoomLayer extends OptionalLayer {
     }
   };
 
-  private handleZoom = async (zoomExtents: ZoomExtents, layerArgs: LayerArgs) => {
+  private handleZoom = async (zoomProperties: ZoomProperties, layerArgs: LayerArgs) => {
     if (this.zooming) return;
     this.zooming = true;
 
     const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
 
-    layerArgs.optionalLayers.forEach(layer => layer.beforeZoom(zoomExtents));
+    layerArgs.optionalLayers.forEach(layer => layer.beforeZoom(zoomProperties));
 
     // updates the scales which are implicitly used by a lot of other
     // components
-    if (zoomExtents.x) scaleX.domain(zoomExtents.x);
-    if (zoomExtents.y) scaleY.domain(zoomExtents.y);
+    if (zoomProperties.x) scaleX.domain(zoomProperties.x);
+    if (zoomProperties.y) scaleY.domain(zoomProperties.y);
 
     const promises: Promise<void>[] = [];
-    layerArgs.optionalLayers.forEach(layer => promises.push(layer.zoom(zoomExtents)));
+    layerArgs.optionalLayers.forEach(layer => promises.push(layer.zoom(zoomProperties)));
     await Promise.all(promises);
 
-    layerArgs.optionalLayers.forEach(layer => layer.afterZoom(zoomExtents));
+    layerArgs.optionalLayers.forEach(layer => layer.afterZoom(zoomProperties));
     this.zooming = false;
   };
 
@@ -93,12 +94,12 @@ export class ZoomLayer extends OptionalLayer {
       layerArgs.optionalLayers.forEach(layer => layer.afterZoom(null));
       return;
     };
-    const zoomExtents: ZoomExtents = {
+    const zoomProperties: ZoomProperties = {
       x: [extentXStart, extentXEnd],
       y: [extentYStart, extentYEnd],
       eventType: "brush"
     };
-    this.handleZoom(zoomExtents, layerArgs);
+    this.handleZoom(zoomProperties, layerArgs);
   };
 
   private handleBrushMove = (event: d3.D3BrushEvent<Point>, layerArgs: LayerArgs) => {
@@ -133,6 +134,12 @@ export class ZoomLayer extends OptionalLayer {
     // and finally the overlay rect subtracts the selection mask from the
     // overlay mask to get the "cut out" effect we want where the user selection
     // is transparent and everything else is greyed
+    // 
+    // note: fill white actually equates to 1 alpha value and fill black to 0
+    // meaning that we get a translucent black overlay by using a mask with
+    // fill white and opacity set, the selection mask then subtracts everything
+    // from our overlay because it has fill black and gives an alpha value of 0
+    // in the user selection
     const overlayMaskId = `${layerArgs.getHtmlId(LayerType.Zoom)}-overlay`;
     svg.select("defs").append("svg:mask")
       .attr("id", overlayMaskId)
@@ -173,20 +180,20 @@ export class ZoomLayer extends OptionalLayer {
     // Respond to double click event by fully zooming out
     const { x, y } = layerArgs.scaleConfig.scaleExtents;
     const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
-    const dblClickZoomExtents: ZoomExtents = {
+    const dblClickZoomProperties: ZoomProperties = {
       x: [x.start, x.end],
       y: [y.start, y.end],
       eventType: "dblclick"
     };
 
     if (this.options.lockAxis === "y") {
-      dblClickZoomExtents.y = scaleY.domain() as [number, number];
+      dblClickZoomProperties.y = scaleY.domain() as [number, number];
     }
     if (this.options.lockAxis === "x") {
-      dblClickZoomExtents.x = scaleX.domain() as [number, number];
+      dblClickZoomProperties.x = scaleX.domain() as [number, number];
     }
 
     layerArgs.coreLayers[LayerType.Svg]
-      .on("dblclick",() => this.handleZoom(dblClickZoomExtents, layerArgs));
+      .on("dblclick",() => this.handleZoom(dblClickZoomProperties, layerArgs));
   };
 };
