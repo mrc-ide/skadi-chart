@@ -261,30 +261,11 @@ export class TracesLayer<Metadata> extends OptionalLayer {
 
   private categoricalLineGen = (line: LineConfig<Metadata>, layerArgs: LayerArgs) => {
     const { x: numericalScaleX, y: numericalScaleY } = layerArgs.scaleConfig.linearScales;
-    const { x: categoricalScaleX, y: categoricalScaleY } = layerArgs.scaleConfig.categoricalScales;
+    const categoricalScales = layerArgs.scaleConfig.categoricalScales
+    const [categoryX, categoryY] = [line.bands?.x, line.bands?.y];
 
-    let scaleX;
-    let scaleY;
-
-    if (categoricalScaleX) {
-      // Create a smaller numerical axis within each category, which will not be visually shown,
-      // but will be used to plot data within the band.
-      const bandwidth = categoricalScaleX.bandwidth();
-      const bandStartSC = categoricalScaleX(line.bands!.x!)!;
-      scaleX = numericalScaleX.copy().range([bandStartSC, bandStartSC + bandwidth]);
-    } else {
-      scaleX = numericalScaleX;
-    }
-
-    if (categoricalScaleY) {
-      // Create a smaller numerical axis within each category, which will not be visually shown,
-      // but will be used to plot data within the band.
-      const bandwidth = categoricalScaleY.bandwidth();
-      const bandStartSC = categoricalScaleY(line.bands!.y!)!;
-      scaleY = numericalScaleY.copy().range([bandStartSC + bandwidth, bandStartSC]);
-    } else {
-      scaleY = numericalScaleY;
-    }
+    const scaleX = categoricalScales.x?.bands[categoryX!] ?? numericalScaleX;
+    const scaleY = categoricalScales.y?.bands[categoryY!] ?? numericalScaleY;
 
     // nb this linegen is getting created per line.
     const lineGen = d3.line<Point>().x(d => scaleX(d.x)).y(d => scaleY(d.y));

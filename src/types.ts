@@ -25,6 +25,8 @@ export type D3Selection<Element extends d3.BaseType> = d3.Selection<Element, Poi
 
 export type AllOptionalLayers = OptionalLayer<any>;
 
+export type ScaleNumeric = d3.ScaleContinuousNumeric<number, number, never>
+
 /*
   LayerArgs are passed into each Layer in the draw
   function. This happens at the last step when users
@@ -40,9 +42,12 @@ export type LayerArgs = {
     tickConfig: XY<{ count: number, specifier?: string }>;
   },
   scaleConfig: {
-    linearScales: XY<d3.ScaleLinear<number, number, never>>,
+    linearScales: XY<ScaleNumeric>,
     scaleExtents: Scales,
-    categoricalScales: Partial<XY<d3.ScaleBand<string>>>,
+    categoricalScales: Partial<XY<{
+      main: d3.ScaleBand<string>, // The main categorical scale
+      bands: Record<string, ScaleNumeric> // Numerical scales within each category for banded data
+    }>>,
   },
   coreLayers: {
     [LayerType.Svg]: D3Selection<SVGSVGElement>,
