@@ -1,5 +1,5 @@
 import * as d3 from "@/d3";
-import { BandLineConfig, BandLines, D3Selection, LayerArgs, Lines, Point, ZoomExtents } from "@/types";
+import { D3Selection, LayerArgs, Lines, LineConfig, Point, ZoomExtents } from "@/types";
 import { LayerType, OptionalLayer } from "./Layer";
 
 export type TracesOptions = {
@@ -101,7 +101,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
   private lowResLinesSC: Point[][] = [];
   private getNewPoint: null | ((x: number, y: number, t: number) => Point) = null;
 
-  constructor(public linesDC: Lines<Metadata> | BandLines<Metadata>, public options: TracesOptions) {
+  constructor(public linesDC: Lines<Metadata>, public options: TracesOptions) {
     super();
   };
 
@@ -179,7 +179,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
     this.traces = this.linesDC.map((l, index) => {
       const linePathSC = (!categoricalScaleX && !categoricalScaleY)
         ? this.customLineGen(this.lowResLinesSC[index], currentExtentsSC)
-        : this.categoricalLineGen(l as BandLineConfig<Metadata>, layerArgs);
+        : this.categoricalLineGen(l, layerArgs);
       return layerArgs.coreLayers[LayerType.BaseLayer].append("path")
         .attr("id", `${layerArgs.getHtmlId(LayerType.Trace)}-${index}`)
         .attr("pointer-events", "none")
@@ -256,7 +256,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
     };
   };
 
-  private categoricalLineGen = (line: BandLineConfig<Metadata>, layerArgs: LayerArgs) => {
+  private categoricalLineGen = (line: LineConfig<Metadata>, layerArgs: LayerArgs) => {
     const { x: numericalScaleX, y: numericalScaleY } = layerArgs.scaleConfig.linearScales;
     const { x: categoricalScaleX, y: categoricalScaleY } = layerArgs.scaleConfig.categoricalScales;
 

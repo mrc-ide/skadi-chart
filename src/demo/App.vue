@@ -64,7 +64,7 @@
 </style>
 
 <script setup lang="ts">
-import { BandLines, BandPoint, PointWithMetadata, ScatterPoints } from "@/types";
+import { BandPoint, PointWithMetadata, ScatterPoints } from "@/types";
 import { Chart, LayerArgs, LayerType, Lines, OptionalLayer, Scales } from "../skadi-chart";
 import { onMounted, ref, watch } from "vue";
 
@@ -214,7 +214,7 @@ const makeRandomCurves = (props: typeof propsBasic) => {
   return lines;
 };
 
-const makeRandomCurvesForCategoricalAxis = (axis: string[]): BandLines<Metadata> => {
+const makeRandomCurvesForCategoricalAxis = (axis: string[]): Lines<Metadata> => {
   return makeRandomCurves(propsBasic).map((line, index) => {
     const band = axis[index % axis.length];
     const color = colors[index % axis.length];
