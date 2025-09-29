@@ -87,7 +87,8 @@ export class Chart<Metadata = any> {
     for (let i = 0; i < lines.length; i++) {
       const currLine = lines[i];
       let isLastCoordinatePositive = currLine.points[0] && currLine.points[0][axis] > 0;
-      let lineSegment: Lines<Metadata>[number] = { ...currLine, points: [], metadata: undefined };
+      let lineSegment: Lines<Metadata>[number] = { ...currLine, points: [] };
+      delete lineSegment.metadata;
 
       for (let j = 0; j < currLine.points.length; j++) {
         if (currLine.points[j][axis] <= 0) {
@@ -101,7 +102,8 @@ export class Chart<Metadata = any> {
           isLastCoordinatePositive = true;
         } else if (isLastCoordinatePositive) {
           filteredLines.push(lineSegment);
-          lineSegment = { ...currLine, points: [], metadata: undefined };
+          lineSegment = { ...currLine, points: [] };
+          delete lineSegment.metadata;
           isLastCoordinatePositive = false;
         }
       }
