@@ -3,7 +3,7 @@ import { AxesLayer } from "./layers/AxesLayer";
 import { TracesLayer, TracesOptions } from "./layers/TracesLayer";
 import { ZoomLayer, ZoomOptions } from "./layers/ZoomLayer";
 import { TooltipHtmlCallback, TooltipsLayer } from "./layers/TooltipsLayer";
-import { AllOptionalLayers, Bounds, CategoricalScales, D3Selection, LayerArgs, Lines, NumericZoomExtents, PartialScales, Point, Scales, ScatterPoints, XY, XYLabel } from "./types";
+import { AllOptionalLayers, BandLines, Bounds, D3Selection, LayerArgs, Lines, PartialScales, Point, Scales, ScatterPoints, XY, XYLabel } from "./types";
 import { LayerType, LifecycleHooks, OptionalLayer } from "./layers/Layer";
 import { GridLayer } from "./layers/GridLayer";
 import html2canvas from "html2canvas";
@@ -24,6 +24,8 @@ type PartialChartOptions = {
   logScale?: Partial<XY<boolean>>,
   animationDuration?: number
 }
+
+type CategoricalScales = Partial<XY<string[]>>;
 
 export class Chart<Metadata = any> {
   id: string;
@@ -79,7 +81,7 @@ export class Chart<Metadata = any> {
   // segments, missing out the points with values <= 0. Here we create a line
   // segment and iterate down the points of a line and once we hit a negative
   // coordinate we push that line segment and start a new one
-  private filterLinesForLogAxis = (lines: Lines<Metadata>, axis: "x" | "y") => {
+  private filterLinesForLogAxis = (lines: Lines<Metadata> | BandLines<Metadata>, axis: "x" | "y") => {
     let warningMsg = "";
     const filteredPoints: Lines<Metadata> = [];
     for (let i = 0; i < lines.length; i++) {
@@ -112,7 +114,7 @@ export class Chart<Metadata = any> {
     return filteredPoints;
   };
 
-  private filterLines = (lines: Lines<Metadata>) => {
+  private filterLines = (lines: Lines<Metadata> | BandLines<Metadata>) => {
     let filteredLines = lines;
     if (this.options.logScale.x) {
       filteredLines = this.filterLinesForLogAxis(filteredLines, "x");
@@ -123,7 +125,7 @@ export class Chart<Metadata = any> {
     return filteredLines;
   };
 
-  addTraces = (lines: Lines<Metadata>, options?: Partial<TracesOptions>) => {
+  addTraces = (lines: Lines<Metadata> | BandLines<Metadata>, options?: Partial<TracesOptions>) => {
     const optionsWithDefaults: TracesOptions = {
       RDPEpsilon: options?.RDPEpsilon ?? null
     };
@@ -262,7 +264,8 @@ export class Chart<Metadata = any> {
     baseElement: HTMLDivElement,
     bounds: Bounds,
     maxExtents: PartialScales,
-    initialExtents: PartialScales
+    initialExtents: PartialScales,
+    categoricalScales: Partial<XY<string[]>> = {},
   ) => {
     const getHtmlId = (layer: LayerType[keyof LayerType]) => `${layer}-${this.id}`;
     const { height, width, margin } = bounds;
@@ -293,18 +296,29 @@ export class Chart<Metadata = any> {
       x: [initialExtents.x?.start ?? x.start, initialExtents.x?.end ?? x.end],
       y: [initialExtents.y?.start ?? y.start, initialExtents.y?.end ?? y.end]
     };
-    const d3ScaleX = this.options.logScale.x ? d3.scaleLog : d3.scaleLinear;
-    const scaleX = d3ScaleX()
-      .domain(initialDomain.x)
-      .range([margin.left, width - margin.right]);
-    const d3ScaleY = this.options.logScale.y ? d3.scaleLog : d3.scaleLinear;
-    const scaleY = d3ScaleY()
-      .domain(initialDomain.y)
-      .range([height - margin.bottom, margin.top]);
+    // Disallow zeros for log-scale domains
+    if ((this.options.logScale.x && initialDomain.x.some(bound => bound <= 0))
+      || (this.options.logScale.y && initialDomain.y.some(bound => bound <= 0))
+    ) {
+      throw new Error(`You have tried to use a log scale axis but the initial extents includes 0.`
+        + ` Please set the initial extents to a range that does not include 0, or pass {} to try the auto-scale.`
+      );
+    }
 
-    const lineGen = d3.line<Point>()
-      .x(d => scaleX(d.x))
-      .y(d => scaleY(d.y));
+    const rangeX = [margin.left, width - margin.right];
+    const rangeY = [height - margin.bottom, margin.top];
+
+    const d3ScaleX = this.options.logScale.x ? d3.scaleLog : d3.scaleLinear;
+    const scaleX = d3ScaleX().domain(initialDomain.x).range(rangeX);
+    const d3ScaleY = this.options.logScale.y ? d3.scaleLog : d3.scaleLinear;
+    const scaleY = d3ScaleY().domain(initialDomain.y).range(rangeY);
+
+    let catScales: Partial<XY<d3.ScaleBand<string>>> = {};
+    // For a categorical axis, two scales are required; the categorical one is mapped to the numerical one.
+    const categoricalScaleX = categoricalScales.x?.length
+      ? catScales.x = d3.scaleBand().domain(categoricalScales.x).range(rangeX) : undefined;
+    const categoricalScaleY = categoricalScales.y?.length
+      ? catScales.y = d3.scaleBand().domain(categoricalScales.y).range(rangeY) : undefined;
 
     let ticksX = 10;
     if (width < 500) ticksX = 6;
@@ -323,7 +337,8 @@ export class Chart<Metadata = any> {
       globals: this.globals,
       scaleConfig: {
         linearScales: { x: scaleX, y: scaleY },
-        scaleExtents: this.autoscaledMaxExtents
+        scaleExtents: this.autoscaledMaxExtents,
+        categoricalScales: { x: categoricalScaleX, y: categoricalScaleY },
       },
       coreLayers: {
         [LayerType.Svg]: svg,
@@ -350,7 +365,7 @@ export class Chart<Metadata = any> {
   ) => {
     const drawWithBounds = (width: number, height: number) => {
       const bounds = { width, height, margin: this.defaultMargin };
-      this.draw(baseElement, bounds, maxExtents, initialExtents);
+      this.draw(baseElement, bounds, maxExtents, initialExtents, categoricalScales);
     };
 
     const { width, height } = baseElement.getBoundingClientRect();

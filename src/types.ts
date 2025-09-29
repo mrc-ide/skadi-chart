@@ -43,6 +43,7 @@ export type LayerArgs = {
   scaleConfig: {
     linearScales: XY<d3.ScaleLinear<number, number, never>>,
     scaleExtents: Scales,
+    categoricalScales: Partial<XY<d3.ScaleBand<string>>>,
   },
   coreLayers: {
     [LayerType.Svg]: D3Selection<SVGSVGElement>,
@@ -57,7 +58,6 @@ export type NumericZoomExtents = XY<[number, number]>
 export type ZoomExtents = NumericZoomExtents & { eventType: "brush" | "dblclick" }
 export type Scales = XY<{ start: number, end: number }>
 export type PartialScales = Partial<XY<{ start?: number, end?: number }>>
-export type CategoricalScales = Partial<XY<string[]>>;
 
 export type LineStyle = {
   color?: string,
@@ -72,7 +72,7 @@ type LineConfig<Metadata> = {
 }
 export type Lines<Metadata> = LineConfig<Metadata>[]
 
-type BandLineConfig<Metadata> = LineConfig<Metadata> & BandConfig
+export type BandLineConfig<Metadata> = LineConfig<Metadata> & BandConfig
 export type BandLines<Metadata> = BandLineConfig<Metadata>[]
 
 export type ScatterPointStyle = {

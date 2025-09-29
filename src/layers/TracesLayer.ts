@@ -1,4 +1,5 @@
-import { D3Selection, LayerArgs, Lines, NumericZoomExtents, Point, ZoomExtents } from "@/types";
+import * as d3 from "@/d3";
+import { BandLineConfig, BandLines, D3Selection, LayerArgs, Lines, NumericZoomExtents, Point } from "@/types";
 import { LayerType, OptionalLayer } from "./Layer";
 
 export type TracesOptions = {
@@ -49,7 +50,7 @@ const doRDP = (
   const rangeYSC = endSC.y - startSC.y;
   const rangeXSC = endSC.x - startSC.x;
   const crossProductSC = endSC.x * startSC.y - endSC.y * startSC.x;
-  
+
   // we are applying this algorthim in svg coordinates as we want to lower resolution of lines based on
   // visual distance instead of data coordinates (DC)
   //
@@ -97,7 +98,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
   private lowResLinesSC: Point[][] = [];
   private getNewPoint: null | ((x: number, y: number, t: number) => Point) = null;
 
-  constructor(public linesDC: Lines<Metadata>, public options: TracesOptions) {
+  constructor(public linesDC: Lines<Metadata> | BandLines<Metadata>, public options: TracesOptions) {
     super();
   };
 
@@ -107,7 +108,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
   private customTween = (index: number, zoomExtents: NumericZoomExtents) => {
     const currLineSC = this.lowResLinesSC[index];
     return (t: number) => {
-      const intermediateLineSC = currLineSC.map(({x, y}) => this.getNewPoint!(x, y, t));
+      const intermediateLineSC = currLineSC.map(({ x, y }) => this.getNewPoint!(x, y, t));
       return this.customLineGen(intermediateLineSC, zoomExtents);
     };
   };
@@ -118,12 +119,12 @@ export class TracesLayer<Metadata> extends OptionalLayer {
     let retStr = "";
     const { x, y } = lineSC[0];
     let wasLastPointInRange = zoomExtents.x[0] <= x && x <= zoomExtents.x[1]
-                           && zoomExtents.y[1] <= y && y <= zoomExtents.y[0];
+      && zoomExtents.y[1] <= y && y <= zoomExtents.y[0];
 
     for (let i = 0; i < lineSC.length; i++) {
       const { x, y } = lineSC[i];
       const isPointInRange = zoomExtents.x[0] <= x && x <= zoomExtents.x[1]
-                          && zoomExtents.y[1] <= y && y <= zoomExtents.y[0];
+        && zoomExtents.y[1] <= y && y <= zoomExtents.y[0];
 
       // if last point in range we always want to add next point even if it
       // isn't in range because we want the line to at least continue off the
@@ -172,13 +173,16 @@ export class TracesLayer<Metadata> extends OptionalLayer {
   draw = (layerArgs: LayerArgs, currentExtentsDC: NumericZoomExtents) => {
     this.updateLowResLinesSC(layerArgs);
     const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
+    const { x: categoricalScaleX, y: categoricalScaleY } = layerArgs.scaleConfig.categoricalScales;
     const currentExtentsSC: NumericZoomExtents = {
       x: [scaleX(currentExtentsDC.x[0]), scaleX(currentExtentsDC.x[1])],
       y: [scaleY(currentExtentsDC.y[0]), scaleY(currentExtentsDC.y[1])],
     };
 
     this.traces = this.linesDC.map((l, index) => {
-      const linePathSC = this.customLineGen(this.lowResLinesSC[index], currentExtentsSC);
+      const linePathSC = (!categoricalScaleX && !categoricalScaleY)
+        ? this.customLineGen(this.lowResLinesSC[index], currentExtentsSC)
+        : this.categoricalLineGen(l as BandLineConfig<Metadata>, layerArgs);
       return layerArgs.coreLayers[LayerType.BaseLayer].append("path")
         .attr("id", `${layerArgs.getHtmlId(LayerType.Trace)}-${index}`)
         .attr("pointer-events", "none")
@@ -212,7 +216,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
       // brush selection
       const offsetXSC = scalingX * scaleX(newExtentXDC[0]) - scaleX(oldExtentXDC[0]);
       const offsetYSC = scalingY * scaleY(newExtentYDC[0]) - scaleY(oldExtentYDC[0]);
-      
+
       // useful to precompute
       const scaleRelativeX = scalingX - 1;
       const scaleRelativeY = scalingY - 1;
@@ -254,5 +258,37 @@ export class TracesLayer<Metadata> extends OptionalLayer {
       });
     };
   };
+
+  private categoricalLineGen = (line: BandLineConfig<Metadata>, layerArgs: LayerArgs) => {
+    const { x: numericalScaleX, y: numericalScaleY } = layerArgs.scaleConfig.linearScales;
+    const { x: categoricalScaleX, y: categoricalScaleY } = layerArgs.scaleConfig.categoricalScales;
+
+    let scaleX;
+    let scaleY;
+
+    if (categoricalScaleX) {
+      // Create a smaller numerical axis within each category, which will not be visually shown,
+      // but will be used to plot data within the band.
+      const bandwidth = categoricalScaleX.bandwidth();
+      const bandStartSC = categoricalScaleX(line.bands.x!)!;
+      scaleX = numericalScaleX.copy().range([bandStartSC, bandStartSC + bandwidth]);
+    } else {
+      scaleX = numericalScaleX;
+    }
+
+    if (categoricalScaleY) {
+      // Create a smaller numerical axis within each category, which will not be visually shown,
+      // but will be used to plot data within the band.
+      const bandwidth = categoricalScaleY.bandwidth();
+      const bandStartSC = categoricalScaleY(line.bands.y!)!;
+      scaleY = numericalScaleY.copy().range([bandStartSC + bandwidth, bandStartSC]);
+    } else {
+      scaleY = numericalScaleY;
+    }
+
+    // nb this linegen is getting created per line.
+    const lineGen = d3.line<Point>().x(d => scaleX(d.x)).y(d => scaleY(d.y));
+    return lineGen(line.points);
+  }
 }
 
