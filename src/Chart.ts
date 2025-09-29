@@ -3,7 +3,7 @@ import { AxesLayer } from "./layers/AxesLayer";
 import { TracesLayer, TracesOptions } from "./layers/TracesLayer";
 import { ZoomLayer, ZoomOptions } from "./layers/ZoomLayer";
 import { TooltipHtmlCallback, TooltipsLayer } from "./layers/TooltipsLayer";
-import { AllOptionalLayers, Bounds, CategoricalScale, D3Selection, LayerArgs, Lines, PartialScales, Point, ScaleNumeric, Scales, ScatterPoints, XY, XYLabel, ZoomExtents } from "./types";
+import { AllOptionalLayers, AxisType, Bounds, CategoricalScale, CategoricalScaleConfig, D3Selection, LayerArgs, Lines, PartialScales, Point, ScaleNumeric, Scales, ScatterPoints, XY, XYLabel, ZoomExtents } from "./types";
 import { LayerType, LifecycleHooks, OptionalLayer } from "./layers/Layer";
 import { GridLayer } from "./layers/GridLayer";
 import html2canvas from "html2canvas";
@@ -313,29 +313,10 @@ export class Chart<Metadata = any> {
     const d3ScaleY = this.options.logScale.y ? d3.scaleLog : d3.scaleLinear;
     const numericalScaleY = d3ScaleY().domain(initialDomain.y).range(rangeY);
 
-    let catScales: Partial<XY<{ main: d3.ScaleBand<string>, bands: Record<string, ScaleNumeric> }>> = {};
-
-    if (categoricalScales.x?.length) {
-      const catScale = d3.scaleBand().domain(categoricalScales.x).range(rangeX);
-      const bandwidth = catScale.bandwidth();
-      catScales.x = { main: catScale, bands: {} };
-      catScales.x.bands = categoricalScales.x.reduce((acc, category) => {
-        const bandStartSC = catScale(category)!;
-        acc[category] = numericalScaleX.copy().range([bandStartSC, bandStartSC + bandwidth]);
-        return acc;
-      }, {} as Record<string, ScaleNumeric>)
-    }
-
-    if (categoricalScales.y?.length) {
-      const catScale = d3.scaleBand().domain(categoricalScales.y).range(rangeY);
-      const bandwidth = catScale.bandwidth();
-      catScales.y = { main: catScale, bands: {} };
-      catScales.y.bands = categoricalScales.y.reduce((acc, category) => {
-        const bandStartSC = catScale(category)!;
-        acc[category] = numericalScaleY.copy().range([bandStartSC, bandStartSC + bandwidth]);
-        return acc;
-      }, {} as Record<string, ScaleNumeric>)
-    }
+    let catScales = {
+      x: this.createCategoricalScale(categoricalScales.x, rangeX, numericalScaleX, "x"),
+      y: this.createCategoricalScale(categoricalScales.y, rangeY, numericalScaleY, "y"),
+    };
 
     let ticksX = 10;
     if (width < 500) ticksX = 6;
@@ -418,4 +399,27 @@ export class Chart<Metadata = any> {
 
     return this;
   };
+
+  // A categorical scale contains two or more 'bands', which each have a small numerical scale.
+  private createCategoricalScale = (
+    categories: string[] | undefined,
+    range: number[],
+    numericalScale: ScaleNumeric,
+    axis: AxisType,
+  ) => {
+    if (!categories?.length) {
+      return;
+    }
+    const bandScale = d3.scaleBand().domain(categories).range(range);
+    const bandwidth = bandScale.bandwidth();
+    const bands = categories.reduce((acc, category) => {
+      const bandStartSC = bandScale(category)!;
+      const bandRange = axis === "x"
+        ? [bandStartSC, bandStartSC + bandwidth]
+        : [bandStartSC + bandwidth, bandStartSC];
+      acc[category] = numericalScale.copy().range(bandRange);
+      return acc;
+    }, {} as Record<string, ScaleNumeric>)
+    return { main: bandScale, bands };
+  }
 };

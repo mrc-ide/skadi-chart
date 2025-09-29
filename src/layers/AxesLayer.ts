@@ -1,10 +1,8 @@
 import * as d3 from "@/d3";
 import { LayerType, OptionalLayer } from "./Layer";
-import { D3Selection, LayerArgs, XYLabel } from "@/types";
+import { AxisType, D3Selection, LayerArgs, XYLabel } from "@/types";
 
 // todo - make sure we cope with y axes that have a 0 at the bottom of the graph not the middle.
-
-type AxisType = 'x' | 'y';
 
 export class AxesLayer extends OptionalLayer {
   type = LayerType.Axes;

@@ -264,7 +264,6 @@ export class TracesLayer<Metadata> extends OptionalLayer {
     const scaleX = categoricalScales.x?.bands[categoryX!] ?? numericalScaleX;
     const scaleY = categoricalScales.y?.bands[categoryY!] ?? numericalScaleY;
 
-    // nb this linegen is getting created per line.
     const lineGen = d3.line<Point>().x(d => scaleX(d.x)).y(d => scaleY(d.y));
     return lineGen(line.points);
   }
