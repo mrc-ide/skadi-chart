@@ -2,6 +2,7 @@ import { ChartOptions } from "./Chart";
 import * as d3 from "./d3";
 import { LayerType, OptionalLayer } from "./layers/Layer";
 
+export type AxisType = 'x' | 'y';
 export type XY<T> = { x: T, y: T }
 export type Point = XY<number>
 export type PointWithMetadata<Metadata> = Point & { metadata?: Metadata }
@@ -26,6 +27,10 @@ export type D3Selection<Element extends d3.BaseType> = d3.Selection<Element, Poi
 export type AllOptionalLayers = OptionalLayer<any>;
 
 export type ScaleNumeric = d3.ScaleContinuousNumeric<number, number, never>
+export type CategoricalScaleConfig = {
+  main: d3.ScaleBand<string>, // The main categorical scale
+  bands: Record<string, ScaleNumeric> // Numerical scales within each category for banded data
+}
 
 /*
   LayerArgs are passed into each Layer in the draw
@@ -44,10 +49,7 @@ export type LayerArgs = {
   scaleConfig: {
     linearScales: XY<ScaleNumeric>,
     scaleExtents: Scales,
-    categoricalScales: Partial<XY<{
-      main: d3.ScaleBand<string>, // The main categorical scale
-      bands: Record<string, ScaleNumeric> // Numerical scales within each category for banded data
-    }>>,
+    categoricalScales: Partial<XY<CategoricalScaleConfig>>,
   },
   coreLayers: {
     [LayerType.Svg]: D3Selection<SVGSVGElement>,
