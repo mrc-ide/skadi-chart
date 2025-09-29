@@ -214,10 +214,10 @@ const makeRandomCurves = (props: typeof propsBasic) => {
   return lines;
 };
 
-const makeRandomCurvesForCategoricalAxis = (axis: string[]): Lines<Metadata> => {
+const makeRandomCurvesForCategoricalAxis = (domain: string[], axis: "x" | "y"): Lines<Metadata> => {
   return makeRandomCurves(propsBasic).map((line, index) => {
-    const band = axis[index % axis.length];
-    const color = colors[index % axis.length];
+    const band = domain[index % domain.length];
+    const color = colors[index % domain.length];
 
     return {
       ...line,
@@ -230,7 +230,7 @@ const makeRandomCurvesForCategoricalAxis = (axis: string[]): Lines<Metadata> => 
         else if (index === 1) { y = 1; }
         return { ...p, y };
       }),
-      bands: { y: band },
+      bands: { [axis]: band },
       style: { ...line.style, color }
     }
   })
@@ -268,7 +268,8 @@ const curvesTooltips = makeRandomCurves(propsBasic);
 const pointsTooltips = makeRandomPoints(pointPropsTooltips);
 const curvesResponsive = makeRandomCurves(propsBasic);
 const curvesCustom = makeRandomCurves(propsBasic);
-const curvesCategoricalYAxis = makeRandomCurvesForCategoricalAxis(categoricalYAxis);
+const curvesCategoricalYAxis = makeRandomCurvesForCategoricalAxis(categoricalYAxis, "y");
+const curvesCategoricalXAxis = makeRandomCurvesForCategoricalAxis(categoricalXAxis, "x");
 
 const scales: Scales = { x: {start: 0, end: 1}, y: {start: -3e6, end: 3e6} };
 
@@ -316,9 +317,17 @@ const drawChartCategoricalYAxis = () => {
     .appendTo(chartCategoricalYAxis.value!, {}, {}, { y: categoricalYAxis });
 };
 
+const drawChartCategoricalXAxis = () => {
+  new Chart({ logScale: { x: logScaleX.value, y: logScaleY.value }})
+    .addAxes({ x: "Category", y: "Value" })
+    .addTraces(curvesCategoricalXAxis)
+    .appendTo(chartCategoricalXAxis.value!, {}, {}, { x: categoricalXAxis });
+};
+
 watch([logScaleY, logScaleX], () => {
   drawChartAxesLabelGridZoomAndLogScale();
   drawChartCategoricalYAxis();
+  drawChartCategoricalXAxis();
 });
 
 onMounted(async () => {
@@ -366,6 +375,7 @@ onMounted(async () => {
     .appendTo(chartTooltips.value!);
 
   drawChartCategoricalYAxis();
+  drawChartCategoricalXAxis();
 
   curvesResponsive.forEach((l, i) => {
     l.style.strokeDasharray = `${i * 2} 5`

@@ -267,7 +267,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
       // Create a smaller numerical axis within each category, which will not be visually shown,
       // but will be used to plot data within the band.
       const bandwidth = categoricalScaleX.bandwidth();
-      const bandStartSC = categoricalScaleX(line.bands.x!)!;
+      const bandStartSC = categoricalScaleX(line.bands!.x!)!;
       scaleX = numericalScaleX.copy().range([bandStartSC, bandStartSC + bandwidth]);
     } else {
       scaleX = numericalScaleX;
@@ -277,7 +277,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
       // Create a smaller numerical axis within each category, which will not be visually shown,
       // but will be used to plot data within the band.
       const bandwidth = categoricalScaleY.bandwidth();
-      const bandStartSC = categoricalScaleY(line.bands.y!)!;
+      const bandStartSC = categoricalScaleY(line.bands!.y!)!;
       scaleY = numericalScaleY.copy().range([bandStartSC + bandwidth, bandStartSC]);
     } else {
       scaleY = numericalScaleY;
