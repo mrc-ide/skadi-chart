@@ -16,6 +16,41 @@ export class AxesLayer extends OptionalLayer {
     super();
   };
 
+  private drawAxis = (axis: AxisType): AxisElements => {
+    if (!this.layerArgs) {
+      throw new Error("AxesLayer.drawAxis called before layerArgs set");
+    }
+    const { width, height, margin } = this.layerArgs.bounds;
+    const { getHtmlId } = this.layerArgs;
+    const numericalScale = this.layerArgs.scaleConfig.linearScales[axis];
+
+    if (this.labels[axis]) {
+      const label = this.layerArgs.coreLayers[LayerType.Svg].append("text")
+        .attr("id", `${getHtmlId(LayerType.Axes)}-label${axis}`)
+        .style("font-size", "1.2rem")
+        .attr("text-anchor", "middle")
+        .text(this.labels[axis])
+      if (axis === "y") {
+        const usableHeight = height - margin.top - margin.bottom;
+        label.attr("x", - usableHeight / 2 - margin.top)
+          .attr("y", margin.left / 3)
+          .attr("transform", "rotate(-90)")
+      } else {
+        const usableWidth = width - margin.left - margin.right;
+        label.attr("x", usableWidth / 2 + margin.left)
+          .attr("y", height - margin.bottom / 3)
+      }
+    }
+
+    if (this.layerArgs.scaleConfig.categoricalScales[axis]) {
+      this.drawCategoricalAxis(axis);
+      return { layer: null, axis: null, line: null }; // No need to return axis elements as this axis won't be zoomed
+    } else {
+      return this.drawNumericalAxis(axis, numericalScale, { ...this.layerArgs.globals.tickConfig[axis], padding: 12 });
+    }
+  };
+
+
   draw = (layerArgs: LayerArgs) => {
     this.layerArgs = layerArgs;
     const { x: scaleX, y: scaleY } = this.layerArgs.scaleConfig.linearScales;
@@ -58,40 +93,6 @@ export class AxesLayer extends OptionalLayer {
 
       await Promise.all([...promises, promiseAxisLineX, promiseAxisLineY]);
     };
-  };
-
-  private drawAxis = (axis: AxisType): AxisElements => {
-    if (!this.layerArgs) {
-      throw new Error("AxesLayer.drawAxis called before layerArgs set");
-    }
-    const { width, height, margin } = this.layerArgs.bounds;
-    const { getHtmlId } = this.layerArgs;
-    const numericalScale = this.layerArgs.scaleConfig.linearScales[axis];
-
-    if (this.labels[axis]) {
-      const label = this.layerArgs.coreLayers[LayerType.Svg].append("text")
-        .attr("id", `${getHtmlId(LayerType.Axes)}-label${axis}`)
-        .style("font-size", "1.2rem")
-        .attr("text-anchor", "middle")
-        .text(this.labels[axis])
-      if (axis === "y") {
-        const usableHeight = height - margin.top - margin.bottom;
-        label.attr("x", - usableHeight / 2 - margin.top)
-          .attr("y", margin.left / 3)
-          .attr("transform", "rotate(-90)")
-      } else {
-        const usableWidth = width - margin.left - margin.right;
-        label.attr("x", usableWidth / 2 + margin.left)
-          .attr("y", height - margin.bottom / 3)
-      }
-    }
-
-    if (this.layerArgs.scaleConfig.categoricalScales[axis]) {
-      this.drawCategoricalAxis(axis);
-      return { layer: null, axis: null, line: null }; // No need to return axis elements as this axis won't be zoomed
-    } else {
-      return this.drawNumericalAxis(axis, numericalScale, { ...this.layerArgs.globals.tickConfig[axis], padding: 12 });
-    }
   };
 
   private translation = (axis: AxisType) => {
