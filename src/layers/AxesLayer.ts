@@ -42,12 +42,9 @@ export class AxesLayer extends OptionalLayer {
       }
     }
 
-    if (this.layerArgs.scaleConfig.categoricalScales[axis]) {
-      this.drawCategoricalAxis(axis);
-      return { layer: null, axis: null, line: null }; // No need to return axis elements as this axis won't be zoomed
-    } else {
-      return this.drawNumericalAxis(axis, numericalScale, { ...this.layerArgs.globals.tickConfig[axis], padding: 12 });
-    }
+    return this.layerArgs.scaleConfig.categoricalScales[axis]
+      ? this.drawCategoricalAxis(axis)
+      : this.drawNumericalAxis(axis, numericalScale, { ...this.layerArgs.globals.tickConfig[axis], padding: 12 });
   };
 
 
@@ -108,7 +105,7 @@ export class AxesLayer extends OptionalLayer {
     return axis === "x" ? height - margin.bottom : margin.left;
   }
 
-  private drawCategoricalAxis = (axis: AxisType) => {
+  private drawCategoricalAxis = (axis: AxisType): AxisElements => {
     if (!this.layerArgs) {
       throw new Error("AxesLayer.drawAxis called before layerArgs set");
     }
@@ -124,13 +121,13 @@ export class AxesLayer extends OptionalLayer {
 
     const distanceFromSvgEdgeToAxis = axis === "x" ? margin.bottom : margin.left;
     const showZeroLine = !this.layerArgs.chartOptions.logScale[axis];
-    const ridgelineAxis = axisCon(categoricalScale).ticks(tickCount).tickSize(0)
+    const categoricalAxis = axisCon(categoricalScale).ticks(tickCount).tickSize(0)
       .tickPadding(distanceFromSvgEdgeToAxis * (showZeroLine ? 0.3 : 0.2));
     svgLayer.append("g")
       .attr("id", `${getHtmlId(LayerType.Axes)}-${axis}`)
       .style("font-size", "0.75rem")
       .attr("transform", `translate(${translate.x},${translate.y})`)
-      .call(ridgelineAxis);
+      .call(categoricalAxis);
 
     const bandNumericalScales = Object.entries(this.layerArgs!.scaleConfig.categoricalScales[axis]!.bands);
     bandNumericalScales.forEach(([category, bandNumericalScale]) => {
@@ -141,6 +138,8 @@ export class AxesLayer extends OptionalLayer {
       // Each band gets a line at its ending edge
       this.drawLinePerpendicularToAxis(axis, categoricalScale(category!)! + bandwidth);
     });
+
+    return { layer: null, axis: null, line: null }; // No need to return axis elements as this axis won't be zoomed
   };
 
   private drawNumericalAxis = (
@@ -153,6 +152,7 @@ export class AxesLayer extends OptionalLayer {
     const axisCon = this.axisConstructor(axis);
     const translate = this.translation(axis);
     let axisLine: D3Selection<SVGLineElement> | null = null;
+
     const numericalAxis = axisCon(scale).ticks(tickCount, tickSpecifier).tickSize(0).tickPadding(tickPadding);
     const axisLayer = this.layerArgs!.coreLayers[LayerType.Svg].append("g")
       .attr("id", `${getHtmlId(LayerType.Axes)}-${axis}`)
