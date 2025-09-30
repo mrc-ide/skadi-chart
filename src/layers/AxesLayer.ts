@@ -84,15 +84,8 @@ export class AxesLayer extends OptionalLayer {
       axisLayer.select(".domain")
         .style("stroke-opacity", 0);
       if (!this.layerArgs.chartOptions.logScale[axis]) {
-        const otherAxis = this.otherAxis(axis);
-        // A line at [axis]=0
-        axisLine = baseLayer.append("g").append("line")
-          .attr(`${axis}1`, numericalScale(0))
-          .attr(`${axis}2`, numericalScale(0))
-          .attr(`${otherAxis}1`, this.svgStartToAxis(axis))
-          .attr(`${otherAxis}2`, axis === "x" ? margin.top : width - margin.right)
-          .style("stroke", "black")
-          .style("stroke-width", 0.5);
+        // Draw a line at [axis]=0
+        this.drawLinePerpendicularToAxis(axis, numericalScale(0), "darkgrey");
       }
     }
 
