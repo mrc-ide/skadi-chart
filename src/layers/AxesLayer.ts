@@ -1,8 +1,12 @@
 import * as d3 from "@/d3";
 import { LayerType, OptionalLayer } from "./Layer";
-import { AxisType, D3Selection, LayerArgs, XYLabel } from "@/types";
+import { AxisType, D3Selection, LayerArgs, ScaleNumeric, TickConfig, XYLabel } from "@/types";
 
-// todo - make sure we cope with y axes that have a 0 at the bottom of the graph not the middle.
+type AxisElements = {
+  layer: D3Selection<SVGGElement> | null;
+  axis: d3.Axis<d3.NumberValue> | null;
+  line: D3Selection<SVGLineElement> | null;
+}
 
 export class AxesLayer extends OptionalLayer {
   type = LayerType.Axes;
@@ -56,37 +60,13 @@ export class AxesLayer extends OptionalLayer {
     };
   };
 
-  private drawAxis = (axis: AxisType) => {
+  private drawAxis = (axis: AxisType): AxisElements => {
     if (!this.layerArgs) {
       throw new Error("AxesLayer.drawAxis called before layerArgs set");
     }
-    const svgLayer = this.layerArgs.coreLayers[LayerType.Svg];
     const { width, height, margin } = this.layerArgs.bounds;
     const { getHtmlId } = this.layerArgs;
     const numericalScale = this.layerArgs.scaleConfig.linearScales[axis];
-    const { count: tickCount, specifier: tickSpecifier } = this.layerArgs.globals.tickConfig[axis];
-    const translate = this.translation(axis);
-
-    let axisLayer: D3Selection<SVGGElement> | null = null;
-    let numericalAxis: d3.Axis<d3.NumberValue> | null = null;
-    let axisLine: D3Selection<SVGLineElement> | null = null;
-
-    if (this.layerArgs.scaleConfig.categoricalScales[axis]) {
-      this.drawCategoricalAxis(axis);
-    } else {
-      numericalAxis = this.axisConstructor(axis)(numericalScale).ticks(tickCount, tickSpecifier).tickSize(0).tickPadding(12);
-      axisLayer = svgLayer.append("g")
-        .attr("id", `${getHtmlId(LayerType.Axes)}-${axis}`)
-        .style("font-size", "0.75rem")
-        .attr("transform", `translate(${translate.x},${translate.y})`)
-        .call(numericalAxis);
-      axisLayer.select(".domain")
-        .style("stroke-opacity", 0);
-      if (!this.layerArgs.chartOptions.logScale[axis]) {
-        // Draw a line at [axis]=0
-        axisLine = this.drawLinePerpendicularToAxis(axis, numericalScale(0), "darkgrey");
-      }
-    }
 
     if (this.labels[axis]) {
       const label = this.layerArgs.coreLayers[LayerType.Svg].append("text")
@@ -106,7 +86,12 @@ export class AxesLayer extends OptionalLayer {
       }
     }
 
-    return { layer: axisLayer, axis: numericalAxis, line: axisLine };
+    if (this.layerArgs.scaleConfig.categoricalScales[axis]) {
+      this.drawCategoricalAxis(axis);
+      return { layer: null, axis: null, line: null }; // No need to return axis elements as this axis won't be zoomed
+    } else {
+      return this.drawNumericalAxis(axis, numericalScale, { ...this.layerArgs.globals.tickConfig[axis], padding: 12 });
+    }
   };
 
   private translation = (axis: AxisType) => {
@@ -147,28 +132,41 @@ export class AxesLayer extends OptionalLayer {
       .call(ridgelineAxis);
 
     const bandNumericalScales = Object.entries(this.layerArgs!.scaleConfig.categoricalScales[axis]!.bands);
-    // Draw a line at [axis]=0 for each band, and at the band's edge.
     bandNumericalScales.forEach(([category, bandNumericalScale]) => {
-      if (showZeroLine) {
+      if (showZeroLine && this.layerArgs!.scaleConfig.categoricalScales.y) {
         // Add a tick and label at y=0 for each band, if the y-axis is categorical
-        if (this.layerArgs!.scaleConfig.categoricalScales.y) {
-          const bandNumericalAxis = axisCon(bandNumericalScale).ticks(1).tickSize(0).tickPadding(6);
-          svgLayer.append("g")
-            .attr("id", `${getHtmlId(LayerType.Axes)}-${axis}`)
-            .style("font-size", "0.75rem")
-            .attr("transform", `translate(${translate.x},${translate.y})`)
-            .call(bandNumericalAxis);
-        }
-
-        if (!this.layerArgs!.chartOptions.logScale[axis]) {
-          // Draw a line at [axis]=0 for each band
-          this.drawLinePerpendicularToAxis(axis, bandNumericalScale(0), "darkgrey"); // darkgrey distinguishes from inter-band lines
-        }
+        this.drawNumericalAxis("y", bandNumericalScale, { count: 1, padding: 6 });
       }
       // Each band gets a line at its ending edge
       this.drawLinePerpendicularToAxis(axis, categoricalScale(category!)! + bandwidth);
     });
   };
+
+  private drawNumericalAxis = (
+    axis: AxisType,
+    scale: ScaleNumeric,
+    tickConfig: TickConfig & { padding: number },
+  ): AxisElements => {
+    const { getHtmlId } = this.layerArgs!;
+    const { count: tickCount, specifier: tickSpecifier, padding: tickPadding } = tickConfig;
+    const axisCon = this.axisConstructor(axis);
+    const translate = this.translation(axis);
+    let axisLine: D3Selection<SVGLineElement> | null = null;
+    const numericalAxis = axisCon(scale).ticks(tickCount, tickSpecifier).tickSize(0).tickPadding(tickPadding);
+    const axisLayer = this.layerArgs!.coreLayers[LayerType.Svg].append("g")
+      .attr("id", `${getHtmlId(LayerType.Axes)}-${axis}`)
+      .style("font-size", "0.75rem")
+      .attr("transform", `translate(${translate.x},${translate.y})`)
+      .call(numericalAxis);
+    axisLayer.select(".domain").style("stroke-opacity", 0);
+
+    if (!this.layerArgs!.chartOptions.logScale[axis]) {
+      // Draw a line at [axis]=0
+      axisLine = this.drawLinePerpendicularToAxis(axis, scale(0), "darkgrey");
+    }
+
+    return { layer: axisLayer, axis: numericalAxis, line: axisLine };
+  }
 
   private drawLinePerpendicularToAxis = (axis: AxisType, positionSC: number, color: string = "black") => {
     const baseLayer = this.layerArgs!.coreLayers[LayerType.BaseLayer];
