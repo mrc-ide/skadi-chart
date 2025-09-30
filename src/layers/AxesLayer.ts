@@ -61,7 +61,6 @@ export class AxesLayer extends OptionalLayer {
       throw new Error("AxesLayer.drawAxis called before layerArgs set");
     }
     const svgLayer = this.layerArgs.coreLayers[LayerType.Svg];
-    const baseLayer = this.layerArgs.coreLayers[LayerType.BaseLayer];
     const { width, height, margin } = this.layerArgs.bounds;
     const { getHtmlId } = this.layerArgs;
     const numericalScale = this.layerArgs.scaleConfig.linearScales[axis];
@@ -85,7 +84,7 @@ export class AxesLayer extends OptionalLayer {
         .style("stroke-opacity", 0);
       if (!this.layerArgs.chartOptions.logScale[axis]) {
         // Draw a line at [axis]=0
-        this.drawLinePerpendicularToAxis(axis, numericalScale(0), "darkgrey");
+        axisLine = this.drawLinePerpendicularToAxis(axis, numericalScale(0), "darkgrey");
       }
     }
 
@@ -151,9 +150,6 @@ export class AxesLayer extends OptionalLayer {
     // Draw a line at [axis]=0 for each band, and at the band's edge.
     bandNumericalScales.forEach(([category, bandNumericalScale]) => {
       if (showZeroLine) {
-        // Draw a line at [axis]=0 for each band
-        this.drawLinePerpendicularToAxis(axis, bandNumericalScale(0), "darkgrey"); // darkgrey distinguishes from inter-band lines
-
         // Add a tick and label at y=0 for each band, if the y-axis is categorical
         if (this.layerArgs!.scaleConfig.categoricalScales.y) {
           const bandNumericalAxis = axisCon(bandNumericalScale).ticks(1).tickSize(0).tickPadding(6);
@@ -162,6 +158,11 @@ export class AxesLayer extends OptionalLayer {
             .style("font-size", "0.75rem")
             .attr("transform", `translate(${translate.x},${translate.y})`)
             .call(bandNumericalAxis);
+        }
+
+        if (!this.layerArgs!.chartOptions.logScale[axis]) {
+          // Draw a line at [axis]=0 for each band
+          this.drawLinePerpendicularToAxis(axis, bandNumericalScale(0), "darkgrey"); // darkgrey distinguishes from inter-band lines
         }
       }
       // Each band gets a line at its ending edge
@@ -173,7 +174,7 @@ export class AxesLayer extends OptionalLayer {
     const baseLayer = this.layerArgs!.coreLayers[LayerType.BaseLayer];
     const { height, width, margin } = this.layerArgs!.bounds;
 
-    baseLayer.append("g").append("line")
+    return baseLayer.append("g").append("line")
       .attr(`${axis}1`, positionSC)
       .attr(`${axis}2`, positionSC)
       .attr(`${this.otherAxis(axis)}1`, axis === "x" ? margin.top : margin.left)
