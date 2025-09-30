@@ -248,7 +248,6 @@ const tooltipHtmlCallback = (point: PointWithMetadata<Metadata> | BandPoint<Meta
   }
 };
 
-
 const categoricalYAxis = ["A", "B", "C", "D", "E"];
 const categoricalXAxis = ["Left", "Right"];
 const chartCategoricalYAxis = ref<HTMLDivElement | null>(null);
