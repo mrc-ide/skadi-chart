@@ -314,6 +314,7 @@ const drawChartCategoricalYAxis = () => {
   new Chart({ logScale: { x: logScaleX.value, y: logScaleY.value }})
     .addAxes({ x: "Time", y: "Category" })
     .addTraces(curvesCategoricalYAxis)
+    .addZoom({ lockAxis: "y" })
     .appendTo(chartCategoricalYAxis.value!, {}, {}, { y: categoricalYAxis });
 };
 
@@ -321,6 +322,7 @@ const drawChartCategoricalXAxis = () => {
   new Chart({ logScale: { x: logScaleX.value, y: logScaleY.value }})
     .addAxes({ x: "Category", y: "Value" })
     .addTraces(curvesCategoricalXAxis)
+    .addZoom({ lockAxis: "x" })
     .appendTo(chartCategoricalXAxis.value!, {}, {}, { x: categoricalXAxis });
 };
 
