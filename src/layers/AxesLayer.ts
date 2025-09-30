@@ -69,13 +69,13 @@ export class AxesLayer extends OptionalLayer {
     const translate = this.translation(axis);
 
     let axisLayer: D3Selection<SVGGElement> | null = null;
-    let numericalAxis: d3.Axis<number> | null = null;
+    let numericalAxis: d3.Axis<d3.NumberValue> | null = null;
     let axisLine: D3Selection<SVGLineElement> | null = null;
 
     if (this.layerArgs.scaleConfig.categoricalScales[axis]) {
       this.drawCategoricalAxis(axis);
     } else {
-      const numericalAxis = this.axisConstructor(axis)(numericalScale).ticks(tickCount, tickSpecifier).tickSize(0).tickPadding(12);
+      numericalAxis = this.axisConstructor(axis)(numericalScale).ticks(tickCount, tickSpecifier).tickSize(0).tickPadding(12);
       axisLayer = svgLayer.append("g")
         .attr("id", `${getHtmlId(LayerType.Axes)}-${axis}`)
         .style("font-size", "0.75rem")
