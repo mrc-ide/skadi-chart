@@ -49,7 +49,7 @@ const doRDP = (
   const rangeYSC = endSC.y - startSC.y;
   const rangeXSC = endSC.x - startSC.x;
   const crossProductSC = endSC.x * startSC.y - endSC.y * startSC.x;
-
+  
   // we are applying this algorthim in svg coordinates as we want to lower resolution of lines based on
   // visual distance instead of data coordinates (DC)
   //
@@ -107,7 +107,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
   private customTween = (index: number, zoomExtents: ZoomExtents) => {
     const currLineSC = this.lowResLinesSC[index];
     return (t: number) => {
-      const intermediateLineSC = currLineSC.map(({ x, y }) => this.getNewPoint!(x, y, t));
+      const intermediateLineSC = currLineSC.map(({x, y}) => this.getNewPoint!(x, y, t));
       return this.customLineGen(intermediateLineSC, zoomExtents);
     };
   };
@@ -122,12 +122,12 @@ export class TracesLayer<Metadata> extends OptionalLayer {
     let retStr = "";
     const { x, y } = lineSC[0];
     let wasLastPointInRange = zoomExtents.x[0] <= x && x <= zoomExtents.x[1]
-      && zoomExtents.y[1] <= y && y <= zoomExtents.y[0];
+                           && zoomExtents.y[1] <= y && y <= zoomExtents.y[0];
 
     for (let i = 0; i < lineSC.length; i++) {
       const { x, y } = lineSC[i];
       const isPointInRange = zoomExtents.x[0] <= x && x <= zoomExtents.x[1]
-        && zoomExtents.y[1] <= y && y <= zoomExtents.y[0];
+                          && zoomExtents.y[1] <= y && y <= zoomExtents.y[0];
 
       // if last point in range we always want to add next point even if it
       // isn't in range because we want the line to at least continue off the
@@ -218,7 +218,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
       // brush selection
       const offsetXSC = scalingX * scaleX(newExtentXDC[0]) - scaleX(oldExtentXDC[0]);
       const offsetYSC = scalingY * scaleY(newExtentYDC[0]) - scaleY(oldExtentYDC[0]);
-
+      
       // useful to precompute
       const scaleRelativeX = scalingX - 1;
       const scaleRelativeY = scalingY - 1;

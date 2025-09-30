@@ -93,8 +93,8 @@ export class Chart<Metadata = any> {
       for (let j = 0; j < currLine.points.length; j++) {
         if (currLine.points[j][axis] <= 0) {
           warningMsg = `You have tried to use ${axis} axis `
-                     + `log scale but there are traces with `
-                     + `${axis} coordinates that are <= 0`;
+            + `log scale but there are traces with `
+            + `${axis} coordinates that are <= 0`;
         }
 
         if (currLine.points[j][axis] > 0) {
@@ -154,8 +154,8 @@ export class Chart<Metadata = any> {
     if (filteredPoints.length !== points.length) {
       console.warn(
         `You have tried to use ${axis} axis `
-        + `log scale but there are points with `
-        + `${axis} coordinates that are <= 0`
+         + `log scale but there are points with `
+         + `${axis} coordinates that are <= 0`
       );
     }
     return filteredPoints;

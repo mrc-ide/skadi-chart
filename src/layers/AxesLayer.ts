@@ -92,6 +92,7 @@ export class AxesLayer extends OptionalLayer {
     };
   };
 
+  // The amount to translate the axis layer by from the edge of the svg.
   private translation = (axis: AxisType) => {
     const svgStartToAxis = this.svgStartToAxis(axis);
     return {
