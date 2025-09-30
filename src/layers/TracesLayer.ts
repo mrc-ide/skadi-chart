@@ -153,8 +153,14 @@ export class TracesLayer<Metadata> extends OptionalLayer {
   };
 
   private updateLowResLinesSC = (layerArgs: LayerArgs) => {
-    const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
+    const { x: numericalScaleX, y: numericalScaleY } = layerArgs.scaleConfig.linearScales;
+    const categoricalScales = layerArgs.scaleConfig.categoricalScales
+
     const linesSC = this.linesDC.map(l => {
+      const [categoryX, categoryY] = [l.bands?.x, l.bands?.y];
+      const scaleX = categoricalScales.x?.bands[categoryX!] ?? numericalScaleX;
+      const scaleY = categoricalScales.y?.bands[categoryY!] ?? numericalScaleY;
+
       return l.points.map(p => ({ x: scaleX(p.x), y: scaleY(p.y) }));
     });
     if (this.options.RDPEpsilon !== null) {
@@ -166,17 +172,20 @@ export class TracesLayer<Metadata> extends OptionalLayer {
 
   draw = (layerArgs: LayerArgs, currentExtentsDC: ZoomExtents) => {
     this.updateLowResLinesSC(layerArgs);
-    const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
-    const { x: categoricalScaleX, y: categoricalScaleY } = layerArgs.scaleConfig.categoricalScales;
-    const currentExtentsSC: ZoomExtents = {
-      x: [scaleX(currentExtentsDC.x[0]), scaleX(currentExtentsDC.x[1])],
-      y: [scaleY(currentExtentsDC.y[0]), scaleY(currentExtentsDC.y[1])],
-    };
+    const { x: numericalScaleX, y: numericalScaleY } = layerArgs.scaleConfig.linearScales;
+    const categoricalScales = layerArgs.scaleConfig.categoricalScales
 
     this.traces = this.linesDC.map((l, index) => {
-      const linePathSC = (!categoricalScaleX && !categoricalScaleY)
-        ? this.customLineGen(this.lowResLinesSC[index], currentExtentsSC)
-        : this.categoricalLineGen(l, layerArgs);
+      const [categoryX, categoryY] = [l.bands?.x, l.bands?.y];
+      const scaleX = categoricalScales.x?.bands[categoryX!] ?? numericalScaleX;
+      const scaleY = categoricalScales.y?.bands[categoryY!] ?? numericalScaleY;
+
+      const currentExtentsSC: ZoomExtents = {
+        x: [scaleX(currentExtentsDC.x[0]), scaleX(currentExtentsDC.x[1])],
+        y: [scaleY(currentExtentsDC.y[0]), scaleY(currentExtentsDC.y[1])],
+      };
+
+      const linePathSC = this.customLineGen(this.lowResLinesSC[index], currentExtentsSC);
       return layerArgs.coreLayers[LayerType.BaseLayer].append("path")
         .attr("id", `${layerArgs.getHtmlId(LayerType.Trace)}-${index}`)
         .attr("pointer-events", "none")
@@ -252,17 +261,5 @@ export class TracesLayer<Metadata> extends OptionalLayer {
       });
     };
   };
-
-  private categoricalLineGen = (line: LineConfig<Metadata>, layerArgs: LayerArgs) => {
-    const { x: numericalScaleX, y: numericalScaleY } = layerArgs.scaleConfig.linearScales;
-    const categoricalScales = layerArgs.scaleConfig.categoricalScales
-    const [categoryX, categoryY] = [line.bands?.x, line.bands?.y];
-
-    const scaleX = categoricalScales.x?.bands[categoryX!] ?? numericalScaleX;
-    const scaleY = categoricalScales.y?.bands[categoryY!] ?? numericalScaleY;
-
-    const lineGen = d3.line<Point>().x(d => scaleX(d.x)).y(d => scaleY(d.y));
-    return lineGen(line.points);
-  }
 }
 
