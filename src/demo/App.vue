@@ -236,19 +236,9 @@ const makeRandomCurvesForCategoricalAxis = (domain: string[], axis: "x" | "y"): 
   })
 };
 
-// TODO: Decide whether tooltips are part of this pr
-const tooltipHtmlCallback = (point: PointWithMetadata<Metadata> | BandPoint<Metadata>) => {
-  const numericalValues = `X: ${point.x.toFixed(3)}, Y: ${point.y.toFixed(3)}`;
-  if (Object.keys(point).includes("bands")) {
-    const bands = (point as BandPoint<Metadata>).bands;
-    return `<div style="color: ${point.metadata?.color};">${numericalValues}`
-    + `<br/>Band X: ${bands.x}, Band Y: ${bands.y}`
-    + `</div>`
-  } else {
-    return `<div style="color: ${point.metadata?.color};">${numericalValues}</div>`
-  }
+const tooltipHtmlCallback = (point: {x: number, y: number, metadata?: Metadata}) => {
+  return `<div style="color: ${point.metadata?.color};">X: ${point.x.toFixed(3)}, Y: ${point.y.toFixed(3)}</div>`;
 };
-
 
 const categoricalYAxis = ["A", "B", "C", "D", "E"];
 const categoricalXAxis = ["Left", "Right"];
