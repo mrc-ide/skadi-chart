@@ -1,11 +1,11 @@
 import * as d3 from "@/d3";
 import { LayerType, OptionalLayer } from "./Layer";
 import { TracesLayer } from "./TracesLayer";
-import { D3Selection, LayerArgs, Point, PointWithMetadata, XY } from "@/types";
+import { BandPoint, D3Selection, LayerArgs, Point, PointWithMetadata, XY } from "@/types";
 import { ScatterLayer } from "./ScatterLayer";
 
 export type TooltipHtmlCallback<Metadata> =
-  (pointWithMetadata: PointWithMetadata<Metadata>) => string
+  (pointWithMetadata: PointWithMetadata<Metadata>, bandString: string) => string
 
 // this file uses variable naming conventions that follow the coordinate systems
 // section outlined in the README. If DC, SC and CC don't make sense to you please
@@ -66,16 +66,24 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     eventCC: d3.ClientPointEvent,
     layerArgs: LayerArgs,
     tooltip: D3Selection<HTMLDivElement>,
-    flatPointsDC: PointWithMetadata<Metadata>[],
+    flatPointsDC: BandPoint<Metadata>[],
     rangeDC: XY<number>
   ) => {
     // d3.pointer converts coords from CC to SC
     const [ clientXSC, clientYSC ] = d3.pointer(eventCC);
-    const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
+    const { x: scaleX } = layerArgs.scaleConfig.linearScales;
+
+    // To get DC coordinates from SC coordinates in the case of band scales on the X axis,
+    // we must first work out which band we are in.
+    const [bandString, bandNumericalScale] = Object.entries(layerArgs.scaleConfig.categoricalScales.y!.bands).find(([_category, bandNumericalScale]) => {
+      const range = bandNumericalScale.range();
+      return clientYSC >= Math.min(...range) && clientYSC <= Math.max(...range);
+    })!;
 
     // scale.invert functions convert SC to DC, applying just scale converts from
     // DC to SC
-    const coordsDC = { x: scaleX.invert(clientXSC), y: scaleY.invert(clientYSC) };
+    const coordsDC = { x: scaleX.invert(clientXSC), y: bandNumericalScale!.invert(clientYSC) };
+    rangeDC.y = bandNumericalScale!.domain()[1] - bandNumericalScale!.domain()[0];
 
     // notice that the min point we want is DC because data points are always
     // going to use data coordinates but the minimum distance that we compare
@@ -93,15 +101,17 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     // compute a proportional distance since we only care about the minimum
     // point
     let fastMinDistanceSC = Infinity;
-    const minPointDC = flatPointsDC.reduce((minPDC, pDC) => {
-      const distanceSC = this.getFastDistanceSqSC(coordsDC, pDC, rangeDC);
-      if (distanceSC >= fastMinDistanceSC) return minPDC;
-      fastMinDistanceSC = distanceSC;
-      return pDC;
-    }, { x: 0, y: 0 });
+    const minPointDC = flatPointsDC
+      .filter(({ bands }) => bands.y === bandString) // only consider points in the band we are in
+      .reduce((minPDC, pDC) => {
+        const distanceSC = this.getFastDistanceSqSC(coordsDC, pDC, rangeDC);
+        if (distanceSC >= fastMinDistanceSC) return minPDC;
+        fastMinDistanceSC = distanceSC;
+        return pDC;
+      }, { x: 0, y: 0 });
 
     // SC distance will be the same as pixel distance
-    const minPointSC = { x: scaleX(minPointDC.x), y: scaleY(minPointDC.y) };
+    const minPointSC = { x: scaleX(minPointDC.x), y: bandNumericalScale!(minPointDC.y) };
     // Having found closest SC point, get its accurate distance to client point
     // to decide if tooltip should be shown
     const minDistanceSC = this.getDistanceSq({ x: clientXSC, y: clientYSC }, minPointSC);
@@ -111,13 +121,21 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     if (minDistanceSC > this.tooltipRadiusSq) {
       tooltip.style("opacity", 0);
     } else {
+      // Add a circle to the line (for debugging only)
+      layerArgs.coreLayers[LayerType.Svg].append("circle")
+        .attr("cx", minPointSC.x)
+        .attr("cy", minPointSC.y)
+        .attr("r", 5)
+        .attr("fill", "white")
+        .attr("stroke", "black")
+
       const minPointCC = this.convertSCPointToCC(minPointSC, layerArgs);
 
       // the tooltip html callback receives the actual data coordinates so the
       // tooltips can be accurate to the user data and we translate the tooltip
       // so it is on top of the closest data point for which we need client
       // coordinates of the point (absolute position of the min point)
-      tooltip.html(this.tooltipHtmlCallback(minPointDC))
+      tooltip.html(this.tooltipHtmlCallback(minPointDC, bandString!))
         .style("left", `${minPointCC.x}px`)
         .style("top", `${minPointCC.y}px`)
         .style("opacity", 1)
@@ -138,13 +156,22 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
       .attr("id", `${layerArgs.getHtmlId(this.type)}`)
       .style("position", "fixed")
       .style("pointer-events", "none") as any as D3Selection<HTMLDivElement>;
-    
+
     let flatPointsDC = traceLayers.reduce((pointsWithMetadata, layer) => {
       const layerPointsWithMetadata = layer.linesDC.flatMap(l => {
-        return l.points.map(p => ({ ...p, metadata: l.metadata }));
+        return l.points.map((p) => {
+          return {
+            ...p,
+            metadata: {
+              ...l.metadata,
+              color: l.style.color
+            } as Metadata,
+            bands: l.bands
+          }
+        });
       });
       return [...layerPointsWithMetadata, ...pointsWithMetadata];
-    }, [] as PointWithMetadata<Metadata>[]);
+    }, [] as BandPoint<Metadata>[]);
     flatPointsDC = scatterLayers.reduce((points, layer) => {
       return [...layer.points.map(p => ({ x: p.x, y: p.y, metadata: p.metadata })), ...points];
     }, flatPointsDC);

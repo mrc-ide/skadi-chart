@@ -203,7 +203,6 @@ const makeRandomCurves = (props: typeof propsBasic) => {
         color,
         strokeWidth: Math.random() * 1
       },
-      metadata: { color }
     };
     const yfunc = makeYFunc();
     for (let i = 0; i < props.nX + 1; i++) {
@@ -237,8 +236,8 @@ const makeRandomCurvesForCategoricalAxis = (domain: string[], axis: "x" | "y"): 
 };
 
 // TODO: Decide whether tooltips are part of this pr
-const tooltipHtmlCallback = (point: PointWithMetadata<Metadata> | BandPoint<Metadata>) => {
-  const numericalValues = `X: ${point.x.toFixed(3)}, Y: ${point.y.toFixed(3)}`;
+const tooltipHtmlCallback = (point: PointWithMetadata<Metadata> | BandPoint<Metadata>, bandString: string) => {
+  const numericalValues = `X: ${point.x.toFixed(3)}, Y: ${point.y.toFixed(3)}<br />bandString: ${bandString}`;
   if (Object.keys(point).includes("bands")) {
     const bands = (point as BandPoint<Metadata>).bands;
     return `<div style="color: ${point.metadata?.color};">${numericalValues}`
@@ -269,7 +268,7 @@ const pointsTooltips = makeRandomPoints(pointPropsTooltips);
 const curvesResponsive = makeRandomCurves(propsBasic);
 const curvesCustom = makeRandomCurves(propsBasic);
 const curvesCategoricalYAxis = makeRandomCurvesForCategoricalAxis(categoricalYAxis, "y");
-const curvesCategoricalXAxis = makeRandomCurvesForCategoricalAxis(categoricalXAxis, "x");
+// const curvesCategoricalXAxis = makeRandomCurvesForCategoricalAxis(categoricalXAxis, "x");
 
 const scales: Scales = { x: {start: 0, end: 1}, y: {start: -3e6, end: 3e6} };
 
@@ -314,6 +313,7 @@ const drawChartCategoricalYAxis = () => {
   new Chart({ logScale: { x: logScaleX.value, y: logScaleY.value }})
     .addAxes({ x: "Time", y: "Category" })
     .addTraces(curvesCategoricalYAxis)
+    .addTooltips(tooltipHtmlCallback)
     .appendTo(chartCategoricalYAxis.value!, {}, {}, { y: categoricalYAxis });
 };
 
@@ -325,56 +325,57 @@ const drawChartCategoricalXAxis = () => {
 };
 
 watch([logScaleY, logScaleX], () => {
-  drawChartAxesLabelGridZoomAndLogScale();
+  // drawChartAxesLabelGridZoomAndLogScale();
   drawChartCategoricalYAxis();
-  drawChartCategoricalXAxis();
+  // drawChartCategoricalXAxis();
 });
 
 onMounted(async () => {
-  new Chart()
-    .addTraces(curvesSparkLines)
-    .appendTo(chartSparkLines.value!);
+  // new Chart()
+  //   .addTraces(curvesSparkLines)
+  //   .appendTo(chartSparkLines.value!);
 
-  new Chart()
-    .addTraces(curvesOnlyAxes)
-    .addAxes()
-    .appendTo(chartOnlyAxes.value!, scales);
+  // new Chart()
+  //   .addTraces(curvesOnlyAxes)
+  //   .addAxes()
+  //   .appendTo(chartOnlyAxes.value!, scales);
 
-  new Chart()
-    .addTraces(curvesAxesAndGrid)
-    .addAxes()
-    .addGridLines()
-    .appendTo(chartAxesAndGrid.value!);
+  // new Chart()
+  //   .addTraces(curvesAxesAndGrid)
+  //   .addAxes()
+  //   .addGridLines()
+  //   .appendTo(chartAxesAndGrid.value!);
 
-  new Chart()
-    .addTraces(curvesAxesLabelsAndGrid)
-    .addAxes(axesLabels)
-    .addGridLines()
-    .appendTo(chartAxesLabelsAndGrid.value!);
+  // new Chart()
+  //   .addTraces(curvesAxesLabelsAndGrid)
+  //   .addAxes(axesLabels)
+  //   .addGridLines()
+  //   .appendTo(chartAxesLabelsAndGrid.value!);
 
-  const chart = new Chart()
-    .addTraces(curvesAxesLabelGridAndZoom)
-    .addAxes(axesLabels)
-    .addGridLines()
-    .addZoom()
-    .appendTo(chartAxesLabelGridAndZoom.value!);
-  exportToPng.value = chart.exportToPng!;
+  // const chart = new Chart()
+  //   .addTraces(curvesAxesLabelGridAndZoom)
+  //   .addAxes(axesLabels)
+  //   .addGridLines()
+  //   .addZoom()
+  //   .appendTo(chartAxesLabelGridAndZoom.value!);
+  // exportToPng.value = chart.exportToPng!;
 
-  drawChartAxesLabelGridZoomAndLogScale();
+  // drawChartAxesLabelGridZoomAndLogScale();
 
-  new Chart()
-    .addScatterPoints(pointsPointsAxesAndZoom)
-    .addAxes(axesLabels)
-    .addZoom({ lockAxis: "x" })
-    .appendTo(chartPointsAxesAndZoom.value!, scales, { y: { start: -2e6, end: -0.5e6 } });
+  // new Chart()
+  //   .addScatterPoints(pointsPointsAxesAndZoom)
+  //   .addAxes(axesLabels)
+  //   .addZoom({ lockAxis: "x" })
+  //   .appendTo(chartPointsAxesAndZoom.value!, scales, { y: { start: -2e6, end: -0.5e6 } });
 
-  new Chart<Metadata>()
-    .addTraces(curvesTooltips)
-    .addScatterPoints(pointsTooltips)
-    .addTooltips(tooltipHtmlCallback)
-    .appendTo(chartTooltips.value!);
+  // new Chart<Metadata>()
+  //   .addTraces(curvesTooltips)
+  //   .addScatterPoints(pointsTooltips)
+  //   .addTooltips(tooltipHtmlCallback)
+  //   .appendTo(chartTooltips.value!);
 
   drawChartCategoricalYAxis();
+  return;
   drawChartCategoricalXAxis();
 
   curvesResponsive.forEach((l, i) => {
