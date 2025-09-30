@@ -1,4 +1,3 @@
-import * as d3 from "@/d3";
 import { D3Selection, LayerArgs, Lines, LineConfig, Point, ZoomExtents, ScaleNumeric, XY } from "@/types";
 import { LayerType, OptionalLayer } from "./Layer";
 
