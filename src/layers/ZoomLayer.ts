@@ -114,6 +114,16 @@ export class ZoomLayer extends OptionalLayer {
   };
 
   draw = (layerArgs: LayerArgs) => {
+    Object.entries(layerArgs.scaleConfig.categoricalScales).forEach(([axis]) => {
+      if (this.options.lockAxis !== axis) {
+        console.warn(
+          `You have tried to use zoom with a categorical scale (\`d3.scaleBand\`) but this is not supported. `
+          + `Zoom is only available for numerical scales (\`d3.scaleLinear\` or \`d3.scaleLog\`). `
+          + `Lock the categorical axis ${axis} explicitly using the \`lockAxis\` option to enable zooming on the numerical axis only.`
+        );
+      }
+    });
+
     const { width, height, margin } = layerArgs.bounds;
     const svg = layerArgs.coreLayers[LayerType.Svg];
     

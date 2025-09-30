@@ -326,6 +326,7 @@ const drawChartCategoricalYAxis = () => {
     .addAxes({ x: "Time", y: "Category" })
     .addTraces(curvesCategoricalYAxis)
     .addScatterPoints(pointsCategoricalYAxis)
+    .addZoom({ lockAxis: "y" })
     .appendTo(chartCategoricalYAxis.value!, scales, {}, { y: categoricalYAxis });
 };
 
@@ -341,6 +342,7 @@ const drawChartCategoricalXAxis = () => {
     .addAxes({ x: "Category", y: "Value" })
     .addTraces(curvesCategoricalXAxis)
     .addScatterPoints(pointsCategoricalXAxis)
+    .addZoom({ lockAxis: "x" })
     .appendTo(chartCategoricalXAxis.value!, scales, {}, { x: categoricalXAxis });
 };
 
