@@ -80,8 +80,8 @@ const tooltipHtmlCallback: TooltipHtmlCallback = ({ x, y, metadata }) => {
     return `<p>Point x=${x}, y=${y} is a ${metadata.type}</p>`
 };
 
-// partially defining scale, chart can compute y by autoscaling based on
-// the data
+// define x axis scale. The chart can compute y by autoscaling based on
+// the data, or you could provide specific values for y here instead. 
 const scales: Scales = {
     x: { start: 0, end: 1 }
 };
