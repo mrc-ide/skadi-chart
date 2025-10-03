@@ -64,8 +64,8 @@
 </style>
 
 <script setup lang="ts">
-import { ScatterPoints, UserLines } from "@/types";
-import { Chart, LayerArgs, LayerType, OptionalLayer, Scales } from "../skadi-chart";
+import { BandPoint, PointWithMetadata, ScatterPoints } from "@/types";
+import { Chart, LayerArgs, LayerType, Lines, OptionalLayer, Scales } from "../skadi-chart";
 import { onMounted, ref, watch } from "vue";
 
 const chartSparkLines = ref<HTMLDivElement | null>(null);
@@ -172,7 +172,7 @@ const makeRandomPoints = (props: typeof pointPropsBasic) => {
 
 const makeRandomCurves = (props: typeof propsBasic) => {
   const xPoints = Array.from({length: props.nX + 1}, (_, i) => i / props.nX);
-  const lines: UserLines<Metadata> = [];
+  const lines: Lines<Metadata> = [];
   const makeYFunc = () => {
     const amp1 = Math.random();
     const amp2 = Math.random();
@@ -196,7 +196,7 @@ const makeRandomCurves = (props: typeof propsBasic) => {
 
   for (let l = 0; l < props.nL; l++) {
     const color = colors[randomIndex(colors.length)];
-    const line: UserLines<Metadata>[number] = {
+    const line: Lines<Metadata>[number] = {
       points: [],
       style: {
         opacity: Math.random() * props.opacityRange + props.opacityOffset,
@@ -214,7 +214,7 @@ const makeRandomCurves = (props: typeof propsBasic) => {
   return lines;
 };
 
-const makeRandomCurvesForCategoricalAxis = (domain: string[], axis: "x" | "y"): UserLines<Metadata> => {
+const makeRandomCurvesForCategoricalAxis = (domain: string[], axis: "x" | "y"): Lines<Metadata> => {
   return makeRandomCurves(propsBasic).map((line, index) => {
     const band = domain[index % domain.length];
     const color = colors[index % domain.length];
