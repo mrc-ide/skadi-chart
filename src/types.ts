@@ -72,13 +72,13 @@ export type LineStyle = {
   strokeWidth?: number
   strokeDasharray?: string
 }
-export type LineConfig<Metadata> = {
+export type UserLineConfig<Metadata> = {
   points: Point[],
   style: LineStyle,
   metadata?: Metadata,
   bands?: Partial<XY<string>>
 }
-export type Lines<Metadata> = LineConfig<Metadata>[]
+export type UserLines<Metadata> = UserLineConfig<Metadata>[]
 
 export type ScatterPointStyle = {
   radius?: number,
