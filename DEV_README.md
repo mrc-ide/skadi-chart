@@ -1,6 +1,6 @@
 # Skadi Chart
 
-Simple d3 graphing library used by Skadi (Static [Wodin](https://github.com/mrc-ide/wodin/blob/main/config-static/README.md))
+Simple d3 graphing library used by Skadi ([Static Wodin](https://github.com/mrc-ide/wodin/blob/main/config-static/README.md))
 
 # Basic commands
 
