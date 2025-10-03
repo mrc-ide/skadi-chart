@@ -38,7 +38,7 @@ import {
 // get element from html document
 const chart = document.getElementById("chart") as HTMLDivElement;
 
-// custom metadata that you can attach to lines or scatter points
+// example custom metadata: define a type that you can attach to lines or scatter points
 type Metadata = { type: "line" | "point" }
 
 // two straight lines
