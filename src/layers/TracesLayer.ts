@@ -154,11 +154,13 @@ export class TracesLayer<Metadata> extends OptionalLayer {
   // Given a line (in DC), return the numerical scales to use for x and y.
   private lineScales = (lineDC: LineConfig<Metadata>, layerArgs: LayerArgs): XY<ScaleNumeric> => {
     const { x: numericalScaleX, y: numericalScaleY } = layerArgs.scaleConfig.linearScales;
-    const categoricalScales = layerArgs.scaleConfig.categoricalScales
-    const [categoryX, categoryY] = [lineDC.bands?.x, lineDC.bands?.y];
-    const scaleX = categoricalScales.x?.bands[categoryX!] ?? numericalScaleX;
-    const scaleY = categoricalScales.y?.bands[categoryY!] ?? numericalScaleY;
-    return { x: scaleX, y: scaleY };
+    const { x: categoricalScaleX, y: categoricalScaleY } = layerArgs.scaleConfig.categoricalScales;
+    const { x: bandX, y: bandY } = lineDC.bands || {};
+
+    return {
+      x: bandX && categoricalScaleX ? categoricalScaleX.bands[bandX] : numericalScaleX,
+      y: bandY && categoricalScaleY ? categoricalScaleY.bands[bandY] : numericalScaleY,
+    }
   }
 
   private updateLowResLinesSC = (layerArgs: LayerArgs) => {
