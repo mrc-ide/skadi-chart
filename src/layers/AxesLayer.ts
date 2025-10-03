@@ -129,7 +129,7 @@ export class AxesLayer extends OptionalLayer {
         this.drawNumericalAxis("y", bandNumericalScale, { count: 1, padding: 6 }, layerArgs);
       }
       // Each band gets a line at its ending edge
-      this.drawLinePerpendicularToAxis(axis, categoricalScale(category!)! + bandwidth, layerArgs);
+      this.drawLinePerpendicularToAxis(axis, categoricalScale(category)! + bandwidth, layerArgs);
     });
 
     return { layer: null, axis: null, line: null }; // No need to return axis elements as this axis won't be zoomed
