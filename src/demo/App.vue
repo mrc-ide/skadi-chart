@@ -17,8 +17,8 @@
 
   <h1>Traces, gridlines, axes, labels, zoom and log scale toggle</h1>
   <div class="chart" ref="chartAxesLabelGridZoomAndLogScale" id="chartAxesLabelGridZoomAndLogScale"></div>
-  <button @click="() => logScaleX = !logScaleX">Toggle log scale X</button>
-  <button @click="() => logScaleY = !logScaleY">Toggle log scale Y</button>
+  <button @click="() => numericalAxesLogScaleX = !numericalAxesLogScaleX">Toggle log scale X</button>
+  <button @click="() => numericalAxesLogScaleY = !numericalAxesLogScaleY">Toggle log scale Y</button>
 
   <h1>Scatter points, axes, zoom with locked X axis and initial zoom (double click graph)</h1>
   <div class="chart" ref="chartPointsAxesAndZoom" id="chartPointsAxesAndZoom"></div>
@@ -28,13 +28,13 @@
 
   <h1>Categorical y axis with traces and log scales</h1>
   <div class="chart" ref="chartCategoricalYAxis" id="chartCategoricalYAxis"></div>
-  <button @click="() => logScaleX = !logScaleX">Toggle log scale X</button>
-  <button @click="() => logScaleY = !logScaleY">Toggle log scale Y</button>
+  <button @click="() => categoricalYAxisLogScaleX = !categoricalYAxisLogScaleX">Toggle log scale X</button>
+  <button @click="() => categoricalYAxisLogScaleY = !categoricalYAxisLogScaleY">Toggle log scale Y</button>
 
   <h1>Categorical x axis with traces and log scales</h1>
   <div class="chart" ref="chartCategoricalXAxis" id="chartCategoricalXAxis"></div>
-  <button @click="() => logScaleX = !logScaleX">Toggle log scale X</button>
-  <button @click="() => logScaleY = !logScaleY">Toggle log scale Y</button>
+  <button @click="() => categoricalXAxisLogScaleX = !categoricalXAxisLogScaleX">Toggle log scale X</button>
+  <button @click="() => categoricalXAxisLogScaleY = !categoricalXAxisLogScaleY">Toggle log scale Y</button>
 
   <h1>Responsive chart (and dashed lines)</h1>
   <div class="chart-responsive" ref="chartResponsive" id="chartResponsive"></div>
@@ -64,7 +64,7 @@
 </style>
 
 <script setup lang="ts">
-import { BandPoint, PointWithMetadata, ScatterPoints } from "@/types";
+import { ScatterPoints } from "@/types";
 import { Chart, LayerArgs, LayerType, Lines, OptionalLayer, Scales } from "../skadi-chart";
 import { onMounted, ref, watch } from "vue";
 
@@ -236,19 +236,9 @@ const makeRandomCurvesForCategoricalAxis = (domain: string[], axis: "x" | "y"): 
   })
 };
 
-// TODO: Decide whether tooltips are part of this pr
-const tooltipHtmlCallback = (point: PointWithMetadata<Metadata> | BandPoint<Metadata>) => {
-  const numericalValues = `X: ${point.x.toFixed(3)}, Y: ${point.y.toFixed(3)}`;
-  if (Object.keys(point).includes("bands")) {
-    const bands = (point as BandPoint<Metadata>).bands;
-    return `<div style="color: ${point.metadata?.color};">${numericalValues}`
-    + `<br/>Band X: ${bands.x}, Band Y: ${bands.y}`
-    + `</div>`
-  } else {
-    return `<div style="color: ${point.metadata?.color};">${numericalValues}</div>`
-  }
+const tooltipHtmlCallback = (point: {x: number, y: number, metadata?: Metadata}) => {
+  return `<div style="color: ${point.metadata?.color};">X: ${point.x.toFixed(3)}, Y: ${point.y.toFixed(3)}</div>`;
 };
-
 
 const categoricalYAxis = ["A", "B", "C", "D", "E"];
 const categoricalXAxis = ["Left", "Right"];
@@ -297,38 +287,50 @@ const axesLabels = { x: "Time", y: "Value" };
 
 const exportToPng = ref<(name?: string) => void>();
 
-const logScaleY = ref<boolean>(false);
-const logScaleX = ref<boolean>(false);
+const numericalAxesLogScaleX = ref<boolean>(false);
+const numericalAxesLogScaleY = ref<boolean>(false);
 
 const drawChartAxesLabelGridZoomAndLogScale = () => {
-  new Chart({ logScale: { y: logScaleY.value, x: logScaleX.value }})
+  new Chart({ logScale: { x: numericalAxesLogScaleX.value, y: numericalAxesLogScaleY.value }})
     .addTraces(curvesAxesLabelGridZoomAndLogScale)
     .addScatterPoints(pointsAxesLabelGridZoomAndLogScale)
     .addAxes(axesLabels)
     .addGridLines()
     .addZoom()
-    .appendTo(chartAxesLabelGridZoomAndLogScale.value!);
+    .appendTo(chartAxesLabelGridZoomAndLogScale.value!, { y: {start: -3e6, end: 3e6} });
 };
 
+watch([numericalAxesLogScaleX, numericalAxesLogScaleY], () => {
+  drawChartAxesLabelGridZoomAndLogScale();
+});
+
+const categoricalYAxisLogScaleX = ref<boolean>(false);
+const categoricalYAxisLogScaleY = ref<boolean>(false);
+
 const drawChartCategoricalYAxis = () => {
-  new Chart({ logScale: { x: logScaleX.value, y: logScaleY.value }})
+  new Chart({ logScale: { x: categoricalYAxisLogScaleX.value, y: categoricalYAxisLogScaleY.value }})
     .addAxes({ x: "Time", y: "Category" })
     .addTraces(curvesCategoricalYAxis)
     .addZoom({ lockAxis: "y" })
-    .appendTo(chartCategoricalYAxis.value!, {}, {}, { y: categoricalYAxis });
+    .appendTo(chartCategoricalYAxis.value!, scales, {}, { y: categoricalYAxis });
 };
 
+watch([categoricalYAxisLogScaleX, categoricalYAxisLogScaleY], () => {
+  drawChartCategoricalYAxis();
+});
+
+const categoricalXAxisLogScaleX = ref<boolean>(false);
+const categoricalXAxisLogScaleY = ref<boolean>(false);
+
 const drawChartCategoricalXAxis = () => {
-  new Chart({ logScale: { x: logScaleX.value, y: logScaleY.value }})
+  new Chart({ logScale: { x: categoricalXAxisLogScaleX.value, y: categoricalXAxisLogScaleY.value }})
     .addAxes({ x: "Category", y: "Value" })
     .addTraces(curvesCategoricalXAxis)
     .addZoom({ lockAxis: "x" })
-    .appendTo(chartCategoricalXAxis.value!, {}, {}, { x: categoricalXAxis });
+    .appendTo(chartCategoricalXAxis.value!, scales, {}, { x: categoricalXAxis });
 };
 
-watch([logScaleY, logScaleX], () => {
-  drawChartAxesLabelGridZoomAndLogScale();
-  drawChartCategoricalYAxis();
+watch([categoricalXAxisLogScaleX, categoricalXAxisLogScaleY], () => {
   drawChartCategoricalXAxis();
 });
 

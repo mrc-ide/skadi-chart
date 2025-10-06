@@ -31,6 +31,7 @@ export type CategoricalScaleConfig = {
   main: d3.ScaleBand<string>, // The main categorical scale
   bands: Record<string, ScaleNumeric> // Numerical scales within each category for banded data
 }
+export type TickConfig = { count: number, specifier?: string }
 
 /*
   LayerArgs are passed into each Layer in the draw
@@ -44,7 +45,7 @@ export type LayerArgs = {
   bounds: Bounds,
   globals: {
     animationDuration: number,
-    tickConfig: XY<{ count: number, specifier?: string }>;
+    tickConfig: XY<TickConfig>;
   },
   scaleConfig: {
     linearScales: XY<ScaleNumeric>,

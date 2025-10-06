@@ -1,4 +1,3 @@
-import * as d3 from "@/d3";
 import { D3Selection, LayerArgs, Lines, LineConfig, Point, ZoomExtents, ScaleNumeric, XY } from "@/types";
 import { LayerType, OptionalLayer } from "./Layer";
 
@@ -50,7 +49,7 @@ const doRDP = (
   const rangeYSC = endSC.y - startSC.y;
   const rangeXSC = endSC.x - startSC.x;
   const crossProductSC = endSC.x * startSC.y - endSC.y * startSC.x;
-
+  
   // we are applying this algorthim in svg coordinates as we want to lower resolution of lines based on
   // visual distance instead of data coordinates (DC)
   //
@@ -108,7 +107,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
   private customTween = (index: number, zoomExtents: ZoomExtents) => {
     const currLineSC = this.lowResLinesSC[index];
     return (t: number) => {
-      const intermediateLineSC = currLineSC.map(({ x, y }) => this.getNewPoint!(x, y, t));
+      const intermediateLineSC = currLineSC.map(({x, y}) => this.getNewPoint!(x, y, t));
       return this.customLineGen(intermediateLineSC, zoomExtents);
     };
   };
@@ -123,12 +122,12 @@ export class TracesLayer<Metadata> extends OptionalLayer {
     let retStr = "";
     const { x, y } = lineSC[0];
     let wasLastPointInRange = zoomExtents.x[0] <= x && x <= zoomExtents.x[1]
-      && zoomExtents.y[1] <= y && y <= zoomExtents.y[0];
+                           && zoomExtents.y[1] <= y && y <= zoomExtents.y[0];
 
     for (let i = 0; i < lineSC.length; i++) {
       const { x, y } = lineSC[i];
       const isPointInRange = zoomExtents.x[0] <= x && x <= zoomExtents.x[1]
-        && zoomExtents.y[1] <= y && y <= zoomExtents.y[0];
+                          && zoomExtents.y[1] <= y && y <= zoomExtents.y[0];
 
       // if last point in range we always want to add next point even if it
       // isn't in range because we want the line to at least continue off the
@@ -155,11 +154,13 @@ export class TracesLayer<Metadata> extends OptionalLayer {
   // Given a line (in DC), return the numerical scales to use for x and y.
   private lineScales = (lineDC: LineConfig<Metadata>, layerArgs: LayerArgs): XY<ScaleNumeric> => {
     const { x: numericalScaleX, y: numericalScaleY } = layerArgs.scaleConfig.linearScales;
-    const categoricalScales = layerArgs.scaleConfig.categoricalScales
-    const [categoryX, categoryY] = [lineDC.bands?.x, lineDC.bands?.y];
-    const scaleX = categoricalScales.x?.bands[categoryX!] ?? numericalScaleX;
-    const scaleY = categoricalScales.y?.bands[categoryY!] ?? numericalScaleY;
-    return { x: scaleX, y: scaleY };
+    const { x: categoricalScaleX, y: categoricalScaleY } = layerArgs.scaleConfig.categoricalScales;
+    const { x: bandX, y: bandY } = lineDC.bands || {};
+
+    return {
+      x: bandX && categoricalScaleX ? categoricalScaleX.bands[bandX] : numericalScaleX,
+      y: bandY && categoricalScaleY ? categoricalScaleY.bands[bandY] : numericalScaleY,
+    }
   }
 
   private updateLowResLinesSC = (layerArgs: LayerArgs) => {
@@ -219,7 +220,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
       // brush selection
       const offsetXSC = scalingX * scaleX(newExtentXDC[0]) - scaleX(oldExtentXDC[0]);
       const offsetYSC = scalingY * scaleY(newExtentYDC[0]) - scaleY(oldExtentYDC[0]);
-
+      
       // useful to precompute
       const scaleRelativeX = scalingX - 1;
       const scaleRelativeY = scalingY - 1;

@@ -3,7 +3,7 @@ import { AxesLayer } from "./layers/AxesLayer";
 import { TracesLayer, TracesOptions } from "./layers/TracesLayer";
 import { ZoomLayer, ZoomOptions } from "./layers/ZoomLayer";
 import { TooltipHtmlCallback, TooltipsLayer } from "./layers/TooltipsLayer";
-import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, ZoomExtents, PartialScales, Point, Scales, ScatterPoints, XY, XYLabel, ScaleNumeric, AxisType } from "./types";
+import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, ZoomExtents, PartialScales, Point, Scales, ScatterPoints, XY, XYLabel, ScaleNumeric, AxisType, CategoricalScaleConfig } from "./types";
 import { LayerType, LifecycleHooks, OptionalLayer } from "./layers/Layer";
 import { GridLayer } from "./layers/GridLayer";
 import html2canvas from "html2canvas";
@@ -88,13 +88,12 @@ export class Chart<Metadata = any> {
       const currLine = lines[i];
       let isLastCoordinatePositive = currLine.points[0] && currLine.points[0][axis] > 0;
       let lineSegment: Lines<Metadata>[number] = { ...currLine, points: [] };
-      delete lineSegment.metadata;
 
       for (let j = 0; j < currLine.points.length; j++) {
         if (currLine.points[j][axis] <= 0) {
           warningMsg = `You have tried to use ${axis} axis `
-                     + `log scale but there are traces with `
-                     + `${axis} coordinates that are <= 0`;
+            + `log scale but there are traces with `
+            + `${axis} coordinates that are <= 0`;
         }
 
         if (currLine.points[j][axis] > 0) {
@@ -103,7 +102,6 @@ export class Chart<Metadata = any> {
         } else if (isLastCoordinatePositive) {
           filteredLines.push(lineSegment);
           lineSegment = { ...currLine, points: [] };
-          delete lineSegment.metadata;
           isLastCoordinatePositive = false;
         }
       }
@@ -154,8 +152,8 @@ export class Chart<Metadata = any> {
     if (filteredPoints.length !== points.length) {
       console.warn(
         `You have tried to use ${axis} axis `
-        + `log scale but there are points with `
-        + `${axis} coordinates that are <= 0`
+         + `log scale but there are points with `
+         + `${axis} coordinates that are <= 0`
       );
     }
     return filteredPoints;
@@ -302,9 +300,12 @@ export class Chart<Metadata = any> {
     if ((this.options.logScale.x && initialDomain.x.some(bound => bound <= 0))
       || (this.options.logScale.y && initialDomain.y.some(bound => bound <= 0))
     ) {
-      throw new Error(`You have tried to use a log scale axis but the initial extents includes 0.`
-        + ` Please set the initial extents to a range that does not include 0, or pass {} to try the auto-scale.`
+      console.warn(`You have tried to use a log scale axis but the initial extents includes 0. Using automatic scales instead.`
+        + ` Please set the initial extents to a range that does not include 0, or pass {} to default to the auto-scale.`
       );
+      const { x, y } = this.processScales({});
+      initialDomain.x = [x.start, x.end];
+      initialDomain.y = [y.start, y.end];
     }
 
     const rangeX = [margin.left, width - margin.right];
@@ -314,11 +315,6 @@ export class Chart<Metadata = any> {
     const numericalScaleX = d3ScaleX().domain(initialDomain.x).range(rangeX);
     const d3ScaleY = this.options.logScale.y ? d3.scaleLog : d3.scaleLinear;
     const numericalScaleY = d3ScaleY().domain(initialDomain.y).range(rangeY);
-
-    let catScales = {
-      x: this.createCategoricalScale(categoricalScales.x, rangeX, numericalScaleX, "x"),
-      y: this.createCategoricalScale(categoricalScales.y, rangeY, numericalScaleY, "y"),
-    };
 
     let ticksX = 10;
     if (width < 500) ticksX = 6;
@@ -338,7 +334,10 @@ export class Chart<Metadata = any> {
       scaleConfig: {
         linearScales: { x: numericalScaleX, y: numericalScaleY },
         scaleExtents: this.autoscaledMaxExtents,
-        categoricalScales: catScales,
+        categoricalScales: {
+          x: this.createCategoricalScale(categoricalScales.x, rangeX, numericalScaleX, "x"),
+          y: this.createCategoricalScale(categoricalScales.y, rangeY, numericalScaleY, "y"),
+        },
       },
       coreLayers: {
         [LayerType.Svg]: svg,
@@ -408,7 +407,7 @@ export class Chart<Metadata = any> {
     range: number[],
     numericalScale: ScaleNumeric,
     axis: AxisType,
-  ) => {
+  ): CategoricalScaleConfig | undefined => {
     if (!categories?.length) {
       return;
     }
