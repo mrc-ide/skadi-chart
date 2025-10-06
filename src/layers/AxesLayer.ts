@@ -2,10 +2,14 @@ import * as d3 from "@/d3";
 import { LayerType, OptionalLayer } from "./Layer";
 import { AxisType, D3Selection, LayerArgs, ScaleNumeric, TickConfig, XYLabel } from "@/types";
 
-type AxisElements = {
-  layer: D3Selection<SVGGElement> | null;
-  axis: d3.Axis<d3.NumberValue> | null;
-  line: D3Selection<SVGLineElement> | null;
+type AxisElements = ({
+  layer: D3Selection<SVGGElement>,
+  axis: d3.Axis<d3.NumberValue>,
+} | {
+  layer: null;
+  axis: null;
+}) & {
+  line: D3Selection<SVGLineElement> | null
 }
 
 export class AxesLayer extends OptionalLayer {
@@ -56,20 +60,15 @@ export class AxesLayer extends OptionalLayer {
     // also update. This function just specifies a smooth transition
     // between the old and new values of the scales
     this.zoom = async () => {
-      const promises = [];
-      if (axisX && axisLayerX) {
-        promises.push(axisLayerX.transition()
-          .duration(animationDuration)
-          .call(axisX)
-          .end());
-      }
+      const promiseX = axisLayerX?.transition()
+        .duration(animationDuration)
+        .call(axisX)
+        .end();
 
-      if (axisY && axisLayerY) {
-        promises.push(axisLayerY.transition()
-          .duration(animationDuration)
-          .call(axisY)
-          .end());
-      }
+      const promiseY = axisLayerY?.transition()
+        .duration(animationDuration)
+        .call(axisY)
+        .end();
 
       const promiseAxisLineX = axisLineX?.transition()
         .duration(animationDuration)
@@ -83,7 +82,7 @@ export class AxesLayer extends OptionalLayer {
         .attr("y2", scaleY(0))
         .end();
 
-      await Promise.all([...promises, promiseAxisLineX, promiseAxisLineY]);
+      await Promise.all([promiseX, promiseY, promiseAxisLineX, promiseAxisLineY]);
     };
   };
 
