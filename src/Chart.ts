@@ -411,7 +411,7 @@ export class Chart<Metadata = any> {
     if (!categories?.length) {
       return;
     }
-    const bandScale = d3.scaleBand().domain(categories).range(range);
+    const bandScale = d3.scaleBand().domain(categories).range(range).paddingInner(0.1);
     const bandwidth = bandScale.bandwidth();
     const bands = categories.reduce((acc, category) => {
       const bandStartSC = bandScale(category)!;

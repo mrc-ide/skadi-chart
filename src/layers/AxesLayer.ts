@@ -123,9 +123,13 @@ export class AxesLayer extends OptionalLayer {
     const showZeroLine = !layerArgs.chartOptions.logScale[axis];
     const bandNumericalScales = Object.entries(layerArgs.scaleConfig.categoricalScales[axis]!.bands);
     bandNumericalScales.forEach(([category, bandNumericalScale]) => {
+      // Add a tick and label at y=0 for each band, if the y-axis is categorical
       if (showZeroLine && layerArgs.scaleConfig.categoricalScales.y) {
-        // Add a tick and label at y=0 for each band, if the y-axis is categorical
         this.drawNumericalAxis("y", bandNumericalScale, { count: 1, padding: 6 }, layerArgs);
+      }
+      if (categoricalScale.paddingInner()) {
+        // Each band gets a line at its starting edge (if there is padding between bands)
+        this.drawLinePerpendicularToAxis(axis, categoricalScale(category)!, layerArgs);
       }
       // Each band gets a line at its ending edge
       this.drawLinePerpendicularToAxis(axis, categoricalScale(category)! + bandwidth, layerArgs);
