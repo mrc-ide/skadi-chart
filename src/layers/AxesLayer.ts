@@ -112,15 +112,15 @@ export class AxesLayer extends OptionalLayer {
     const axisCon = this.axisConstructor(axis);
 
     const distanceFromSvgEdgeToAxis = axis === "x" ? margin.bottom : margin.left;
-    const showZeroLine = !layerArgs.chartOptions.logScale[axis];
     const categoricalAxis = axisCon(categoricalScale).ticks(tickCount).tickSize(0)
-      .tickPadding(distanceFromSvgEdgeToAxis * (showZeroLine ? 0.3 : 0.2));
+      .tickPadding(distanceFromSvgEdgeToAxis * 0.3);
     svgLayer.append("g")
       .attr("id", `${getHtmlId(LayerType.Axes)}-${axis}`)
       .style("font-size", "0.75rem")
       .attr("transform", `translate(${translate.x},${translate.y})`)
       .call(categoricalAxis);
 
+    const showZeroLine = !layerArgs.chartOptions.logScale[axis];
     const bandNumericalScales = Object.entries(layerArgs.scaleConfig.categoricalScales[axis]!.bands);
     bandNumericalScales.forEach(([category, bandNumericalScale]) => {
       if (showZeroLine && layerArgs.scaleConfig.categoricalScales.y) {
