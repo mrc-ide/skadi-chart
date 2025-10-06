@@ -86,20 +86,6 @@ export class AxesLayer extends OptionalLayer {
     };
   };
 
-  // The amount to translate the axis layer by from the edge of the svg.
-  private translation = (axis: AxisType, layerArgs: LayerArgs) => {
-    const svgStartToAxis = this.svgStartToAxis(axis, layerArgs);
-    return {
-      [axis]: 0,
-      [this.otherAxis(axis)]: svgStartToAxis
-    };
-  }
-
-  private svgStartToAxis = (axis: AxisType, layerArgs: LayerArgs) => {
-    const { height, margin } = layerArgs.bounds;
-    return axis === "x" ? height - margin.bottom : margin.left;
-  }
-
   private drawCategoricalAxis = (axis: AxisType, layerArgs: LayerArgs): AxisElements => {
     const categoricalScale = layerArgs.scaleConfig.categoricalScales[axis]!.main;
     const { margin } = layerArgs.bounds;
@@ -107,17 +93,17 @@ export class AxesLayer extends OptionalLayer {
     const { getHtmlId } = layerArgs;
     const { count: tickCount } = layerArgs.globals.tickConfig[axis];
 
-    const translate = this.translation(axis, layerArgs);
+    const { translation, axisConstructor } = this.axisConfig(axis, layerArgs);
+
     const bandwidth = categoricalScale.bandwidth();
-    const axisCon = this.axisConstructor(axis);
 
     const distanceFromSvgEdgeToAxis = axis === "x" ? margin.bottom : margin.left;
-    const categoricalAxis = axisCon(categoricalScale).ticks(tickCount).tickSize(0)
+    const categoricalAxis = axisConstructor(categoricalScale).ticks(tickCount).tickSize(0)
       .tickPadding(distanceFromSvgEdgeToAxis * 0.3);
     svgLayer.append("g")
       .attr("id", `${getHtmlId(LayerType.Axes)}-${axis}`)
       .style("font-size", "0.75rem")
-      .attr("transform", `translate(${translate.x},${translate.y})`)
+      .attr("transform", `translate(${translation.x},${translation.y})`)
       .call(categoricalAxis);
 
     const bandNumericalScales = Object.entries(layerArgs.scaleConfig.categoricalScales[axis]!.bands);
@@ -145,15 +131,14 @@ export class AxesLayer extends OptionalLayer {
   ): AxisElements => {
     const { getHtmlId } = layerArgs;
     const { count: tickCount, specifier: tickSpecifier, padding: tickPadding } = tickConfig;
-    const axisCon = this.axisConstructor(axis);
-    const translate = this.translation(axis, layerArgs);
+    const { translation, axisConstructor } = this.axisConfig(axis, layerArgs);
     let axisLine: D3Selection<SVGLineElement> | null = null;
 
-    const numericalAxis = axisCon(scale).ticks(tickCount, tickSpecifier).tickSize(0).tickPadding(tickPadding);
+    const numericalAxis = axisConstructor(scale).ticks(tickCount, tickSpecifier).tickSize(0).tickPadding(tickPadding);
     const axisLayer = layerArgs.coreLayers[LayerType.Svg].append("g")
       .attr("id", `${getHtmlId(LayerType.Axes)}-${axis}`)
       .style("font-size", "0.75rem")
-      .attr("transform", `translate(${translate.x},${translate.y})`)
+      .attr("transform", `translate(${translation.x},${translation.y})`)
       .call(numericalAxis);
     axisLayer.select(".domain").style("stroke-opacity", 0);
 
@@ -173,16 +158,26 @@ export class AxesLayer extends OptionalLayer {
   ) => {
     const baseLayer = layerArgs.coreLayers[LayerType.BaseLayer];
     const { height, width, margin } = layerArgs.bounds;
+    const otherAxis = axis === "x" ? "y" : "x";
 
     return baseLayer.append("g").append("line")
       .attr(`${axis}1`, positionSC)
       .attr(`${axis}2`, positionSC)
-      .attr(`${this.otherAxis(axis)}1`, axis === "x" ? margin.top : margin.left)
-      .attr(`${this.otherAxis(axis)}2`, axis === "x" ? height - margin.bottom : width - margin.right)
+      .attr(`${otherAxis}1`, axis === "x" ? margin.top : margin.left)
+      .attr(`${otherAxis}2`, axis === "x" ? height - margin.bottom : width - margin.right)
       .style("stroke", color).style("stroke-width", 0.5);
   }
 
-  private otherAxis = (axis: AxisType) => axis === "x" ? "y" : "x";
-
-  private axisConstructor = (axis: AxisType) => axis === "x" ? d3.axisBottom : d3.axisLeft;
+  private axisConfig = (axis: AxisType, layerArgs: LayerArgs) => {
+    const { height, margin } = layerArgs.bounds;
+    const otherAxis = axis === "x" ? "y" : "x";
+    const svgStartToAxis = axis === "x" ? height - margin.bottom : margin.left;
+    // The amount to translate the axis layer by from the starting edge of the svg.
+    const translation = {
+      [axis]: 0,
+      [otherAxis]: svgStartToAxis
+    }
+    const axisConstructor = axis === "x" ? d3.axisBottom : d3.axisLeft;
+    return { translation, axisConstructor };
+  }
 }
