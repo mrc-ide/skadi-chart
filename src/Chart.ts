@@ -3,7 +3,7 @@ import { AxesLayer } from "./layers/AxesLayer";
 import { TracesLayer, TracesOptions } from "./layers/TracesLayer";
 import { ZoomLayer, ZoomOptions } from "./layers/ZoomLayer";
 import { TooltipHtmlCallback, TooltipsLayer } from "./layers/TooltipsLayer";
-import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, ZoomExtents, PartialScales, Point, Scales, ScatterPoints, XY, XYLabel, ScaleNumeric, AxisType } from "./types";
+import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, ZoomExtents, PartialScales, Point, Scales, ScatterPoints, XY, XYLabel, ScaleNumeric, AxisType, CategoricalScaleConfig } from "./types";
 import { LayerType, LifecycleHooks, OptionalLayer } from "./layers/Layer";
 import { GridLayer } from "./layers/GridLayer";
 import html2canvas from "html2canvas";
@@ -316,11 +316,6 @@ export class Chart<Metadata = any> {
     const d3ScaleY = this.options.logScale.y ? d3.scaleLog : d3.scaleLinear;
     const numericalScaleY = d3ScaleY().domain(initialDomain.y).range(rangeY);
 
-    let catScales = {
-      x: this.createCategoricalScale(categoricalScales.x, rangeX, numericalScaleX, "x"),
-      y: this.createCategoricalScale(categoricalScales.y, rangeY, numericalScaleY, "y"),
-    };
-
     let ticksX = 10;
     if (width < 500) ticksX = 6;
     if (width < 300) ticksX = 3;
@@ -339,7 +334,10 @@ export class Chart<Metadata = any> {
       scaleConfig: {
         linearScales: { x: numericalScaleX, y: numericalScaleY },
         scaleExtents: this.autoscaledMaxExtents,
-        categoricalScales: catScales,
+        categoricalScales: {
+          x: this.createCategoricalScale(categoricalScales.x, rangeX, numericalScaleX, "x"),
+          y: this.createCategoricalScale(categoricalScales.y, rangeY, numericalScaleY, "y"),
+        },
       },
       coreLayers: {
         [LayerType.Svg]: svg,
@@ -409,7 +407,7 @@ export class Chart<Metadata = any> {
     range: number[],
     numericalScale: ScaleNumeric,
     axis: AxisType,
-  ) => {
+  ): CategoricalScaleConfig | undefined => {
     if (!categories?.length) {
       return;
     }
