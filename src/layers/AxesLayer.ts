@@ -120,19 +120,18 @@ export class AxesLayer extends OptionalLayer {
       .attr("transform", `translate(${translate.x},${translate.y})`)
       .call(categoricalAxis);
 
-    const showZeroLine = !layerArgs.chartOptions.logScale[axis];
     const bandNumericalScales = Object.entries(layerArgs.scaleConfig.categoricalScales[axis]!.bands);
     bandNumericalScales.forEach(([category, bandNumericalScale]) => {
-      // Add a tick and label at y=0 for each band, if the y-axis is categorical
-      if (showZeroLine && layerArgs.scaleConfig.categoricalScales.y) {
-        this.drawNumericalAxis("y", bandNumericalScale, { count: 1, padding: 6 }, layerArgs);
+      const bandStart = categoricalScale(category)!;
+      const bandDomain = bandNumericalScale.domain();
+      if (bandDomain[0] < 0 && bandDomain[1] > 0) {
+        // Add a tick and label at [axis]=0 for each band
+        this.drawNumericalAxis(axis, bandNumericalScale, { count: 1, padding: 6 }, layerArgs);
       }
       if (categoricalScale.paddingInner()) {
-        // Each band gets a line at its starting edge (if there is padding between bands)
-        this.drawLinePerpendicularToAxis(axis, categoricalScale(category)!, layerArgs);
+        this.drawLinePerpendicularToAxis(axis, bandStart, layerArgs);
       }
-      // Each band gets a line at its ending edge
-      this.drawLinePerpendicularToAxis(axis, categoricalScale(category)! + bandwidth, layerArgs);
+      this.drawLinePerpendicularToAxis(axis, bandStart + bandwidth, layerArgs);
     });
 
     return { layer: null, axis: null, line: null }; // No need to return axis elements as this axis won't be zoomed
