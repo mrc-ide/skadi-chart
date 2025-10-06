@@ -297,7 +297,7 @@ const drawChartAxesLabelGridZoomAndLogScale = () => {
     .addAxes(axesLabels)
     .addGridLines()
     .addZoom()
-    .appendTo(chartAxesLabelGridZoomAndLogScale.value!);
+    .appendTo(chartAxesLabelGridZoomAndLogScale.value!, { y: {start: -3e6, end: 3e6} });
 };
 
 watch([numericalAxesLogScaleX, numericalAxesLogScaleY], () => {
@@ -311,7 +311,7 @@ const drawChartCategoricalYAxis = () => {
   new Chart({ logScale: { x: categoricalYAxisLogScaleX.value, y: categoricalYAxisLogScaleY.value }})
     .addAxes({ x: "Time", y: "Category" })
     .addTraces(curvesCategoricalYAxis)
-    .appendTo(chartCategoricalYAxis.value!, {}, {}, { y: categoricalYAxis });
+    .appendTo(chartCategoricalYAxis.value!, scales, {}, { y: categoricalYAxis });
 };
 
 watch([categoricalYAxisLogScaleX, categoricalYAxisLogScaleY], () => {
@@ -325,7 +325,7 @@ const drawChartCategoricalXAxis = () => {
   new Chart({ logScale: { x: categoricalXAxisLogScaleX.value, y: categoricalXAxisLogScaleY.value }})
     .addAxes({ x: "Category", y: "Value" })
     .addTraces(curvesCategoricalXAxis)
-    .appendTo(chartCategoricalXAxis.value!, {}, {}, { x: categoricalXAxis });
+    .appendTo(chartCategoricalXAxis.value!, scales, {}, { x: categoricalXAxis });
 };
 
 watch([categoricalXAxisLogScaleX, categoricalXAxisLogScaleY], () => {

@@ -300,9 +300,12 @@ export class Chart<Metadata = any> {
     if ((this.options.logScale.x && initialDomain.x.some(bound => bound <= 0))
       || (this.options.logScale.y && initialDomain.y.some(bound => bound <= 0))
     ) {
-      throw new Error(`You have tried to use a log scale axis but the initial extents includes 0.`
-        + ` Please set the initial extents to a range that does not include 0, or pass {} to try the auto-scale.`
+      console.warn(`You have tried to use a log scale axis but the initial extents includes 0. Using automatic scales instead.`
+        + ` Please set the initial extents to a range that does not include 0, or pass {} to default to the auto-scale.`
       );
+      const { x, y } = this.processScales({});
+      initialDomain.x = [x.start, x.end];
+      initialDomain.y = [y.start, y.end];
     }
 
     const rangeX = [margin.left, width - margin.right];
