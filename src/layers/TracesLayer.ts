@@ -1,5 +1,6 @@
 import { D3Selection, LayerArgs, Lines, LineConfig, Point, ZoomExtents, ScaleNumeric, XY } from "@/types";
 import { LayerType, OptionalLayer } from "./Layer";
+import { numScales } from "@/helpers";
 
 export type TracesOptions = {
   RDPEpsilon: number | null
@@ -151,21 +152,9 @@ export class TracesLayer<Metadata> extends OptionalLayer {
     return retStr;
   };
 
-  // Given a line (in DC), return the numerical scales to use for x and y.
-  private lineScales = (lineDC: LineConfig<Metadata>, layerArgs: LayerArgs): XY<ScaleNumeric> => {
-    const { x: numericalScaleX, y: numericalScaleY } = layerArgs.scaleConfig.linearScales;
-    const { x: categoricalScaleX, y: categoricalScaleY } = layerArgs.scaleConfig.categoricalScales;
-    const { x: bandX, y: bandY } = lineDC.bands || {};
-
-    return {
-      x: bandX && categoricalScaleX ? categoricalScaleX.bands[bandX] : numericalScaleX,
-      y: bandY && categoricalScaleY ? categoricalScaleY.bands[bandY] : numericalScaleY,
-    }
-  }
-
   private updateLowResLinesSC = (layerArgs: LayerArgs) => {
     const linesSC = this.linesDC.map(l => {
-      const scales = this.lineScales(l, layerArgs);
+      const scales = numScales(l.bands, layerArgs);
       return l.points.map(p => ({ x: scales.x(p.x), y: scales.y(p.y) }));
     });
     if (this.options.RDPEpsilon !== null) {
@@ -179,7 +168,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
     this.updateLowResLinesSC(layerArgs);
 
     this.traces = this.linesDC.map((l, index) => {
-      const scales = this.lineScales(l, layerArgs);
+      const scales = numScales(l.bands, layerArgs);
 
       const currentExtentsSC: ZoomExtents = {
         x: [scales.x(currentExtentsDC.x[0]), scales.x(currentExtentsDC.x[1])],
