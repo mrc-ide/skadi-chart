@@ -3,7 +3,7 @@ import * as d3 from "./d3";
 import { LayerType, OptionalLayer } from "./layers/Layer";
 
 export type AxisType = 'x' | 'y';
-export type XY<T> = { x: T, y: T }
+export type XY<T> = Record<AxisType, T>;
 export type Point = XY<number>
 export type PointWithMetadata<Metadata> = Point & {
   metadata?: Metadata,
