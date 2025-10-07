@@ -73,18 +73,19 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     const pointer = d3.pointer(eventCC);
     const clientSC = { x: pointer[0], y: pointer[1] };
     const numericalScales = { ...layerArgs.scaleConfig.linearScales };
-    const categoricalScales = { ...layerArgs.scaleConfig.categoricalScales };
-    const bands = { x: undefined, y: undefined } as { x?: string, y?: string };
+    const bands = { x: undefined, y: undefined } as Partial<XY<string>>;
+
     // To get DC coordinates from SC coordinates in the case of band scales,
     // we must first work out which band we are in.
-    (["x", "y"] as AxisType[]).forEach((axis) => {
-      if (categoricalScales[axis]?.bands) {
-        const [band, bandNumericalScale] = Object.entries(categoricalScales[axis].bands).find(([category, numericalScale]) => {
+    Object.entries(layerArgs.scaleConfig.categoricalScales).forEach(([axis, catScaleConfig]) => {
+      if (catScaleConfig?.bands) {
+        const ax = axis as AxisType;
+        const [band, numScale] = Object.entries(catScaleConfig.bands).find(([band, numericalScale]) => {
           const range = numericalScale.range();
-          return clientSC[axis] >= Math.min(...range) && clientSC[axis] <= Math.max(...range);
+          return clientSC[ax] >= Math.min(...range) && clientSC[ax] <= Math.max(...range);
         })!;
-        numericalScales[axis] = bandNumericalScale;
-        bands[axis] = band;
+        numericalScales[ax] = numScale;
+        bands[ax] = band;
       }
     });
 
