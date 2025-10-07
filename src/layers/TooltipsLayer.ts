@@ -1,7 +1,7 @@
 import * as d3 from "@/d3";
 import { LayerType, OptionalLayer } from "./Layer";
 import { TracesLayer } from "./TracesLayer";
-import { D3Selection, LayerArgs, Point, PointWithMetadata, XY } from "@/types";
+import { AxisType, D3Selection, LayerArgs, Point, PointWithMetadata, XY } from "@/types";
 import { ScatterLayer } from "./ScatterLayer";
 
 export type TooltipHtmlCallback<Metadata> =
@@ -70,12 +70,30 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     rangeDC: XY<number>
   ) => {
     // d3.pointer converts coords from CC to SC
-    const [ clientXSC, clientYSC ] = d3.pointer(eventCC);
-    const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
+    const pointer = d3.pointer(eventCC);
+    const clientSC = { x: pointer[0], y: pointer[1] };
+    const numericalScales = { ...layerArgs.scaleConfig.linearScales };
+    const categoricalScales = { ...layerArgs.scaleConfig.categoricalScales };
+    const bands = { x: undefined, y: undefined } as { x?: string, y?: string };
+    // To get DC coordinates from SC coordinates in the case of band scales,
+    // we must first work out which band we are in.
+    (["x", "y"] as AxisType[]).forEach((axis) => {
+      if (categoricalScales[axis]?.bands) {
+        const [band, bandNumericalScale] = Object.entries(categoricalScales[axis].bands).find(([category, numericalScale]) => {
+          const range = numericalScale.range();
+          return clientSC[axis] >= Math.min(...range) && clientSC[axis] <= Math.max(...range);
+        })!;
+        numericalScales[axis] = bandNumericalScale;
+        bands[axis] = band;
+      }
+    });
 
     // scale.invert functions convert SC to DC, applying just scale converts from
     // DC to SC
-    const coordsDC = { x: scaleX.invert(clientXSC), y: scaleY.invert(clientYSC) };
+    const coordsDC = { x: numericalScales.x.invert(clientSC.x), y: numericalScales.y.invert(clientSC.y) };
+
+    // Only consider points in the band we are in
+    const bandPointsDC = flatPointsDC.filter((p) => bands.y === p.bands?.y && bands.x === p.bands?.x);
 
     // notice that the min point we want is DC because data points are always
     // going to use data coordinates but the minimum distance that we compare
@@ -93,7 +111,7 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     // compute a proportional distance since we only care about the minimum
     // point
     let fastMinDistanceSC = Infinity;
-    const minPointDC = flatPointsDC.reduce((minPDC, pDC) => {
+    const minPointDC = bandPointsDC.reduce((minPDC, pDC) => {
       const distanceSC = this.getFastDistanceSqSC(coordsDC, pDC, rangeDC);
       if (distanceSC >= fastMinDistanceSC) return minPDC;
       fastMinDistanceSC = distanceSC;
@@ -101,10 +119,10 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     }, { x: 0, y: 0 });
 
     // SC distance will be the same as pixel distance
-    const minPointSC = { x: scaleX(minPointDC.x), y: scaleY(minPointDC.y) };
+    const minPointSC = { x: numericalScales.x(minPointDC.x), y: numericalScales.y(minPointDC.y) };
     // Having found closest SC point, get its accurate distance to client point
     // to decide if tooltip should be shown
-    const minDistanceSC = this.getDistanceSq({ x: clientXSC, y: clientYSC }, minPointSC);
+    const minDistanceSC = this.getDistanceSq(clientSC, minPointSC);
 
     // if client pointer is more than tooltip radius pixels away from the closest point
     // NOTE: we compare the squares of the distance and tooltip radius
@@ -140,14 +158,12 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
       .style("pointer-events", "none") as any as D3Selection<HTMLDivElement>;
     
     let flatPointsDC = traceLayers.reduce((pointsWithMetadata, layer) => {
-      const layerPointsWithMetadata = layer.linesDC.flatMap(l => {
-        return l.points.map(p => ({ ...p, metadata: l.metadata }));
+      const layerPointsWithMetadata = layer.linesDC.flatMap(({ points, metadata, bands }) => {
+        return points.map(p => ({ ...p, metadata, bands }) );
       });
       return [...layerPointsWithMetadata, ...pointsWithMetadata];
     }, [] as PointWithMetadata<Metadata>[]);
-    flatPointsDC = scatterLayers.reduce((points, layer) => {
-      return [...layer.points.map(p => ({ x: p.x, y: p.y, metadata: p.metadata })), ...points];
-    }, flatPointsDC);
+    flatPointsDC = scatterLayers.reduce((points, layer) => ([...layer.points, ...points]), flatPointsDC);
 
     const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
     const rangeXDC = scaleX.domain()[1] - scaleX.domain()[0];
