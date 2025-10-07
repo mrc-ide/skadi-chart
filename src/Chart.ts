@@ -296,15 +296,17 @@ export class Chart<Metadata = any> {
       x: [initialExtents.x?.start ?? x.start, initialExtents.x?.end ?? x.end],
       y: [initialExtents.y?.start ?? y.start, initialExtents.y?.end ?? y.end]
     };
-    // Disallow zeros for log-scale domains
-    if ((this.options.logScale.x && initialDomain.x.some(bound => bound <= 0))
-      || (this.options.logScale.y && initialDomain.y.some(bound => bound <= 0))
-    ) {
-      console.warn(`You have tried to use a log scale axis but the initial extents includes 0. Using automatic scales instead.`
-        + ` Please set the initial extents to a range that does not include 0, or pass {} to default to the auto-scale.`
-      );
-      const { x, y } = this.processScales({});
+    const disallowZerosForLogScaleDomainsMsg = `You have tried to use a log scale axis but the initial extents includes 0.`
+      + `Using automatic scales instead.`
+      + ` Please set the initial extents to a range that does not include 0, or pass {} to default to the auto-scale.`
+    if (this.options.logScale.x && initialDomain.x.some(bound => bound <= 0)) {
+      console.warn(disallowZerosForLogScaleDomainsMsg);
+      const { x } = this.processScales({});
       initialDomain.x = [x.start, x.end];
+    }
+    if (this.options.logScale.y && initialDomain.y.some(bound => bound <= 0)) {
+      console.warn(disallowZerosForLogScaleDomainsMsg);
+      const { y } = this.processScales({});
       initialDomain.y = [y.start, y.end];
     }
 
