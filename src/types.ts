@@ -5,8 +5,10 @@ import { LayerType, OptionalLayer } from "./layers/Layer";
 export type AxisType = 'x' | 'y';
 export type XY<T> = { x: T, y: T }
 export type Point = XY<number>
-export type PointWithMetadata<Metadata> = Point & { metadata?: Metadata }
-export type BandPoint<Metadata> = PointWithMetadata<Metadata> & { bands: Partial<XY<string>> }
+export type PointWithMetadata<Metadata> = Point & {
+  metadata?: Metadata,
+  bands?: Partial<XY<string>>
+}
 
 export type XYLabel = Partial<XY<string>>
 
@@ -85,11 +87,7 @@ export type ScatterPointStyle = {
   color?: string,
   opacity?: number,
 }
-type ScatterPointConfig<Metadata> = {
-  x: number,
-  y: number,
+type ScatterPointConfig<Metadata> = PointWithMetadata<Metadata> & {
   style: ScatterPointStyle,
-  metadata?: Metadata,
-  bands?: Partial<XY<string>>
 }
 export type ScatterPoints<Metadata> = ScatterPointConfig<Metadata>[];

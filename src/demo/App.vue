@@ -64,7 +64,7 @@
 </style>
 
 <script setup lang="ts">
-import { ScatterPoints } from "@/types";
+import { PointWithMetadata, ScatterPoints } from "@/types";
 import { Chart, LayerArgs, LayerType, Lines, OptionalLayer, Scales } from "../skadi-chart";
 import { onMounted, ref, watch } from "vue";
 
@@ -177,7 +177,8 @@ const makeRandomPointsForCategoricalAxis = (domain: string[], axis: "x" | "y"): 
     return {
       ...point,
       bands: { [axis]: band },
-      style: { ...point.style, color }
+      style: { ...point.style, color },
+      metadata: { ...point.metadata, color }
     }
   });
 };
@@ -243,13 +244,17 @@ const makeRandomCurvesForCategoricalAxis = (domain: string[], axis: "x" | "y"): 
         return { ...p, y };
       }),
       bands: { [axis]: band },
-      style: { ...line.style, color }
+      style: { ...line.style, color },
+      metadata: { ...line.metadata, color }
     }
   })
 };
 
-const tooltipHtmlCallback = (point: {x: number, y: number, metadata?: Metadata}) => {
-  return `<div style="color: ${point.metadata?.color};">X: ${point.x.toFixed(3)}, Y: ${point.y.toFixed(3)}</div>`;
+const tooltipHtmlCallback = (point: PointWithMetadata<Metadata>) => {
+  return `<div style="color: ${point.metadata?.color || "black"};">X: ${point.x.toFixed(3)}, Y: ${point.y.toFixed(3)}`
+    + (point.bands?.x ? `<br/>Band X: ${point.bands?.x}` : ``)
+    + (point.bands?.y ? `<br/>Band X: ${point.bands?.y}` : ``)
+    + `</div>`
 };
 
 const categoricalYAxis = ["A", "B", "C", "D", "E"];
@@ -327,6 +332,7 @@ const drawChartCategoricalYAxis = () => {
     .addTraces(curvesCategoricalYAxis)
     .addScatterPoints(pointsCategoricalYAxis)
     .addZoom()
+    .addTooltips(tooltipHtmlCallback)
     .appendTo(chartCategoricalYAxis.value!, scales, {}, { y: categoricalYAxis });
 };
 
@@ -343,6 +349,7 @@ const drawChartCategoricalXAxis = () => {
     .addTraces(curvesCategoricalXAxis)
     .addScatterPoints(pointsCategoricalXAxis)
     .addZoom()
+    .addTooltips(tooltipHtmlCallback)
     .appendTo(chartCategoricalXAxis.value!, scales, {}, { x: categoricalXAxis });
 };
 
