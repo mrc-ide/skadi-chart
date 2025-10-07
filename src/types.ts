@@ -2,10 +2,11 @@ import { ChartOptions } from "./Chart";
 import * as d3 from "./d3";
 import { LayerType, OptionalLayer } from "./layers/Layer";
 
+export type AxisType = 'x' | 'y';
 export type XY<T> = { x: T, y: T }
-
 export type Point = XY<number>
 export type PointWithMetadata<Metadata> = Point & { metadata?: Metadata }
+export type BandPoint<Metadata> = PointWithMetadata<Metadata> & { bands: Partial<XY<string>> }
 
 export type XYLabel = Partial<XY<string>>
 
@@ -25,6 +26,13 @@ export type D3Selection<Element extends d3.BaseType> = d3.Selection<Element, Poi
 
 export type AllOptionalLayers = OptionalLayer<any>;
 
+export type ScaleNumeric = d3.ScaleContinuousNumeric<number, number, never>
+export type CategoricalScaleConfig = {
+  main: d3.ScaleBand<string>, // The main categorical scale
+  bands: Record<string, ScaleNumeric> // Numerical scales within each category for banded data
+}
+export type TickConfig = { count: number, specifier?: string }
+
 /*
   LayerArgs are passed into each Layer in the draw
   function. This happens at the last step when users
@@ -37,12 +45,12 @@ export type LayerArgs = {
   bounds: Bounds,
   globals: {
     animationDuration: number,
-    tickConfig: XY<{ count: number, specifier?: string }>;
+    tickConfig: XY<TickConfig>;
   },
   scaleConfig: {
-    linearScales: XY<d3.ScaleLinear<number, number, never>>,
+    linearScales: XY<ScaleNumeric>,
     scaleExtents: Scales,
-    lineGen: d3.Line<Point>
+    categoricalScales: Partial<XY<CategoricalScaleConfig>>,
   },
   coreLayers: {
     [LayerType.Svg]: D3Selection<SVGSVGElement>,
@@ -64,10 +72,11 @@ export type LineStyle = {
   strokeWidth?: number
   strokeDasharray?: string
 }
-type LineConfig<Metadata> = {
+export type LineConfig<Metadata> = {
   points: Point[],
   style: LineStyle,
-  metadata?: Metadata
+  metadata?: Metadata,
+  bands?: Partial<XY<string>>
 }
 export type Lines<Metadata> = LineConfig<Metadata>[]
 

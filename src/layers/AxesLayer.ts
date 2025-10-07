@@ -1,6 +1,16 @@
 import * as d3 from "@/d3";
 import { LayerType, OptionalLayer } from "./Layer";
-import { D3Selection, LayerArgs, XYLabel } from "@/types";
+import { AxisType, D3Selection, LayerArgs, ScaleNumeric, TickConfig, XYLabel } from "@/types";
+
+type AxisElements = ({
+  layer: D3Selection<SVGGElement>,
+  axis: d3.Axis<d3.NumberValue>,
+} | {
+  layer: null;
+  axis: null;
+}) & {
+  line: D3Selection<SVGLineElement> | null
+}
 
 export class AxesLayer extends OptionalLayer {
   type = LayerType.Axes;
@@ -9,37 +19,10 @@ export class AxesLayer extends OptionalLayer {
     super();
   };
 
-  private drawAxis = (axis: 'x' | 'y', layerArgs: LayerArgs) => {
-    const svgLayer = layerArgs.coreLayers[LayerType.Svg];
-    const baseLayer = layerArgs.coreLayers[LayerType.BaseLayer];
+  private drawAxis = (axis: AxisType, layerArgs: LayerArgs): AxisElements => {
     const { width, height, margin } = layerArgs.bounds;
     const { getHtmlId } = layerArgs;
-    const scale = layerArgs.scaleConfig.linearScales[axis];
-    const axisConstructor = axis === "x" ? d3.axisBottom : d3.axisLeft;
-    const { count: tickCount, specifier: tickSpecifier } = layerArgs.globals.tickConfig[axis];
-    const svgStartToAxis = axis === "x" ? height - margin.bottom : margin.left;
-    const otherAxis = axis === "x" ? "y" : "x";
-    const translate = { [axis]: 0, [otherAxis]: svgStartToAxis }
-
-    const numericalAxis = axisConstructor(scale).ticks(tickCount, tickSpecifier).tickSize(0).tickPadding(12);
-    const axisLayer = svgLayer.append("g")
-      .attr("id", `${getHtmlId(LayerType.Axes)}-${axis}`)
-      .style("font-size", "0.75rem")
-      .attr("transform", `translate(${translate.x},${translate.y})`)
-      .call(numericalAxis);
-    axisLayer.select(".domain")
-      .style("stroke-opacity", 0);
-    let axisLine: D3Selection<SVGLineElement> | null = null;
-    if (!layerArgs.chartOptions.logScale[axis]) {
-      // A line at [axis]=0
-      axisLine = baseLayer.append("g").append("line")
-        .attr(`${axis}1`, scale(0))
-        .attr(`${axis}2`, scale(0))
-        .attr(`${otherAxis}1`, svgStartToAxis)
-        .attr(`${otherAxis}2`, axis === "x" ? margin.top : width - margin.right)
-        .style("stroke", "black")
-        .style("stroke-width", 0.5);
-    }
+    const numericalScale = layerArgs.scaleConfig.linearScales[axis];
 
     if (this.labels[axis]) {
       const label = layerArgs.coreLayers[LayerType.Svg].append("text")
@@ -59,8 +42,11 @@ export class AxesLayer extends OptionalLayer {
       }
     }
 
-    return { layer: axisLayer, axis: numericalAxis, line: axisLine };
+    return layerArgs.scaleConfig.categoricalScales[axis]
+      ? this.drawCategoricalAxis(axis, layerArgs)
+      : this.drawNumericalAxis(axis, numericalScale, { ...layerArgs.globals.tickConfig[axis], padding: 12 }, layerArgs);
   };
+
 
   draw = (layerArgs: LayerArgs) => {
     const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
@@ -74,12 +60,12 @@ export class AxesLayer extends OptionalLayer {
     // also update. This function just specifies a smooth transition
     // between the old and new values of the scales
     this.zoom = async () => {
-      const promiseX = axisLayerX.transition()
+      const promiseX = axisLayerX?.transition()
         .duration(animationDuration)
         .call(axisX)
         .end();
 
-      const promiseY = axisLayerY.transition()
+      const promiseY = axisLayerY?.transition()
         .duration(animationDuration)
         .call(axisY)
         .end();
@@ -99,4 +85,99 @@ export class AxesLayer extends OptionalLayer {
       await Promise.all([promiseX, promiseY, promiseAxisLineX, promiseAxisLineY]);
     };
   };
+
+  private drawCategoricalAxis = (axis: AxisType, layerArgs: LayerArgs): AxisElements => {
+    const categoricalScale = layerArgs.scaleConfig.categoricalScales[axis]!.main;
+    const { margin } = layerArgs.bounds;
+    const svgLayer = layerArgs.coreLayers[LayerType.Svg];
+    const { getHtmlId } = layerArgs;
+    const { count: tickCount } = layerArgs.globals.tickConfig[axis];
+
+    const { translation, axisConstructor } = this.axisConfig(axis, layerArgs);
+
+    const bandwidth = categoricalScale.bandwidth();
+
+    const distanceFromSvgEdgeToAxis = axis === "x" ? margin.bottom : margin.left;
+    const categoricalAxis = axisConstructor(categoricalScale).ticks(tickCount).tickSize(0)
+      .tickPadding(distanceFromSvgEdgeToAxis * 0.3);
+    svgLayer.append("g")
+      .attr("id", `${getHtmlId(LayerType.Axes)}-${axis}`)
+      .style("font-size", "0.75rem")
+      .attr("transform", `translate(${translation.x},${translation.y})`)
+      .call(categoricalAxis);
+
+    const bandNumericalScales = Object.entries(layerArgs.scaleConfig.categoricalScales[axis]!.bands);
+    bandNumericalScales.forEach(([category, bandNumericalScale]) => {
+      const bandStart = categoricalScale(category)!;
+      const bandDomain = bandNumericalScale.domain();
+      if (bandDomain[0] < 0 && bandDomain[1] > 0) {
+        // Add a tick and label at [axis]=0 for each band
+        this.drawNumericalAxis(axis, bandNumericalScale, { count: 1, padding: 6 }, layerArgs);
+      }
+      if (categoricalScale.paddingInner()) {
+        this.drawLinePerpendicularToAxis(axis, bandStart, layerArgs);
+      }
+      this.drawLinePerpendicularToAxis(axis, bandStart + bandwidth, layerArgs);
+    });
+
+    return { layer: null, axis: null, line: null }; // No need to return axis elements as this axis won't be zoomed
+  };
+
+  private drawNumericalAxis = (
+    axis: AxisType,
+    scale: ScaleNumeric,
+    tickConfig: TickConfig & { padding: number },
+    layerArgs: LayerArgs
+  ): AxisElements => {
+    const { getHtmlId } = layerArgs;
+    const { count: tickCount, specifier: tickSpecifier, padding: tickPadding } = tickConfig;
+    const { translation, axisConstructor } = this.axisConfig(axis, layerArgs);
+    let axisLine: D3Selection<SVGLineElement> | null = null;
+
+    const numericalAxis = axisConstructor(scale).ticks(tickCount, tickSpecifier).tickSize(0).tickPadding(tickPadding);
+    const axisLayer = layerArgs.coreLayers[LayerType.Svg].append("g")
+      .attr("id", `${getHtmlId(LayerType.Axes)}-${axis}`)
+      .style("font-size", "0.75rem")
+      .attr("transform", `translate(${translation.x},${translation.y})`)
+      .call(numericalAxis);
+    axisLayer.select(".domain").style("stroke-opacity", 0);
+
+    if (!layerArgs.chartOptions.logScale[axis]) {
+      // Draw a line at [axis]=0
+      axisLine = this.drawLinePerpendicularToAxis(axis, scale(0), layerArgs, "darkgrey");
+    }
+
+    return { layer: axisLayer, axis: numericalAxis, line: axisLine };
+  }
+
+  private drawLinePerpendicularToAxis = (
+    axis: AxisType,
+    positionSC: number,
+    layerArgs: LayerArgs,
+    color: string = "black",
+  ) => {
+    const baseLayer = layerArgs.coreLayers[LayerType.BaseLayer];
+    const { height, width, margin } = layerArgs.bounds;
+    const otherAxis = axis === "x" ? "y" : "x";
+
+    return baseLayer.append("g").append("line")
+      .attr(`${axis}1`, positionSC)
+      .attr(`${axis}2`, positionSC)
+      .attr(`${otherAxis}1`, axis === "x" ? margin.top : margin.left)
+      .attr(`${otherAxis}2`, axis === "x" ? height - margin.bottom : width - margin.right)
+      .style("stroke", color).style("stroke-width", 0.5);
+  }
+
+  private axisConfig = (axis: AxisType, layerArgs: LayerArgs) => {
+    const { height, margin } = layerArgs.bounds;
+    const otherAxis = axis === "x" ? "y" : "x";
+    const svgStartToAxis = axis === "x" ? height - margin.bottom : margin.left;
+    // The amount to translate the axis layer by from the starting edge of the svg.
+    const translation = {
+      [axis]: 0,
+      [otherAxis]: svgStartToAxis
+    }
+    const axisConstructor = axis === "x" ? d3.axisBottom : d3.axisLeft;
+    return { translation, axisConstructor };
+  }
 }

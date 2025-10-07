@@ -3,7 +3,7 @@ import { AxesLayer } from "./layers/AxesLayer";
 import { TracesLayer, TracesOptions } from "./layers/TracesLayer";
 import { ZoomLayer, ZoomOptions } from "./layers/ZoomLayer";
 import { TooltipHtmlCallback, TooltipsLayer } from "./layers/TooltipsLayer";
-import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, ZoomExtents, PartialScales, Point, Scales, ScatterPoints, XY, XYLabel } from "./types";
+import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, ZoomExtents, PartialScales, Point, Scales, ScatterPoints, XY, XYLabel, ScaleNumeric, AxisType, CategoricalScaleConfig } from "./types";
 import { LayerType, LifecycleHooks, OptionalLayer } from "./layers/Layer";
 import { GridLayer } from "./layers/GridLayer";
 import html2canvas from "html2canvas";
@@ -24,6 +24,8 @@ type PartialChartOptions = {
   logScale?: Partial<XY<boolean>>,
   animationDuration?: number
 }
+
+type CategoricalScales = Partial<XY<string[]>>;
 
 export class Chart<Metadata = any> {
   id: string;
@@ -81,35 +83,35 @@ export class Chart<Metadata = any> {
   // coordinate we push that line segment and start a new one
   private filterLinesForLogAxis = (lines: Lines<Metadata>, axis: "x" | "y") => {
     let warningMsg = "";
-    const filteredPoints: Lines<Metadata> = [];
+    const filteredLines: Lines<Metadata> = [];
     for (let i = 0; i < lines.length; i++) {
       const currLine = lines[i];
       let isLastCoordinatePositive = currLine.points[0] && currLine.points[0][axis] > 0;
-      let lineSegment: Lines<Metadata>[number] = { points: [], style: currLine.style };
+      let lineSegment: Lines<Metadata>[number] = { ...currLine, points: [] };
 
       for (let j = 0; j < currLine.points.length; j++) {
         if (currLine.points[j][axis] <= 0) {
           warningMsg = `You have tried to use ${axis} axis `
-                     + `log scale but there are traces with `
-                     + `${axis} coordinates that are <= 0`;
+            + `log scale but there are traces with `
+            + `${axis} coordinates that are <= 0`;
         }
 
         if (currLine.points[j][axis] > 0) {
           lineSegment.points.push(currLine.points[j]);
           isLastCoordinatePositive = true;
         } else if (isLastCoordinatePositive) {
-          filteredPoints.push(lineSegment);
-          lineSegment = { points: [], style: currLine.style };
+          filteredLines.push(lineSegment);
+          lineSegment = { ...currLine, points: [] };
           isLastCoordinatePositive = false;
         }
       }
 
       if (isLastCoordinatePositive) {
-        filteredPoints.push(lineSegment);
+        filteredLines.push(lineSegment);
       }
     }
     if (warningMsg) console.warn(warningMsg);
-    return filteredPoints;
+    return filteredLines;
   };
 
   private filterLines = (lines: Lines<Metadata>) => {
@@ -262,7 +264,8 @@ export class Chart<Metadata = any> {
     baseElement: HTMLDivElement,
     bounds: Bounds,
     maxExtents: PartialScales,
-    initialExtents: PartialScales
+    initialExtents: PartialScales,
+    categoricalScales: Partial<XY<string[]>> = {},
   ) => {
     const getHtmlId = (layer: LayerType[keyof LayerType]) => `${layer}-${this.id}`;
     const { height, width, margin } = bounds;
@@ -293,18 +296,27 @@ export class Chart<Metadata = any> {
       x: [initialExtents.x?.start ?? x.start, initialExtents.x?.end ?? x.end],
       y: [initialExtents.y?.start ?? y.start, initialExtents.y?.end ?? y.end]
     };
+    const disallowZerosForLogScaleDomainsMsg = `You have tried to use a log scale axis but the initial extents includes 0.`
+      + `Using automatic scales instead.`
+      + ` Please set the initial extents to a range that does not include 0, or pass {} to default to the auto-scale.`
+    if (this.options.logScale.x && initialDomain.x.some(bound => bound <= 0)) {
+      console.warn(disallowZerosForLogScaleDomainsMsg);
+      const { x } = this.processScales({});
+      initialDomain.x = [x.start, x.end];
+    }
+    if (this.options.logScale.y && initialDomain.y.some(bound => bound <= 0)) {
+      console.warn(disallowZerosForLogScaleDomainsMsg);
+      const { y } = this.processScales({});
+      initialDomain.y = [y.start, y.end];
+    }
+
+    const rangeX = [margin.left, width - margin.right];
+    const rangeY = [height - margin.bottom, margin.top];
+
     const d3ScaleX = this.options.logScale.x ? d3.scaleLog : d3.scaleLinear;
-    const scaleX = d3ScaleX()
-      .domain(initialDomain.x)
-      .range([ margin.left, width - margin.right ]);
+    const numericalScaleX = d3ScaleX().domain(initialDomain.x).range(rangeX);
     const d3ScaleY = this.options.logScale.y ? d3.scaleLog : d3.scaleLinear;
-    const scaleY = d3ScaleY()
-      .domain(initialDomain.y)
-      .range([ height - margin.bottom, margin.top ]);
-    
-    const lineGen = d3.line<Point>()
-      .x(d => scaleX(d.x))
-      .y(d => scaleY(d.y));
+    const numericalScaleY = d3ScaleY().domain(initialDomain.y).range(rangeY);
 
     let ticksX = 10;
     if (width < 500) ticksX = 6;
@@ -322,9 +334,12 @@ export class Chart<Metadata = any> {
       bounds,
       globals: this.globals,
       scaleConfig: {
-        linearScales: { x: scaleX, y: scaleY },
-        lineGen,
-        scaleExtents: this.autoscaledMaxExtents
+        linearScales: { x: numericalScaleX, y: numericalScaleY },
+        scaleExtents: this.autoscaledMaxExtents,
+        categoricalScales: {
+          x: this.createCategoricalScale(categoricalScales.x, rangeX, numericalScaleX, "x"),
+          y: this.createCategoricalScale(categoricalScales.y, rangeY, numericalScaleY, "y"),
+        },
       },
       coreLayers: {
         [LayerType.Svg]: svg,
@@ -347,10 +362,11 @@ export class Chart<Metadata = any> {
     baseElement: HTMLDivElement,
     maxExtents: PartialScales = {},
     initialExtents: PartialScales = {},
+    categoricalScales: CategoricalScales = {},
   ) => {
     const drawWithBounds = (width: number, height: number) => {
       const bounds = { width, height, margin: this.defaultMargin };
-      this.draw(baseElement, bounds, maxExtents, initialExtents);
+      this.draw(baseElement, bounds, maxExtents, initialExtents, categoricalScales);
     };
 
     const { width, height } = baseElement.getBoundingClientRect();
@@ -386,4 +402,27 @@ export class Chart<Metadata = any> {
 
     return this;
   };
+
+  // A categorical scale contains two or more 'bands', which each have a small numerical scale.
+  private createCategoricalScale = (
+    categories: string[] | undefined,
+    range: number[],
+    numericalScale: ScaleNumeric,
+    axis: AxisType,
+  ): CategoricalScaleConfig | undefined => {
+    if (!categories?.length) {
+      return;
+    }
+    const bandScale = d3.scaleBand().domain(categories).range(range);
+    const bandwidth = bandScale.bandwidth();
+    const bands = categories.reduce((acc, category) => {
+      const bandStartSC = bandScale(category)!;
+      const bandRange = axis === "x"
+        ? [bandStartSC, bandStartSC + bandwidth]
+        : [bandStartSC + bandwidth, bandStartSC];
+      acc[category] = numericalScale.copy().range(bandRange);
+      return acc;
+    }, {} as Record<string, ScaleNumeric>)
+    return { main: bandScale, bands };
+  }
 };

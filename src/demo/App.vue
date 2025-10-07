@@ -17,14 +17,24 @@
 
   <h1>Traces, gridlines, axes, labels, zoom and log scale toggle</h1>
   <div class="chart" ref="chartAxesLabelGridZoomAndLogScale" id="chartAxesLabelGridZoomAndLogScale"></div>
-  <button @click="() => logScaleX = !logScaleX">Toggle log scale X</button>
-  <button @click="() => logScaleY = !logScaleY">Toggle log scale Y</button>
+  <button @click="() => numericalAxesLogScaleX = !numericalAxesLogScaleX">Toggle log scale X</button>
+  <button @click="() => numericalAxesLogScaleY = !numericalAxesLogScaleY">Toggle log scale Y</button>
 
   <h1>Scatter points, axes, zoom with locked X axis and initial zoom (double click graph)</h1>
   <div class="chart" ref="chartPointsAxesAndZoom" id="chartPointsAxesAndZoom"></div>
 
   <h1>Chart with tooltips</h1>
   <div class="chart" ref="chartTooltips" id="chartTooltips"></div>
+
+  <h1>Categorical y axis with traces and log scales</h1>
+  <div class="chart" ref="chartCategoricalYAxis" id="chartCategoricalYAxis"></div>
+  <button @click="() => categoricalYAxisLogScaleX = !categoricalYAxisLogScaleX">Toggle log scale X</button>
+  <button @click="() => categoricalYAxisLogScaleY = !categoricalYAxisLogScaleY">Toggle log scale Y</button>
+
+  <h1>Categorical x axis with traces and log scales</h1>
+  <div class="chart" ref="chartCategoricalXAxis" id="chartCategoricalXAxis"></div>
+  <button @click="() => categoricalXAxisLogScaleX = !categoricalXAxisLogScaleX">Toggle log scale X</button>
+  <button @click="() => categoricalXAxisLogScaleY = !categoricalXAxisLogScaleY">Toggle log scale Y</button>
 
   <h1>Responsive chart (and dashed lines)</h1>
   <div class="chart-responsive" ref="chartResponsive" id="chartResponsive"></div>
@@ -204,10 +214,36 @@ const makeRandomCurves = (props: typeof propsBasic) => {
   return lines;
 };
 
+const makeRandomCurvesForCategoricalAxis = (domain: string[], axis: "x" | "y"): Lines<Metadata> => {
+  return makeRandomCurves(propsBasic).map((line, index) => {
+    const band = domain[index % domain.length];
+    const color = colors[index % domain.length];
+
+    return {
+      ...line,
+      points: line.points.map((p, i) => {
+        let y = p.y;
+        // Make one line be an increasing line in the positive part of the band, to ensure that the positive part
+        // is on the right side of 0, and so are the axis ticks, and that the scale increases in the expected direction.
+        if (index === 0) { y = 1e3 * i; }
+        // Make another line near 0 to check that the scale/ticks are in the right place.
+        else if (index === 1) { y = 1; }
+        return { ...p, y };
+      }),
+      bands: { [axis]: band },
+      style: { ...line.style, color }
+    }
+  })
+};
+
 const tooltipHtmlCallback = (point: {x: number, y: number, metadata?: Metadata}) => {
   return `<div style="color: ${point.metadata?.color};">X: ${point.x.toFixed(3)}, Y: ${point.y.toFixed(3)}</div>`;
 };
 
+const categoricalYAxis = ["A", "B", "C", "D", "E"];
+const categoricalXAxis = ["Left", "Right"];
+const chartCategoricalYAxis = ref<HTMLDivElement | null>(null);
+const chartCategoricalXAxis = ref<HTMLDivElement | null>(null);
 const curvesSparkLines = makeRandomCurves(propsBasic);
 const curvesOnlyAxes = makeRandomCurves(propsBasic);
 const curvesAxesAndGrid = makeRandomCurves(propsBasic);
@@ -222,6 +258,8 @@ const curvesTooltips = makeRandomCurves(propsBasic);
 const pointsTooltips = makeRandomPoints(pointPropsTooltips);
 const curvesResponsive = makeRandomCurves(propsBasic);
 const curvesCustom = makeRandomCurves(propsBasic);
+const curvesCategoricalYAxis = makeRandomCurvesForCategoricalAxis(categoricalYAxis, "y");
+const curvesCategoricalXAxis = makeRandomCurvesForCategoricalAxis(categoricalXAxis, "x");
 
 const scales: Scales = { x: {start: 0, end: 1}, y: {start: -3e6, end: 3e6} };
 
@@ -249,17 +287,49 @@ const axesLabels = { x: "Time", y: "Value" };
 
 const exportToPng = ref<(name?: string) => void>();
 
-const logScaleY = ref<boolean>(false);
-const logScaleX = ref<boolean>(false);
+const numericalAxesLogScaleX = ref<boolean>(false);
+const numericalAxesLogScaleY = ref<boolean>(false);
 
-watch([logScaleY, logScaleX], () => {
-  new Chart({ logScale: { y: logScaleY.value, x: logScaleX.value }})
+const drawChartAxesLabelGridZoomAndLogScale = () => {
+  new Chart({ logScale: { x: numericalAxesLogScaleX.value, y: numericalAxesLogScaleY.value }})
     .addTraces(curvesAxesLabelGridZoomAndLogScale)
     .addScatterPoints(pointsAxesLabelGridZoomAndLogScale)
     .addAxes(axesLabels)
     .addGridLines()
     .addZoom()
-    .appendTo(chartAxesLabelGridZoomAndLogScale.value!);
+    .appendTo(chartAxesLabelGridZoomAndLogScale.value!, { y: {start: -3e6, end: 3e6} });
+};
+
+watch([numericalAxesLogScaleX, numericalAxesLogScaleY], () => {
+  drawChartAxesLabelGridZoomAndLogScale();
+});
+
+const categoricalYAxisLogScaleX = ref<boolean>(false);
+const categoricalYAxisLogScaleY = ref<boolean>(false);
+
+const drawChartCategoricalYAxis = () => {
+  new Chart({ logScale: { x: categoricalYAxisLogScaleX.value, y: categoricalYAxisLogScaleY.value }})
+    .addAxes({ x: "Time", y: "Category" })
+    .addTraces(curvesCategoricalYAxis)
+    .appendTo(chartCategoricalYAxis.value!, scales, {}, { y: categoricalYAxis });
+};
+
+watch([categoricalYAxisLogScaleX, categoricalYAxisLogScaleY], () => {
+  drawChartCategoricalYAxis();
+});
+
+const categoricalXAxisLogScaleX = ref<boolean>(false);
+const categoricalXAxisLogScaleY = ref<boolean>(false);
+
+const drawChartCategoricalXAxis = () => {
+  new Chart({ logScale: { x: categoricalXAxisLogScaleX.value, y: categoricalXAxisLogScaleY.value }})
+    .addAxes({ x: "Category", y: "Value" })
+    .addTraces(curvesCategoricalXAxis)
+    .appendTo(chartCategoricalXAxis.value!, scales, {}, { x: categoricalXAxis });
+};
+
+watch([categoricalXAxisLogScaleX, categoricalXAxisLogScaleY], () => {
+  drawChartCategoricalXAxis();
 });
 
 onMounted(async () => {
@@ -292,13 +362,7 @@ onMounted(async () => {
     .appendTo(chartAxesLabelGridAndZoom.value!);
   exportToPng.value = chart.exportToPng!;
 
-  new Chart({ logScale: { y: logScaleY.value, x: logScaleX.value } })
-    .addTraces(curvesAxesLabelGridZoomAndLogScale)
-    .addScatterPoints(pointsAxesLabelGridZoomAndLogScale)
-    .addAxes(axesLabels)
-    .addGridLines()
-    .addZoom()
-    .appendTo(chartAxesLabelGridZoomAndLogScale.value!);
+  drawChartAxesLabelGridZoomAndLogScale();
 
   new Chart()
     .addScatterPoints(pointsPointsAxesAndZoom)
@@ -311,6 +375,9 @@ onMounted(async () => {
     .addScatterPoints(pointsTooltips)
     .addTooltips(tooltipHtmlCallback)
     .appendTo(chartTooltips.value!);
+
+  drawChartCategoricalYAxis();
+  drawChartCategoricalXAxis();
 
   curvesResponsive.forEach((l, i) => {
     l.style.strokeDasharray = `${i * 2} 5`
