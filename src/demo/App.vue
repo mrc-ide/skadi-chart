@@ -170,6 +170,18 @@ const makeRandomPoints = (props: typeof pointPropsBasic) => {
   return points;
 };
 
+const makeRandomPointsForCategoricalAxis = (domain: string[], axis: "x" | "y"): ScatterPoints<Metadata> => {
+  return makeRandomPoints(pointPropsBasic).map((point, index) => {
+    const band = domain[index % domain.length];
+    const color = colors[index % domain.length];
+    return {
+      ...point,
+      bands: { [axis]: band },
+      style: { ...point.style, color }
+    }
+  });
+};
+
 const makeRandomCurves = (props: typeof propsBasic) => {
   const xPoints = Array.from({length: props.nX + 1}, (_, i) => i / props.nX);
   const lines: Lines<Metadata> = [];
@@ -258,8 +270,10 @@ const curvesTooltips = makeRandomCurves(propsBasic);
 const pointsTooltips = makeRandomPoints(pointPropsTooltips);
 const curvesResponsive = makeRandomCurves(propsBasic);
 const curvesCustom = makeRandomCurves(propsBasic);
-const curvesCategoricalYAxis = makeRandomCurvesForCategoricalAxis(categoricalYAxis, "y");
 const curvesCategoricalXAxis = makeRandomCurvesForCategoricalAxis(categoricalXAxis, "x");
+const curvesCategoricalYAxis = makeRandomCurvesForCategoricalAxis(categoricalYAxis, "y");
+const pointsCategoricalXAxis = makeRandomPointsForCategoricalAxis(categoricalXAxis, "x");
+const pointsCategoricalYAxis = makeRandomPointsForCategoricalAxis(categoricalYAxis, "y");
 
 const scales: Scales = { x: {start: 0, end: 1}, y: {start: -3e6, end: 3e6} };
 
@@ -311,6 +325,7 @@ const drawChartCategoricalYAxis = () => {
   new Chart({ logScale: { x: categoricalYAxisLogScaleX.value, y: categoricalYAxisLogScaleY.value }})
     .addAxes({ x: "Time", y: "Category" })
     .addTraces(curvesCategoricalYAxis)
+    .addScatterPoints(pointsCategoricalYAxis)
     .appendTo(chartCategoricalYAxis.value!, scales, {}, { y: categoricalYAxis });
 };
 
@@ -325,6 +340,7 @@ const drawChartCategoricalXAxis = () => {
   new Chart({ logScale: { x: categoricalXAxisLogScaleX.value, y: categoricalXAxisLogScaleY.value }})
     .addAxes({ x: "Category", y: "Value" })
     .addTraces(curvesCategoricalXAxis)
+    .addScatterPoints(pointsCategoricalXAxis)
     .appendTo(chartCategoricalXAxis.value!, scales, {}, { x: categoricalXAxis });
 };
 

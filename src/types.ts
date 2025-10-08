@@ -89,6 +89,7 @@ type ScatterPointConfig<Metadata> = {
   x: number,
   y: number,
   style: ScatterPointStyle,
-  metadata?: Metadata
+  metadata?: Metadata,
+  bands?: Partial<XY<string>>
 }
 export type ScatterPoints<Metadata> = ScatterPointConfig<Metadata>[];
