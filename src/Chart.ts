@@ -3,11 +3,12 @@ import { AxesLayer } from "./layers/AxesLayer";
 import { TracesLayer, TracesOptions } from "./layers/TracesLayer";
 import { ZoomLayer, ZoomOptions } from "./layers/ZoomLayer";
 import { TooltipHtmlCallback, TooltipsLayer } from "./layers/TooltipsLayer";
-import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, ZoomExtents, PartialScales, Point, Scales, ScatterPoints, XY, XYLabel, ScaleNumeric, AxisType, CategoricalScaleConfig } from "./types";
+import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, ZoomExtents, PartialScales, Point, Scales, ScatterPoints, XY, XYLabel, ScaleNumeric, AxisType, CategoricalScaleConfig, AreaLines } from "./types";
 import { LayerType, LifecycleHooks, OptionalLayer } from "./layers/Layer";
 import { GridLayer } from "./layers/GridLayer";
 import html2canvas from "html2canvas";
 import { ScatterLayer } from "./layers/ScatterLayer";
+import { AreaLayer, AreaOptions } from "./layers/AreaLayer";
 
 // used for holding custom lifecycle hooks only - layer has no visual effect
 class CustomHooksLayer extends OptionalLayer {
@@ -86,7 +87,7 @@ export class Chart<Metadata = any> {
     const filteredLines: Lines<Metadata> = [];
     for (let i = 0; i < lines.length; i++) {
       const currLine = lines[i];
-      let isLastCoordinatePositive = currLine.points[0] && currLine.points[0][axis] > 0;
+      let isPrevCoordinatePositive = currLine.points[0] && currLine.points[0][axis] > 0;
       let lineSegment: Lines<Metadata>[number] = { ...currLine, points: [] };
 
       for (let j = 0; j < currLine.points.length; j++) {
@@ -98,15 +99,15 @@ export class Chart<Metadata = any> {
 
         if (currLine.points[j][axis] > 0) {
           lineSegment.points.push(currLine.points[j]);
-          isLastCoordinatePositive = true;
-        } else if (isLastCoordinatePositive) {
+          isPrevCoordinatePositive = true;
+        } else if (isPrevCoordinatePositive) {
           filteredLines.push(lineSegment);
           lineSegment = { ...currLine, points: [] };
-          isLastCoordinatePositive = false;
+          isPrevCoordinatePositive = false;
         }
       }
 
-      if (isLastCoordinatePositive) {
+      if (isPrevCoordinatePositive) {
         filteredLines.push(lineSegment);
       }
     }
@@ -131,6 +132,15 @@ export class Chart<Metadata = any> {
     };
     const filteredLines = this.filterLines(lines);
     this.optionalLayers.push(new TracesLayer(filteredLines, optionsWithDefaults));
+    return this;
+  };
+
+  addAreas = (lines: AreaLines<Metadata>, options?: Partial<AreaOptions>) => {
+    const optionsWithDefaults: AreaOptions = {
+      RDPEpsilon: options?.RDPEpsilon ?? null
+    };
+    const filteredLines = this.filterLines(lines);
+    this.optionalLayers.push(new AreaLayer(filteredLines, optionsWithDefaults));
     return this;
   };
 
@@ -229,11 +239,16 @@ export class Chart<Metadata = any> {
   private processScales = (partialScales: PartialScales): Scales => {
     const traceLayers = this.optionalLayers
       .filter(l => l.type === LayerType.Trace) as TracesLayer<Metadata>[];
+    const areaLayers = this.optionalLayers
+      .filter(l => l.type === LayerType.Area) as AreaLayer<Metadata>[];
     const scatterLayers = this.optionalLayers
       .filter(l => l.type === LayerType.Scatter) as ScatterLayer<Metadata>[];
     let flatPointsDC = traceLayers.reduce((points, layer) => {
       return [...layer.linesDC.map(l => l.points).flat(), ...points];
     }, [] as Point[]);
+    flatPointsDC = areaLayers.reduce((points, layer) => {
+      return [...layer.linesDC.map(l => l.points).flat(), ...points];
+    }, flatPointsDC);
     flatPointsDC = scatterLayers.reduce((points, layer) => {
       return [...layer.points.map(p => ({ x: p.x, y: p.y })), ...points];
     }, flatPointsDC);

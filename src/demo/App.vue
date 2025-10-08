@@ -17,11 +17,16 @@
 
   <h1>Traces, gridlines, axes, labels, zoom and log scale toggle</h1>
   <div class="chart" ref="chartAxesLabelGridZoomAndLogScale" id="chartAxesLabelGridZoomAndLogScale"></div>
-  <button @click="() => numericalAxesLogScaleX = !numericalAxesLogScaleX">Toggle log scale X</button>
-  <button @click="() => numericalAxesLogScaleY = !numericalAxesLogScaleY">Toggle log scale Y</button>
+  <button @click="() => labelGridZoomLogScaleX = !labelGridZoomLogScaleX">Toggle log scale X</button>
+  <button @click="() => labelGridZoomLogScaleY = !labelGridZoomLogScaleY">Toggle log scale Y</button>
 
   <h1>Scatter points, axes, zoom with locked X axis and initial zoom (double click graph)</h1>
   <div class="chart" ref="chartPointsAxesAndZoom" id="chartPointsAxesAndZoom"></div>
+
+  <h1>Area lines with zoom</h1>
+  <div class="chart" ref="chartAreaLines" id="chartAreaLines"></div>
+  <button @click="() => areaLogScaleX = !areaLogScaleX">Toggle log scale X</button>
+  <button @click="() => areaLogScaleY = !areaLogScaleY">Toggle log scale Y</button>
 
   <h1>Chart with tooltips</h1>
   <div class="chart" ref="chartTooltips" id="chartTooltips"></div>
@@ -75,7 +80,10 @@ const chartAxesLabelsAndGrid = ref<HTMLDivElement | null>(null);
 const chartAxesLabelGridAndZoom = ref<HTMLDivElement | null>(null);
 const chartAxesLabelGridZoomAndLogScale = ref<HTMLDivElement | null>(null);
 const chartPointsAxesAndZoom = ref<HTMLDivElement | null>(null);
+const chartAreaLines = ref<HTMLDivElement | null>(null);
 const chartTooltips = ref<HTMLDivElement | null>(null);
+const chartCategoricalYAxis = ref<HTMLDivElement | null>(null);
+const chartCategoricalXAxis = ref<HTMLDivElement | null>(null);
 const chartResponsive = ref<HTMLDivElement | null>(null);
 const chartStress = ref<HTMLDivElement | null>(null);
 const chartStressPoints = ref<HTMLDivElement | null>(null);
@@ -259,8 +267,6 @@ const tooltipHtmlCallback = (point: PointWithMetadata<Metadata>) => {
 
 const categoricalYAxis = ["A", "B", "C", "D", "E"];
 const categoricalXAxis = ["Left", "Right"];
-const chartCategoricalYAxis = ref<HTMLDivElement | null>(null);
-const chartCategoricalXAxis = ref<HTMLDivElement | null>(null);
 const curvesSparkLines = makeRandomCurves(propsBasic);
 const curvesOnlyAxes = makeRandomCurves(propsBasic);
 const curvesAxesAndGrid = makeRandomCurves(propsBasic);
@@ -306,11 +312,11 @@ const axesLabels = { x: "Time", y: "Value" };
 
 const exportToPng = ref<(name?: string) => void>();
 
-const numericalAxesLogScaleX = ref<boolean>(false);
-const numericalAxesLogScaleY = ref<boolean>(false);
+const labelGridZoomLogScaleX = ref<boolean>(false);
+const labelGridZoomLogScaleY = ref<boolean>(false);
 
 const drawChartAxesLabelGridZoomAndLogScale = () => {
-  new Chart({ logScale: { x: numericalAxesLogScaleX.value, y: numericalAxesLogScaleY.value }})
+  new Chart({ logScale: { x: labelGridZoomLogScaleX.value, y: labelGridZoomLogScaleY.value }})
     .addTraces(curvesAxesLabelGridZoomAndLogScale)
     .addScatterPoints(pointsAxesLabelGridZoomAndLogScale)
     .addAxes(axesLabels)
@@ -319,8 +325,23 @@ const drawChartAxesLabelGridZoomAndLogScale = () => {
     .appendTo(chartAxesLabelGridZoomAndLogScale.value!, { y: {start: -3e6, end: 3e6} });
 };
 
-watch([numericalAxesLogScaleX, numericalAxesLogScaleY], () => {
+watch([labelGridZoomLogScaleX, labelGridZoomLogScaleY], () => {
   drawChartAxesLabelGridZoomAndLogScale();
+});
+
+const areaLogScaleX = ref<boolean>(false);
+const areaLogScaleY = ref<boolean>(false);
+
+const drawChartAreaLines = () => {
+  new Chart({ logScale: { x: areaLogScaleX.value, y: areaLogScaleY.value }})
+    .addAxes()
+    .addAreas(curvesAxesLabelGridZoomAndLogScale.slice(0, 1))
+    .addZoom()
+    .appendTo(chartAreaLines.value!);
+}
+
+watch([areaLogScaleX, areaLogScaleY], () => {
+  drawChartAreaLines();
 });
 
 const categoricalYAxisLogScaleX = ref<boolean>(false);
@@ -358,6 +379,8 @@ watch([categoricalXAxisLogScaleX, categoricalXAxisLogScaleY], () => {
 });
 
 onMounted(async () => {
+  drawChartAreaLines();
+
   new Chart()
     .addTraces(curvesSparkLines)
     .appendTo(chartSparkLines.value!);

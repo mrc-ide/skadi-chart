@@ -68,9 +68,11 @@ export type ZoomProperties = ZoomExtents & { eventType: "brush" | "dblclick" }
 export type Scales = XY<{ start: number, end: number }>
 export type PartialScales = Partial<XY<{ start?: number, end?: number }>>
 
-export type LineStyle = {
+type BasicLineStyle = {
   color?: string,
   opacity?: number,
+}
+export type LineStyle = BasicLineStyle & {
   strokeWidth?: number
   strokeDasharray?: string
 }
@@ -82,6 +84,11 @@ export type LineConfig<Metadata> = {
 }
 export type Lines<Metadata> = LineConfig<Metadata>[]
 
+export type AreaLineConfig<Metadata> = LineConfig<Metadata> & {
+  style: BasicLineStyle,
+}
+export type AreaLines<Metadata> = AreaLineConfig<Metadata>[];
+
 export type ScatterPointStyle = {
   radius?: number,
   color?: string,
@@ -91,3 +98,7 @@ type ScatterPointConfig<Metadata> = PointWithMetadata<Metadata> & {
   style: ScatterPointStyle,
 }
 export type ScatterPoints<Metadata> = ScatterPointConfig<Metadata>[];
+
+export type RDPOptions = {
+  RDPEpsilon: number | null
+}

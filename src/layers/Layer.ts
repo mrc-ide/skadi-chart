@@ -12,6 +12,7 @@ export enum LayerType {
   BaseLayer = "baseLayer",
   Axes = "axes",
   Zoom = "zoom",
+  Area = "area",
   Trace = "trace",
   Tooltip = "skadi-chart-tooltip",
   Grid = "grid",

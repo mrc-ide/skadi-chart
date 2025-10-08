@@ -10,4 +10,4 @@ export const numScales = (bands: Partial<XY<string>> | undefined, layerArgs: Lay
     x: bandX && categoricalScaleX ? categoricalScaleX.bands[bandX] : numericalScaleX,
     y: bandY && categoricalScaleY ? categoricalScaleY.bands[bandY] : numericalScaleY,
   }
-}
+};
