@@ -80,12 +80,14 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     Object.entries(layerArgs.scaleConfig.categoricalScales).forEach(([axis, catScaleConfig]) => {
       if (catScaleConfig?.bands) {
         const ax = axis as AxisType;
-        const [band, numScale] = Object.entries(catScaleConfig.bands).find(([band, numericalScale]) => {
+        const [band, numScale] = Object.entries(catScaleConfig.bands).find(([category, numericalScale]) => {
           const range = numericalScale.range();
           return clientSC[ax] >= Math.min(...range) && clientSC[ax] <= Math.max(...range);
-        })!;
-        numericalScales[ax] = numScale;
-        bands[ax] = band;
+        }) || [];
+        if (band && numScale) { // Mouse may be outside of any band
+          numericalScales[ax] = numScale;
+          bands[ax] = band;
+        }
       }
     });
 
