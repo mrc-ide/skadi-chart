@@ -29,7 +29,7 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     return diffX * diffX + diffY * diffY;
   };
 
-  private getFastDistanceSqSC = (coord1DC: Point, coord2DC: Point, yScalingFactor: number) => {
+  private getDistanceSqSC = (coord1DC: Point, coord2DC: Point, yScalingFactor: number) => {
     const coord1SC = { x: coord1DC.x, y: coord1DC.y * yScalingFactor };
     const coord2SC = { x: coord2DC.x, y: coord2DC.y * yScalingFactor };
 
@@ -99,27 +99,16 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     // rather than data distance (which can be very different from visual
     // distance if the axes are not the same aspect ratio as the height and
     // width of the svg)
-    //
-    // NOTE: fastMinDistanceSC is not the actual SC distance, we use a crude way
-    // to calculate it quickly, it is going to be off by a scale factor. If
-    // we wanted to calculate the actual SC distance we would first need to
-    // convert DC to SC by using the scaleX and scaleY d3 functions however
-    // these are slow so we use our getFastDistanceSqSC function to quickly
-    // compute a proportional distance since we only care about the minimum
-    // point
-    let fastMinDistanceSC = Infinity;
+    let minDistanceSC = Infinity;
     const minPointDC = bandPointsDC.reduce((minPDC, pDC) => {
-      const distanceSC = this.getFastDistanceSqSC(coordsDC, pDC, yScalingFactor);
-      if (distanceSC >= fastMinDistanceSC) return minPDC;
-      fastMinDistanceSC = distanceSC;
+      const distanceSC = this.getDistanceSqSC(coordsDC, pDC, yScalingFactor);
+      if (distanceSC >= minDistanceSC) return minPDC;
+      minDistanceSC = distanceSC;
       return pDC;
     }, { x: 0, y: 0 });
 
     // SC distance will be the same as pixel distance
     const minPointSC = { x: numericalScales.x(minPointDC.x), y: numericalScales.y(minPointDC.y) };
-    // Having found closest SC point, get its accurate distance to client point
-    // to decide if tooltip should be shown
-    const minDistanceSC = this.getDistanceSq(clientSC, minPointSC);
 
     // if client pointer is more than tooltip radius pixels away from the closest point
     // NOTE: we compare the squares of the distance and tooltip radius
