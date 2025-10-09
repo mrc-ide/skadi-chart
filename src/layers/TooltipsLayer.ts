@@ -1,7 +1,7 @@
 import * as d3 from "@/d3";
 import { LayerType, OptionalLayer } from "./Layer";
 import { TracesLayer } from "./TracesLayer";
-import { AxisType, D3Selection, LayerArgs, Point, PointWithMetadata, XY } from "@/types";
+import { AxisType, D3Selection, LayerArgs, Point, PointWithMetadata, ScaleNumeric, XY } from "@/types";
 import { ScatterLayer } from "./ScatterLayer";
 
 export type TooltipHtmlCallback<Metadata> =
@@ -14,6 +14,7 @@ export type TooltipHtmlCallback<Metadata> =
 export class TooltipsLayer<Metadata> extends OptionalLayer {
   type = LayerType.Tooltip;
   tooltipRadiusSq = 25 * 25;
+  private hideTooltip = false;
 
   constructor(public tooltipHtmlCallback: TooltipHtmlCallback<Metadata>) {
     super();
@@ -28,16 +29,9 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     return diffX * diffX + diffY * diffY;
   };
 
-  private getFastDistanceSqSC = (coord1DC: Point, coord2DC: Point, rangeDC: XY<number>) => {
-    // we want the closest point based on pixels (SC) however if we just calculated
-    // the straight line distance between two points (DC) without scaling the coords
-    // then we would get the closest point if the axes were to scale. However if the
-    // svg was square and x axis extent was [0, 100], while y axis was [0, 1000], then
-    // one vertial pixel (SC) will account for 10 times the data distance (DC) as one
-    // horizontal pixel so we must scale by the range to get an accurate SC distance
-    // representation
-    const coord1SC = { x: coord1DC.x / rangeDC.x, y: coord1DC.y / rangeDC.y };
-    const coord2SC = { x: coord2DC.x / rangeDC.x, y: coord2DC.y / rangeDC.y };
+  private getFastDistanceSqSC = (coord1DC: Point, coord2DC: Point, yScalingFactor: number) => {
+    const coord1SC = { x: coord1DC.x, y: coord1DC.y * yScalingFactor };
+    const coord2SC = { x: coord2DC.x, y: coord2DC.y * yScalingFactor };
 
     return this.getDistanceSq(coord1SC, coord2SC);
   };
@@ -67,7 +61,7 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     layerArgs: LayerArgs,
     tooltip: D3Selection<HTMLDivElement>,
     flatPointsDC: PointWithMetadata<Metadata>[],
-    rangeDC: XY<number>
+    yScalingFactor: number,
   ) => {
     // d3.pointer converts coords from CC to SC
     const pointer = d3.pointer(eventCC);
@@ -115,7 +109,7 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     // point
     let fastMinDistanceSC = Infinity;
     const minPointDC = bandPointsDC.reduce((minPDC, pDC) => {
-      const distanceSC = this.getFastDistanceSqSC(coordsDC, pDC, rangeDC);
+      const distanceSC = this.getFastDistanceSqSC(coordsDC, pDC, yScalingFactor);
       if (distanceSC >= fastMinDistanceSC) return minPDC;
       fastMinDistanceSC = distanceSC;
       return pDC;
@@ -168,36 +162,63 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     }, [] as PointWithMetadata<Metadata>[]);
     flatPointsDC = scatterLayers.reduce((points, layer) => ([...layer.points, ...points]), flatPointsDC);
 
-    const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
-    const rangeXDC = scaleX.domain()[1] - scaleX.domain()[0];
-    const rangeYDC = scaleY.domain()[1] - scaleY.domain()[0];
-    // edge case if range is 0 then don't scale the coordinate
-    const rangeDC = { x: rangeXDC || 1, y: rangeYDC || 1 };
+    this.setMouseMove(layerArgs, tooltip, flatPointsDC);
+
+    this.brushStart = () => {
+      this.hideTooltip = true;
+      tooltip.html("");
+    };
+    this.afterZoom = () => {
+      this.hideTooltip = false;
+      // We need to set the mousemove with a new y scaling factor, to take account of changed scales.
+      this.setMouseMove(layerArgs, tooltip, flatPointsDC);
+    };
 
     const svg = layerArgs.coreLayers[LayerType.Svg];
+    svg.on("mouseleave", () => tooltip.remove());
+    svg.on("mouseenter", () => document.body.append(tooltip.node()!));
+  };
+
+  private setMouseMove = (layerArgs: LayerArgs, tooltip: D3Selection<HTMLDivElement>, flatPointsDC: PointWithMetadata<Metadata>[]) => {
+    const svg = layerArgs.coreLayers[LayerType.Svg];
+    const yScalingFactor = this.getYScalingFactor(layerArgs);
     let timerFlag: NodeJS.Timeout | undefined = undefined;
-    let hideTooltip = false;
     svg.on("mousemove", e => {
-      if (timerFlag === undefined && !hideTooltip) {
+      if (timerFlag === undefined && !this.hideTooltip) {
         // in laggy situation there is a persistent phantom tooltip left behind.
         // this gets rid of any other tooltips that are not meant to be there
         document.querySelectorAll(`*[id*="${this.type}"]`)?.forEach(el => el.innerHTML = "");
-        this.handleMouseMove(e, layerArgs, tooltip, flatPointsDC, rangeDC);
+        this.handleMouseMove(e, layerArgs, tooltip, flatPointsDC, yScalingFactor);
         timerFlag = setTimeout(() => {
           timerFlag = undefined;
         }, 25);
       }
     });
+  }
 
-    this.brushStart = () => {
-      hideTooltip = true;
-      tooltip.html("");
-    };
-    this.afterZoom = () => {
-      hideTooltip = false;
-    };
+  // Get a scaling factor to normalize Y DC to account for
+  // 1) the shape of the plot (which might be quite different from 1:1, especially if using categorical axes)
+  // 2) different DC scales on x and y axes (including differences due to zooming)
+  // It's useful to pre-calculate this once per draw/zoom rather than per mousemove event.
+  private getYScalingFactor = (layerArgs: LayerArgs) => {
+    // If there is a categorical scale on either axis, use the numerical scale from a sample band; else use the basic numerical scale.
+    const [scaleX, scaleY] = (["x", "y"] as AxisType[]).map((axis) =>
+      Object.values(layerArgs.scaleConfig.categoricalScales[axis]?.bands || {})[0]
+      ?? layerArgs.scaleConfig.linearScales[axis]);
 
-    svg.on("mouseleave", () => tooltip.remove());
-    svg.on("mouseenter", () => document.body.append(tooltip.node()!));
-  };
+    // plotWidthSC and plotHeightSC give the width and height in pixels of either the overall plot, or of a band within that if applicable.
+    const [plotWidthSC, plotHeightSC] = [scaleX, scaleY].map(s => Math.abs(s.range()[0] - s.range()[1]) || 1);
+
+    // plotWidthDC and plotHeightDC give the extent of the data coordinates per axis.
+    const [plotWidthDC, plotHeightDC] = [scaleX, scaleY].map(s => Math.abs(s.domain()[0] - s.domain()[1]) || 1);
+
+    // Edge case: if any extent was 0, don't do any scaling.
+    if ([plotWidthSC, plotHeightSC, plotWidthDC, plotHeightDC].includes(0)) {
+      return 1;
+    }
+
+    const yScalingFactorForSvgExtents = plotHeightSC / plotWidthSC;
+    const yScalingFactorForDataExtents = plotWidthDC / plotHeightDC;
+    return yScalingFactorForSvgExtents * yScalingFactorForDataExtents;
+  }
 }
