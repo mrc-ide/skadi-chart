@@ -1,6 +1,6 @@
 import * as d3 from "@/d3";
 import { LayerType, OptionalLayer } from "./Layer";
-import { D3Selection, LayerArgs, Point, ZoomProperties } from "@/types";
+import { AxisType, D3Selection, LayerArgs, Point, ZoomProperties } from "@/types";
 
 export type ZoomOptions = {
   lockAxis: "x" | "y" | null
@@ -114,13 +114,14 @@ export class ZoomLayer extends OptionalLayer {
   };
 
   draw = (layerArgs: LayerArgs) => {
-    Object.entries(layerArgs.scaleConfig.categoricalScales).forEach(([axis, catScaleConfig]) => {
-      if (this.options.lockAxis !== axis && catScaleConfig) {
-        console.warn(
-          `You have tried to use zoom with a categorical scale (\`d3.scaleBand\`) but this is not supported. `
-          + `Zoom is only available for numerical scales (\`d3.scaleLinear\` or \`d3.scaleLog\`). `
-          + `Lock the categorical axis ${axis} explicitly using the \`lockAxis\` option to enable zooming on the numerical axis only.`
-        );
+    const categoricalScales = layerArgs.scaleConfig.categoricalScales;
+    if (categoricalScales.x && categoricalScales.y) {
+      console.warn(`You have tried to use zoom with two categorical axes, but this is not supported.`);
+      return;
+    }
+    Object.entries(categoricalScales).forEach(([axis, catScaleConfig]) => {
+      if (catScaleConfig) {
+        this.options.lockAxis = axis as AxisType;
       }
     });
 
