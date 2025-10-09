@@ -89,9 +89,6 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     // DC to SC
     const coordsDC = { x: numericalScales.x.invert(clientSC.x), y: numericalScales.y.invert(clientSC.y) };
 
-    // Only consider points in the band we are in
-    const bandPointsDC = flatPointsDC.filter((p) => bands.y === p.bands?.y && bands.x === p.bands?.x);
-
     // notice that the min point we want is DC because data points are always
     // going to use data coordinates but the minimum distance that we compare
     // is in SC because svg coordinates is what the user sees so you want to
@@ -100,7 +97,11 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     // distance if the axes are not the same aspect ratio as the height and
     // width of the svg)
     let minDistanceSC = Infinity;
-    const minPointDC = bandPointsDC.reduce((minPDC, pDC) => {
+    const minPointDC = flatPointsDC.reduce((minPDC, pDC) => {
+      // Only consider points in the band we are in
+      if (bands.y !== pDC.bands?.y || bands.x !== pDC.bands?.x) {
+        return minPDC;
+      }
       const distanceSC = this.getDistanceSqSC(coordsDC, pDC, yScalingFactor);
       if (distanceSC >= minDistanceSC) return minPDC;
       minDistanceSC = distanceSC;
