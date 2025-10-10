@@ -96,6 +96,7 @@ export abstract class LinesLayer<Metadata> extends OptionalLayer {
   protected paths: D3Selection<SVGPathElement>[] = [];
   protected getNewPoint: null | ((x: number, y: number, t: number) => Point) = null;
   protected lowResLinesSC: Point[][] = [];
+  protected preZoomYOriginSC: number | null = null;
 
   constructor(
     public linesDC: AreaLines<Metadata> | Lines<Metadata>,
@@ -153,13 +154,21 @@ export abstract class LinesLayer<Metadata> extends OptionalLayer {
   protected customTween = (
     index: number,
     zoomExtents: ZoomExtents,
-    ...lineGenArgs: any[]
+    // layerArgs: LayerArgs,
+    // ...lineGenArgs: any[]
   ) => {
     const currLineSC = this.lowResLinesSC[index];
-
+    
     return (t: number) => {
+      const yOriginSC = this.preZoomYOriginSC!;
+      const getNewYOrigin = (xSC: number) => {
+        console.log("Get new Y Origin")
+        return this.getNewPoint!(xSC, yOriginSC, t);
+      }
+
       const intermediateLineSC = currLineSC.map(({ x, y }) => this.getNewPoint!(x, y, t));
-      return this.customLineGen(intermediateLineSC, zoomExtents, ...lineGenArgs)
+      return this.customLineGen(intermediateLineSC, zoomExtents, yOriginSC, getNewYOrigin, currLineSC)
+      // return this.customLineGen(intermediateLineSC, zoomExtents, ...lineGenArgs) // could be a callback
     };
   }
 
@@ -167,6 +176,8 @@ export abstract class LinesLayer<Metadata> extends OptionalLayer {
   protected beforeZoomFunc = (scales: XY<ScaleNumeric>) => {
     return (zoomExtentsDC: ZoomExtents) => {
       const { x: scaleX, y: scaleY } = scales;
+      
+      this.preZoomYOriginSC = scaleY(0);
 
       // we have to convert the extents to SC from DC to find out what pixel
       // scaling we need
@@ -189,12 +200,14 @@ export abstract class LinesLayer<Metadata> extends OptionalLayer {
       const offsetYSC = scalingY * scaleY(newExtentYDC[0]) - scaleY(oldExtentYDC[0]);
 
       // useful to precompute
+      // here, scale means factor
       const scaleRelativeX = scalingX - 1;
       const scaleRelativeY = scalingY - 1;
 
       // this function gives us the x coordinate at any point t (between 0 and 1) of the
       // animation, t = 0 gives the x points of the original traces, t = 1 gives the zoomed
       // in line x coordinates
+      // here, x and y are in SC, representing the starting coords. yOriginSC would go in nicely.
       this.getNewPoint = (x, y, t) => ({
         x: x * (t * scaleRelativeX + 1) - t * offsetXSC,
         y: y * (t * scaleRelativeY + 1) - t * offsetYSC
