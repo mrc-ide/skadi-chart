@@ -90,8 +90,12 @@ const RDPAlgorithm = (linesSC: Point[][], epsilon: number) => {
   });
 };
 
-
 const round = (num: number) => Math.floor(num * 10) / 10;
+
+const pointIsInXRange = (p: Point, zoomExtents: ZoomExtents) => {
+  return zoomExtents.x[0] <= p.x && p.x <= zoomExtents.x[1];
+}
+
 export abstract class LinesLayer<Metadata> extends OptionalLayer {
   protected paths: D3Selection<SVGPathElement>[] = [];
   protected getNewPoint: null | ((x: number, y: number, t: number) => Point) = null;
@@ -116,8 +120,18 @@ export abstract class LinesLayer<Metadata> extends OptionalLayer {
         y: [scales.y(currentExtentsDC.y[0]), scales.y(currentExtentsDC.y[1])],
       };
 
-      const linePathSC = this.customLineGen(this.lowResLinesSC[index], currentExtentsSC, scales.y(0));
-      return this.drawLinePath(line, linePathSC, index, layerArgs);
+      const linePathSC = this.customLineGen(this.lowResLinesSC[index], currentExtentsSC);
+      
+      const yOriginSC = layerArgs.scaleConfig.linearScales.y(0);
+      
+      const currLineSC = this.lowResLinesSC[index];
+
+      const ACTUALlinepathsc = this.getNewSvgPoint({ ...currLineSC[0], y: yOriginSC }, "M")
+        + "L" + linePathSC.substring(1)
+        + this.getNewSvgPoint({ ...currLineSC[currLineSC.length - 1], y: yOriginSC }, "L")
+        + "Z";            
+      
+      return this.drawLinePath(line, ACTUALlinepathsc, index, layerArgs);
     });
 
     this.beforeZoom = this.beforeZoomFunc(layerArgs.scaleConfig.linearScales);
@@ -127,12 +141,6 @@ export abstract class LinesLayer<Metadata> extends OptionalLayer {
   protected abstract drawLinePath(lineDC: LineConfig<Metadata> | AreaLineConfig<Metadata>, linePathSC: string, index: number, layerArgs: LayerArgs): D3Selection<SVGPathElement>;
 
   protected getNewSvgPoint = (p: Point, moveOrLine: "M" | "L") => `${moveOrLine}${round(p.x)},${round(p.y)}`;
-
-  protected abstract customLineGen(
-    lineSC: Point[],
-    zoomExtents: ZoomExtents,
-    ...args: any[]
-  ): string;
 
   protected updateLowResLinesSC = (layerArgs: LayerArgs) => {
     const linesSC = this.linesDC.map(l => {
@@ -147,6 +155,39 @@ export abstract class LinesLayer<Metadata> extends OptionalLayer {
     }
   };
 
+  // This function is here as if it's the one from traceslayer, but with the correct pointRangeCheck for AreaLayer.
+  protected customLineGen = (lineSC: Point[], zoomExtents: ZoomExtents, pointRangeCheck?: any) => {
+    let retStr = "";
+    let wasPrevPointInRange = pointIsInXRange(lineSC[0], zoomExtents);
+
+    for (let i = 0; i < lineSC.length; i++) {
+      const isPointInRange = pointIsInXRange(lineSC[i], zoomExtents);
+
+      // if last point in range we always want to add next point even if it
+      // isn't in range because we want the line to at least continue off the
+      // right edge of the svg
+      //
+      // if the last point wasn't in range but this point is, then we must be
+      // at the start of a new line segment so add the previous point too
+      // because we want the line to go off the left edge of the svg
+      if (wasPrevPointInRange) {
+        retStr += this.getNewSvgPoint(lineSC[i], retStr ? "L" : "M");
+      } else if (isPointInRange) {
+        // prev point will always exist, i.e. i will never be 0 in this branch
+        // because wasLastPointInRange will always match isPointInRange for
+        // i = 0 so we have to fall into the previous branch
+        retStr += this.getNewSvgPoint(lineSC[i - 1], "M");
+        retStr += this.getNewSvgPoint(lineSC[i], "L");
+      }
+
+      wasPrevPointInRange = isPointInRange;
+    }
+
+    return retStr;
+  };
+
+  // Define a custom tween for the area layer, which wraps the traces layer custom tween.
+
   // We do a custom animation because it is faster than d3's default.
   // d3 feeds the function we return from this function with t, which goes from
   // 0 to 1 with different jumps based on your ease, t = 0 is the start state of
@@ -160,16 +201,29 @@ export abstract class LinesLayer<Metadata> extends OptionalLayer {
     const currLineSC = this.lowResLinesSC[index];
     
     return (t: number) => {
-      const yOriginSC = this.preZoomYOriginSC!;
-      const getNewYOrigin = (xSC: number) => {
-        console.log("Get new Y Origin")
-        return this.getNewPoint!(xSC, yOriginSC, t);
-      }
-
       const intermediateLineSC = currLineSC.map(({ x, y }) => this.getNewPoint!(x, y, t));
-      return this.customLineGen(intermediateLineSC, zoomExtents, yOriginSC, getNewYOrigin, currLineSC)
+      // Use the traces customLineGen (except we use pointIsInXRange)
+      return this.customLineGen(intermediateLineSC, zoomExtents)
       // return this.customLineGen(intermediateLineSC, zoomExtents, ...lineGenArgs) // could be a callback
     };
+  }
+
+  protected areaCustomTween = (
+    index: number,
+    zoomExtents: ZoomExtents,
+  ) => {
+    const currLineSC = this.lowResLinesSC[index];
+
+    return (t: number) => {
+      const tracesCustomTweenSvgString = this.customTween(index, zoomExtents)(t);
+
+      const yOriginSC = this.preZoomYOriginSC!;
+      
+      return this.getNewSvgPoint(this.getNewPoint!(currLineSC[0].x, yOriginSC, t), "M")
+        + "L" + tracesCustomTweenSvgString.substring(1)
+        + this.getNewSvgPoint(this.getNewPoint!(currLineSC[currLineSC.length - 1].x, yOriginSC, t), "L")
+        + "Z";
+    }
   }
 
   // Returns a function to be assigned to beforeZoom
@@ -177,7 +231,7 @@ export abstract class LinesLayer<Metadata> extends OptionalLayer {
     return (zoomExtentsDC: ZoomExtents) => {
       const { x: scaleX, y: scaleY } = scales;
       
-      this.preZoomYOriginSC = scaleY(0);
+      this.preZoomYOriginSC = scaleY(0); // This logic to go into arealayer.
 
       // we have to convert the extents to SC from DC to find out what pixel
       // scaling we need

@@ -15,7 +15,8 @@ export class TracesLayer<Metadata> extends LinesLayer<Metadata> {
     super(linesDC, options);
   };
 
-  // See if AreaLayer can wrap this, by adding a point at the start and end
+  // AreaLayer can wrap this, by adding a point at the start and end, and making
+  // sure to use pointIsInXRange (as a callback) instead of pointIsInRange
   protected customLineGen = (lineSC: Point[], zoomExtents: ZoomExtents) => {
     let retStr = "";
     let wasPrevPointInRange = pointIsInRange(lineSC[0], zoomExtents);
