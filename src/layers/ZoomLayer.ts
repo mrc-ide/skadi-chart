@@ -1,6 +1,6 @@
 import * as d3 from "@/d3";
 import { LayerType, OptionalLayer } from "./Layer";
-import { D3Selection, LayerArgs, Point, ZoomProperties } from "@/types";
+import { AxisType, D3Selection, LayerArgs, Point, ZoomProperties } from "@/types";
 
 export type ZoomOptions = {
   lockAxis: "x" | "y" | null
@@ -114,6 +114,17 @@ export class ZoomLayer extends OptionalLayer {
   };
 
   draw = (layerArgs: LayerArgs) => {
+    const categoricalScales = layerArgs.scaleConfig.categoricalScales;
+    if (categoricalScales.x && categoricalScales.y) {
+      console.warn(`You have tried to use zoom with two categorical axes, but this is not supported.`);
+      return;
+    }
+    Object.entries(categoricalScales).forEach(([axis, catScaleConfig]) => {
+      if (catScaleConfig) {
+        this.options.lockAxis = axis as AxisType;
+      }
+    });
+
     const { width, height, margin } = layerArgs.bounds;
     const svg = layerArgs.coreLayers[LayerType.Svg];
     
