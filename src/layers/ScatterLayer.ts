@@ -10,7 +10,6 @@ export class ScatterLayer<Metadata> extends OptionalLayer {
   };
 
   draw = (layerArgs: LayerArgs) => {
-    const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
     const baseLayer = layerArgs.coreLayers[LayerType.BaseLayer];
     const { animationDuration } = layerArgs.globals;
     const { getHtmlId } = layerArgs;
@@ -32,10 +31,12 @@ export class ScatterLayer<Metadata> extends OptionalLayer {
     this.zoom = async () => {
       const promises: Promise<void>[] = [];
       scatterPoints.forEach((sp, index) => {
+        const scales = numScales(this.points[index].bands, layerArgs);
+
         const promise = sp.transition()
           .duration(animationDuration)
-          .attr("cx", scaleX(this.points[index].x))
-          .attr("cy", scaleY(this.points[index].y))
+          .attr("cx", scales.x(this.points[index].x))
+          .attr("cy", scales.y(this.points[index].y))
           .end();
         promises.push(promise);
       });
