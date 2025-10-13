@@ -23,6 +23,11 @@
   <h1>Scatter points, axes, zoom with locked X axis and initial zoom (double click graph)</h1>
   <div class="chart" ref="chartPointsAxesAndZoom" id="chartPointsAxesAndZoom"></div>
 
+  <h1>Area lines with zoom</h1>
+  <div class="chart" ref="chartAreaLines" id="chartAreaLines"></div>
+  <button @click="() => areaLogScaleX = !areaLogScaleX">Toggle log scale X</button>
+  <button @click="() => areaLogScaleY = !areaLogScaleY">Toggle log scale Y</button>
+
   <h1>Chart with tooltips</h1>
   <div class="chart" ref="chartTooltips" id="chartTooltips"></div>
 
@@ -75,7 +80,10 @@ const chartAxesLabelsAndGrid = ref<HTMLDivElement | null>(null);
 const chartAxesLabelGridAndZoom = ref<HTMLDivElement | null>(null);
 const chartAxesLabelGridZoomAndLogScale = ref<HTMLDivElement | null>(null);
 const chartPointsAxesAndZoom = ref<HTMLDivElement | null>(null);
+const chartAreaLines = ref<HTMLDivElement | null>(null);
 const chartTooltips = ref<HTMLDivElement | null>(null);
+const chartCategoricalYAxis = ref<HTMLDivElement | null>(null);
+const chartCategoricalXAxis = ref<HTMLDivElement | null>(null);
 const chartResponsive = ref<HTMLDivElement | null>(null);
 const chartStress = ref<HTMLDivElement | null>(null);
 const chartStressPoints = ref<HTMLDivElement | null>(null);
@@ -259,8 +267,6 @@ const tooltipHtmlCallback = (point: PointWithMetadata<Metadata>) => {
 
 const categoricalYAxis = ["A", "B", "C", "D", "E"];
 const categoricalXAxis = ["Left", "Right"];
-const chartCategoricalYAxis = ref<HTMLDivElement | null>(null);
-const chartCategoricalXAxis = ref<HTMLDivElement | null>(null);
 const curvesSparkLines = makeRandomCurves(propsBasic);
 const curvesOnlyAxes = makeRandomCurves(propsBasic);
 const curvesAxesAndGrid = makeRandomCurves(propsBasic);
@@ -321,6 +327,20 @@ const drawChartAxesLabelGridZoomAndLogScale = () => {
 
 watch([numericalAxesLogScaleX, numericalAxesLogScaleY], () => {
   drawChartAxesLabelGridZoomAndLogScale();
+});
+
+const areaLogScaleX = ref<boolean>(false);
+const areaLogScaleY = ref<boolean>(false);
+const drawChartAreaLines = () => {
+  new Chart({ logScale: { x: areaLogScaleX.value, y: areaLogScaleY.value }})
+    .addAxes()
+    .addTraces(curvesAxesLabelGridZoomAndLogScale.map((l, i) => ({ ...l, fillArea: [true, false][i] })))
+    .addZoom()
+    .appendTo(chartAreaLines.value!);
+}
+
+watch([areaLogScaleX, areaLogScaleY], () => {
+  drawChartAreaLines();
 });
 
 const categoricalYAxisLogScaleX = ref<boolean>(false);
@@ -394,6 +414,8 @@ onMounted(async () => {
     .addAxes(axesLabels)
     .addZoom({ lockAxis: "x" })
     .appendTo(chartPointsAxesAndZoom.value!, scales, { y: { start: -2e6, end: -0.5e6 } });
+
+  drawChartAreaLines();
 
   new Chart<Metadata>()
     .addTraces(curvesTooltips)

@@ -10,6 +10,7 @@ export enum LayerType {
   Svg = "svg",
   ClipPath = "clipPath",
   BaseLayer = "baseLayer",
+  Area = "area",
   Axes = "axes",
   Zoom = "zoom",
   Trace = "trace",

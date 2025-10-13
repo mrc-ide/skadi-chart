@@ -8,6 +8,7 @@ import { LayerType, LifecycleHooks, OptionalLayer } from "./layers/Layer";
 import { GridLayer } from "./layers/GridLayer";
 import html2canvas from "html2canvas";
 import { ScatterLayer } from "./layers/ScatterLayer";
+import { AreaLayer } from "./layers/AreaLayer";
 
 // used for holding custom lifecycle hooks only - layer has no visual effect
 class CustomHooksLayer extends OptionalLayer {
@@ -130,7 +131,11 @@ export class Chart<Metadata = any> {
       RDPEpsilon: options?.RDPEpsilon ?? null
     };
     const filteredLines = this.filterLines(lines);
-    this.optionalLayers.push(new TracesLayer(filteredLines, optionsWithDefaults));
+    const tracesLayer = new TracesLayer(filteredLines, optionsWithDefaults);
+    this.optionalLayers.push(tracesLayer);
+    if (filteredLines.filter(line => line.fillArea).length) {
+      this.optionalLayers.push(new AreaLayer(tracesLayer));
+    }
     return this;
   };
 

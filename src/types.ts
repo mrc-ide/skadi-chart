@@ -77,6 +77,7 @@ export type LineStyle = {
 export type LineConfig<Metadata> = {
   points: Point[],
   style: LineStyle,
+  fillArea?: boolean,
   metadata?: Metadata,
   bands?: Partial<XY<string>>
 }
