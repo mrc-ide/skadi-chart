@@ -1,7 +1,7 @@
 // An area is applied to a trace if the line is configured with `fillArea` as true.
 // It reuses the line points from the trace layer to draw a filled area under the line.
 
-import { D3Selection, LayerArgs, Lines, ZoomExtents } from "@/types";
+import { D3Selection, LayerArgs, ZoomExtents } from "@/types";
 import { LayerType, OptionalLayer } from "./Layer";
 import { TracesLayer } from "./TracesLayer";
 import { numScales } from "@/helpers";
@@ -11,6 +11,7 @@ export class AreaLayer<Metadata> extends OptionalLayer {
   type = LayerType.Area;
   // todo - see if we can drop nulls - though they may be needed for corresponding with traceslayer.
   private paths: Array<D3Selection<SVGPathElement> | null> = [];
+  protected preZoomYOriginSC: number | null = null;
 
   constructor(public tracesLayer: TracesLayer<Metadata>) {
     super();
@@ -31,7 +32,7 @@ export class AreaLayer<Metadata> extends OptionalLayer {
       };
 
       const currLineSC = this.tracesLayer.lowResLinesSC[index];
-      const linePathSC = customLineGen(currLineSC, currentExtentsSC, lineDC.fillArea);
+      const linePathSC = customLineGen(currLineSC, currentExtentsSC, true);
 
       // todo: does this become scales.y(0) for bands?
       const yOriginSC = layerArgs.scaleConfig.linearScales.y(0);
@@ -42,12 +43,71 @@ export class AreaLayer<Metadata> extends OptionalLayer {
         .attr("fill", lineDC.style.color || "black")
         .attr("stroke", "none")
         .attr("opacity", lineDC.style.opacity ? lineDC.style.opacity / 2 : 0.5)
-        .attr("d", this.closeSVGPath(linePathSC, currLineSC, yOriginSC));
+        .attr("d", this.closedSVGPath(linePathSC, currLineSC, yOriginSC));
     });
+
+    this.beforeZoom = () => {
+      // todo - get correct scale when using bands
+      this.preZoomYOriginSC = layerArgs.scaleConfig.linearScales.y(0);
+    }
+
+    this.zoom = async (zoomExtentsDC: ZoomExtents) => {
+      const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
+      const zoomExtentsSC: ZoomExtents = {
+        x: [scaleX(zoomExtentsDC.x[0]), scaleX(zoomExtentsDC.x[1])],
+        y: [scaleY(zoomExtentsDC.y[0]), scaleY(zoomExtentsDC.y[1])],
+      };
+
+      const promises: Promise<void>[] = [];
+      for (let i = 0; i < this.tracesLayer.linesDC.length; i++) {
+        const path = this.paths[i];
+        if (path) {
+          const promise = path
+            .transition()
+            .duration(layerArgs.globals.animationDuration)
+            .attrTween("d", () => this.customTween(i, zoomExtentsSC))
+            .end();
+          promises.push(promise);
+        }
+      };
+      await Promise.all(promises);
+    };
+
+    this.afterZoom = (zoomExtentsDC: ZoomExtents | null) => {
+      if (!zoomExtentsDC) {
+        return;
+      }
+
+      // After TracesLayer zoom animation is complete, get the appropriate resolution lines which were re-calculated
+      // during the TracesLayer zoom function, and replace without the user knowing.
+
+      const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
+      // ?      const { x, y } = layerArgs.scaleConfig.scaleExtents;
+
+      const zoomExtentsSC: ZoomExtents = {
+        x: [scaleX(zoomExtentsDC.x[0]), scaleX(zoomExtentsDC.x[1])],
+        y: [scaleY(zoomExtentsDC.y[0]), scaleY(zoomExtentsDC.y[1])],
+      };
+
+      this.tracesLayer.linesDC.forEach((_line, index) => {
+        const path = this.paths[index];
+        if (!path) {
+          return;
+        }
+        // todo - get correct scale when using bands
+        const yOriginAfterZoomSC = layerArgs.scaleConfig.linearScales.y(0);
+
+        const linePathSC = customLineGen(this.tracesLayer.lowResLinesSC[index], zoomExtentsSC, true);
+
+        const currLineSC = this.tracesLayer.lowResLinesSC[index];
+
+        path.attr("d", this.closedSVGPath(linePathSC, currLineSC, yOriginAfterZoomSC))
+      });
+    }
   }
 
-  // todo - consider wrapping inside customLineGen
-  private closeSVGPath = (openPath: string, currLineSC: {x: number, y: number}[], yOriginSC: number) => {
+  // todo - consider wrapping inside customLineGen (might let us incorporate the logic from customTween)
+  private closedSVGPath = (openPath: string, currLineSC: { x: number, y: number }[], yOriginSC: number) => {
     // For area lines, we need to convert any open path of the TracesLayer to a closed path
     // where the first and last points are at the y-origin (filling the area between the line and the x-axis).
     const firstPoint = { ...currLineSC[0], y: yOriginSC };
@@ -57,4 +117,25 @@ export class AreaLayer<Metadata> extends OptionalLayer {
       + getNewSvgPoint(lastPoint, "L")
       + "Z";
   }
+
+  // d3 feeds the function we return from this function with t, which goes from
+  // 0 to 1 with different jumps based on your ease, t = 0 is the start state of
+  // your animation, t = 1 is the end state of your animation
+  private customTween = (index: number, zoomExtents: ZoomExtents) => {
+    const currLineSC = this.tracesLayer.lowResLinesSC[index];
+    const getNewPoint = this.tracesLayer.getNewPoint!;
+    return (t: number) => {
+      const intermediateLineSC = currLineSC.map(({x, y}) => getNewPoint(x, y, t));
+      const intermediateLinePathSC = customLineGen(intermediateLineSC, zoomExtents, true);
+
+      const yOriginSC = this.preZoomYOriginSC!;
+      const firstPoint = getNewPoint(currLineSC[0].x, yOriginSC, t);
+      const lastPoint = getNewPoint(currLineSC[currLineSC.length - 1].x, yOriginSC, t);
+
+      return getNewSvgPoint(firstPoint, "M")
+        + "L" + intermediateLinePathSC.substring(1)
+        + getNewSvgPoint(lastPoint, "L")
+        + "Z";
+    }
+  };
 }

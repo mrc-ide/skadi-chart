@@ -26,7 +26,7 @@ export const customLineGen = (lineSC: Point[], zoomExtents: ZoomExtents, fillAre
 
   for (let i = 0; i < lineSC.length; i++) {
     const { x, y } = lineSC[i];
-    const isPointInRange = pointIsInRange(lineSC[0], zoomExtents, fillArea);
+    const isPointInRange = pointIsInRange(lineSC[i], zoomExtents, fillArea);
 
     // if last point in range we always want to add next point even if it
     // isn't in range because we want the line to at least continue off the

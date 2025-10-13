@@ -97,7 +97,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
   type = LayerType.Trace;
   private traces: D3Selection<SVGPathElement>[] = [];
   lowResLinesSC: Point[][] = [];
-  private getNewPoint: null | ((x: number, y: number, t: number) => Point) = null;
+  getNewPoint: null | ((x: number, y: number, t: number) => Point) = null;
 
   constructor(public linesDC: Lines<Metadata>, public options: TracesOptions) {
     super();
