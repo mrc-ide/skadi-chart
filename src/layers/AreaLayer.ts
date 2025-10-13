@@ -9,9 +9,8 @@ import { customLineGen, getNewSvgPoint } from "@/customLineGen";
 
 export class AreaLayer<Metadata> extends OptionalLayer {
   type = LayerType.Area;
-  // todo - see if we can drop nulls - though they may be needed for corresponding with traceslayer.
   private paths: Array<D3Selection<SVGPathElement> | null> = [];
-  protected preZoomYOriginSC: number | null = null;
+  protected preZoomYOriginSCs: Record<string, number> = {};
 
   constructor(public tracesLayer: TracesLayer<Metadata>) {
     super();
@@ -34,8 +33,7 @@ export class AreaLayer<Metadata> extends OptionalLayer {
       const currLineSC = this.tracesLayer.lowResLinesSC[index];
       const linePathSC = customLineGen(currLineSC, currentExtentsSC, true);
 
-      // todo: does this become scales.y(0) for bands?
-      const yOriginSC = layerArgs.scaleConfig.linearScales.y(0);
+      const yOriginSC = scales.y(0);
       const firstYOriginPoint = { ...currLineSC[0], y: yOriginSC };
       const lastYOriginPoint = { ...currLineSC[currLineSC.length - 1], y: yOriginSC };
 
@@ -49,8 +47,13 @@ export class AreaLayer<Metadata> extends OptionalLayer {
     });
 
     this.beforeZoom = () => {
-      // todo - get correct scale when using bands
-      this.preZoomYOriginSC = layerArgs.scaleConfig.linearScales.y(0);
+      if (layerArgs.scaleConfig.categoricalScales.y) {
+        Object.entries(layerArgs.scaleConfig.categoricalScales.y.bands).forEach(([category, scale]) => {
+          this.preZoomYOriginSCs[category] = scale(0);
+        });
+      } else {
+        this.preZoomYOriginSCs = { main: layerArgs.scaleConfig.linearScales.y(0) };
+      }
     }
 
     this.zoom = async (zoomExtentsDC: ZoomExtents) => {
@@ -76,35 +79,28 @@ export class AreaLayer<Metadata> extends OptionalLayer {
     };
 
     this.afterZoom = (zoomExtentsDC: ZoomExtents | null) => {
-      if (!zoomExtentsDC) {
-        return;
-      }
+      if (!zoomExtentsDC) { return }
 
       // After TracesLayer zoom animation is complete, get the appropriate resolution lines which were re-calculated
       // during the TracesLayer zoom function, and replace without the user knowing.
-
       const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
-      // ?      const { x, y } = layerArgs.scaleConfig.scaleExtents;
-
       const zoomExtentsSC: ZoomExtents = {
         x: [scaleX(zoomExtentsDC.x[0]), scaleX(zoomExtentsDC.x[1])],
         y: [scaleY(zoomExtentsDC.y[0]), scaleY(zoomExtentsDC.y[1])],
       };
 
-      this.tracesLayer.linesDC.forEach((_line, index) => {
+      this.tracesLayer.linesDC.forEach((lineDC, index) => {
         const path = this.paths[index];
-        if (!path) {
-          return;
-        }
-        // todo - get correct scale when using bands
-        const yOriginAfterZoomSC = layerArgs.scaleConfig.linearScales.y(0);
+        if (!path) { return }
+
+        const postZoomYOriginSC = numScales(lineDC.bands, layerArgs).y(0);
 
         const linePathSC = customLineGen(this.tracesLayer.lowResLinesSC[index], zoomExtentsSC, true);
 
         const currLineSC = this.tracesLayer.lowResLinesSC[index];
 
-        const firstYOriginPoint = { ...currLineSC[0], y: yOriginAfterZoomSC };
-        const lastYOriginPoint = { ...currLineSC[currLineSC.length - 1], y: yOriginAfterZoomSC };
+        const firstYOriginPoint = { ...currLineSC[0], y: postZoomYOriginSC };
+        const lastYOriginPoint = { ...currLineSC[currLineSC.length - 1], y: postZoomYOriginSC };
 
         path.attr("d", this.closedSVGPath(linePathSC, firstYOriginPoint, lastYOriginPoint))
       });
@@ -127,7 +123,7 @@ export class AreaLayer<Metadata> extends OptionalLayer {
   private customTween = (index: number, zoomExtents: ZoomExtents) => {
     const currLineSC = this.tracesLayer.lowResLinesSC[index];
     const getNewPoint = this.tracesLayer.getNewPoint!;
-    const yOriginSC = this.preZoomYOriginSC!;
+    const yOriginSC = this.preZoomYOriginSCs[this.tracesLayer.linesDC[index].bands?.y || "main"];
     return (t: number) => {
       const intermediateLineSC = currLineSC.map(({x, y}) => getNewPoint(x, y, t));
       const intermediateLinePathSC = customLineGen(intermediateLineSC, zoomExtents, true);

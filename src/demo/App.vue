@@ -252,6 +252,7 @@ const makeRandomCurvesForCategoricalAxis = (domain: string[], axis: "x" | "y"): 
         return { ...p, y };
       }),
       bands: { [axis]: band },
+      fillArea: index === 2 ? true : false,
       style: { ...line.style, color },
       metadata: { ...line.metadata, color }
     }
@@ -334,7 +335,7 @@ const areaLogScaleY = ref<boolean>(false);
 const drawChartAreaLines = () => {
   new Chart({ logScale: { x: areaLogScaleX.value, y: areaLogScaleY.value }})
     .addAxes()
-    .addTraces(curvesAxesLabelGridZoomAndLogScale.map((l, i) => ({ ...l, fillArea: [true, false][i] })))
+    .addTraces(curvesAxesLabelGridZoomAndLogScale.map((l, i) => ({ ...l, fillArea: [true, false][i % 2] })))
     .addZoom()
     .appendTo(chartAreaLines.value!);
 }
