@@ -31,15 +31,10 @@ export class AreaLayer<Metadata> extends OptionalLayer {
       };
 
       const currLineSC = this.tracesLayer.lowResLinesSC[index];
-      const tracePathSC = customLineGen(currLineSC, currentExtentsSC, lineDC.fillArea);
+      const linePathSC = customLineGen(currLineSC, currentExtentsSC, lineDC.fillArea);
 
       // todo: does this become scales.y(0) for bands?
       const yOriginSC = layerArgs.scaleConfig.linearScales.y(0);
-
-      const areaLinePathSC = getNewSvgPoint({ ...currLineSC[0], y: yOriginSC }, "M")
-        + "L" + tracePathSC.substring(1)
-        + getNewSvgPoint({ ...currLineSC[currLineSC.length - 1], y: yOriginSC }, "L")
-        + "Z";
 
       return layerArgs.coreLayers[LayerType.BaseLayer].append("path")
         .attr("id", `${layerArgs.getHtmlId(LayerType.Area)}-${index}`)
@@ -47,7 +42,19 @@ export class AreaLayer<Metadata> extends OptionalLayer {
         .attr("fill", lineDC.style.color || "black")
         .attr("stroke", "none")
         .attr("opacity", lineDC.style.opacity ? lineDC.style.opacity / 2 : 0.5)
-        .attr("d", areaLinePathSC);
+        .attr("d", this.closeSVGPath(linePathSC, currLineSC, yOriginSC));
     });
+  }
+
+  // todo - consider wrapping inside customLineGen
+  private closeSVGPath = (openPath: string, currLineSC: {x: number, y: number}[], yOriginSC: number) => {
+    // For area lines, we need to convert any open path of the TracesLayer to a closed path
+    // where the first and last points are at the y-origin (filling the area between the line and the x-axis).
+    const firstPoint = { ...currLineSC[0], y: yOriginSC };
+    const lastPoint = { ...currLineSC[currLineSC.length - 1], y: yOriginSC };
+    return getNewSvgPoint(firstPoint, "M")
+      + "L" + openPath.substring(1) // convert the initial M to an L
+      + getNewSvgPoint(lastPoint, "L")
+      + "Z";
   }
 }

@@ -9,11 +9,17 @@ export const getNewSvgPoint = (p: Point, moveOrLine: "M" | "L") => {
 const pointIsInRange = (p: Point, zoomExtents: ZoomExtents, fillArea?: boolean) => {
   const pointIsInXRange = zoomExtents.x[0] <= p.x && p.x <= zoomExtents.x[1];
   if (fillArea) {
+    // For SVG paths that we intend to fill, we need to plot all points within
+    // the x range, regardless of their y value, to ensure the area is filled correctly.
     return pointIsInXRange;
   }
   return pointIsInXRange && zoomExtents.y[1] <= p.y && p.y <= zoomExtents.y[0];
 }
 
+// Generates an SVG path string from a series of points in screen coordinates (SC).
+// The fillArea flag indicates whether the path is intended to be filled (as in an area chart),
+// but does not affect the actual path generation beyond how we determine if a point is in range:
+// this will still output an open path (a line) rather than a closed path (a loop).
 export const customLineGen = (lineSC: Point[], zoomExtents: ZoomExtents, fillArea?: boolean) => {
   let retStr = "";
   let wasLastPointInRange = pointIsInRange(lineSC[0], zoomExtents, fillArea);
