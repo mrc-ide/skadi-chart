@@ -337,6 +337,7 @@ const drawChartAreaLines = () => {
     .addAxes()
     .addTraces(curvesAxesLabelGridZoomAndLogScale.map((l, i) => ({ ...l, fillArea: [true, false][i % 2] })))
     .addZoom()
+    .addTooltips(tooltipHtmlCallback)
     .appendTo(chartAreaLines.value!);
 }
 

@@ -24,7 +24,6 @@ export class AreaLayer<Metadata> extends OptionalLayer {
 
       const scales = numScales(lineDC.bands, layerArgs);
 
-      // todo: precalc some of these?
       const currentExtentsSC: ZoomExtents = {
         x: [scales.x(currentExtentsDC.x[0]), scales.x(currentExtentsDC.x[1])],
         y: [scales.y(currentExtentsDC.y[0]), scales.y(currentExtentsDC.y[1])],
@@ -107,7 +106,6 @@ export class AreaLayer<Metadata> extends OptionalLayer {
     }
   }
 
-  // todo - consider wrapping inside customLineGen (might let us incorporate the logic from customTween)
   private closedSVGPath = (openPath: string, firstYOriginPointSC: Point, lastYOriginPointSC: Point) => {
     // For area lines, we need to convert any open path of the TracesLayer to a closed path
     // where the first and last points are at the y-origin (filling the area between the line and the x-axis).
