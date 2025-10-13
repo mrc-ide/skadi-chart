@@ -1,7 +1,7 @@
 // An area is applied to a trace if the line is configured with `fillArea` as true.
 // It reuses the line points from the trace layer to draw a filled area under the line.
 
-import { D3Selection, LayerArgs, ZoomExtents } from "@/types";
+import { D3Selection, LayerArgs, Point, ZoomExtents } from "@/types";
 import { LayerType, OptionalLayer } from "./Layer";
 import { TracesLayer } from "./TracesLayer";
 import { numScales } from "@/helpers";
@@ -36,6 +36,8 @@ export class AreaLayer<Metadata> extends OptionalLayer {
 
       // todo: does this become scales.y(0) for bands?
       const yOriginSC = layerArgs.scaleConfig.linearScales.y(0);
+      const firstYOriginPoint = { ...currLineSC[0], y: yOriginSC };
+      const lastYOriginPoint = { ...currLineSC[currLineSC.length - 1], y: yOriginSC };
 
       return layerArgs.coreLayers[LayerType.BaseLayer].append("path")
         .attr("id", `${layerArgs.getHtmlId(LayerType.Area)}-${index}`)
@@ -43,7 +45,7 @@ export class AreaLayer<Metadata> extends OptionalLayer {
         .attr("fill", lineDC.style.color || "black")
         .attr("stroke", "none")
         .attr("opacity", lineDC.style.opacity ? lineDC.style.opacity / 2 : 0.5)
-        .attr("d", this.closedSVGPath(linePathSC, currLineSC, yOriginSC));
+        .attr("d", this.closedSVGPath(linePathSC, firstYOriginPoint, lastYOriginPoint));
     });
 
     this.beforeZoom = () => {
@@ -101,20 +103,21 @@ export class AreaLayer<Metadata> extends OptionalLayer {
 
         const currLineSC = this.tracesLayer.lowResLinesSC[index];
 
-        path.attr("d", this.closedSVGPath(linePathSC, currLineSC, yOriginAfterZoomSC))
+        const firstYOriginPoint = { ...currLineSC[0], y: yOriginAfterZoomSC };
+        const lastYOriginPoint = { ...currLineSC[currLineSC.length - 1], y: yOriginAfterZoomSC };
+
+        path.attr("d", this.closedSVGPath(linePathSC, firstYOriginPoint, lastYOriginPoint))
       });
     }
   }
 
   // todo - consider wrapping inside customLineGen (might let us incorporate the logic from customTween)
-  private closedSVGPath = (openPath: string, currLineSC: { x: number, y: number }[], yOriginSC: number) => {
+  private closedSVGPath = (openPath: string, firstYOriginPointSC: Point, lastYOriginPointSC: Point) => {
     // For area lines, we need to convert any open path of the TracesLayer to a closed path
     // where the first and last points are at the y-origin (filling the area between the line and the x-axis).
-    const firstPoint = { ...currLineSC[0], y: yOriginSC };
-    const lastPoint = { ...currLineSC[currLineSC.length - 1], y: yOriginSC };
-    return getNewSvgPoint(firstPoint, "M")
+    return getNewSvgPoint(firstYOriginPointSC, "M")
       + "L" + openPath.substring(1) // convert the initial M to an L
-      + getNewSvgPoint(lastPoint, "L")
+      + getNewSvgPoint(lastYOriginPointSC, "L")
       + "Z";
   }
 
@@ -124,18 +127,15 @@ export class AreaLayer<Metadata> extends OptionalLayer {
   private customTween = (index: number, zoomExtents: ZoomExtents) => {
     const currLineSC = this.tracesLayer.lowResLinesSC[index];
     const getNewPoint = this.tracesLayer.getNewPoint!;
+    const yOriginSC = this.preZoomYOriginSC!;
     return (t: number) => {
       const intermediateLineSC = currLineSC.map(({x, y}) => getNewPoint(x, y, t));
       const intermediateLinePathSC = customLineGen(intermediateLineSC, zoomExtents, true);
 
-      const yOriginSC = this.preZoomYOriginSC!;
-      const firstPoint = getNewPoint(currLineSC[0].x, yOriginSC, t);
-      const lastPoint = getNewPoint(currLineSC[currLineSC.length - 1].x, yOriginSC, t);
+      const firstYOriginPoint = getNewPoint(currLineSC[0].x, yOriginSC, t);
+      const lastYOriginPoint = getNewPoint(currLineSC[currLineSC.length - 1].x, yOriginSC, t);
 
-      return getNewSvgPoint(firstPoint, "M")
-        + "L" + intermediateLinePathSC.substring(1)
-        + getNewSvgPoint(lastPoint, "L")
-        + "Z";
+      return this.closedSVGPath(intermediateLinePathSC, firstYOriginPoint, lastYOriginPoint)
     }
   };
 }
