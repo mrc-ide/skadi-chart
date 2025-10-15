@@ -14,7 +14,6 @@ export type TooltipHtmlCallback<Metadata> =
 export class TooltipsLayer<Metadata> extends OptionalLayer {
   type = LayerType.Tooltip;
   tooltipRadiusSq = 25 * 25;
-  private hideTooltip = false;
 
   constructor(public tooltipHtmlCallback: TooltipHtmlCallback<Metadata>) {
     super();
@@ -97,8 +96,8 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     // Use scaling factors to normalize DC to account for
     // 1) the shape of the plot (which might be quite different from 1:1, especially if using categorical axes)
     // 2) different DC scales on x and y axes (including differences due to zooming)
-    let scalingFactors = { x: 1, y: 1 };
     // Edge case: if any extent was 0, don't do any scaling.
+    let scalingFactors = { x: 1, y: 1 };
     if (![plotWidthSC, plotHeightSC, plotWidthDC, plotHeightDC].includes(0)) {
       scalingFactors.x = plotWidthSC / plotWidthDC;
       scalingFactors.y = plotHeightSC / plotHeightDC;
@@ -125,6 +124,8 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
 
     // SC distance will be the same as pixel distance
     const minPointSC = { x: numericalScales.x(minPointDC.x), y: numericalScales.y(minPointDC.y) };
+    // Having found closest SC point, get its accurate distance to client point
+    // to decide if tooltip should be shown
     const minDistanceSC = this.getDistanceSq(clientSC, minPointSC);
 
     // if client pointer is more than tooltip radius pixels away from the closest point
@@ -170,8 +171,9 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
 
     const svg = layerArgs.coreLayers[LayerType.Svg];
     let timerFlag: NodeJS.Timeout | undefined = undefined;
+    let hideTooltip = false;
     svg.on("mousemove", e => {
-      if (timerFlag === undefined && !this.hideTooltip) {
+      if (timerFlag === undefined && !hideTooltip) {
         // in laggy situation there is a persistent phantom tooltip left behind.
         // this gets rid of any other tooltips that are not meant to be there
         document.querySelectorAll(`*[id*="${this.type}"]`)?.forEach(el => el.innerHTML = "");
@@ -183,11 +185,11 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     });
 
     this.brushStart = () => {
-      this.hideTooltip = true;
+      hideTooltip = true;
       tooltip.html("");
     };
     this.afterZoom = () => {
-      this.hideTooltip = false;
+      hideTooltip = false;
     };
 
     svg.on("mouseleave", () => tooltip.remove());
