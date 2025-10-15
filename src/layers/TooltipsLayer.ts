@@ -96,20 +96,21 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     // rather than data distance (which can be very different from visual
     // distance if the axes are not the same aspect ratio as the height and
     // width of the svg)
-    let minDistanceSC = Infinity;
+    let minDistanceNormalized = Infinity;
     const minPointDC = flatPointsDC.reduce((minPDC, pDC) => {
       // Only consider points in the band we are in
       if (bands.y !== pDC.bands?.y || bands.x !== pDC.bands?.x) {
         return minPDC;
       }
       const distanceSC = this.getDistanceSqSC(coordsDC, pDC, yScalingFactor);
-      if (distanceSC >= minDistanceSC) return minPDC;
-      minDistanceSC = distanceSC;
+      if (distanceSC >= minDistanceNormalized) return minPDC;
+      minDistanceNormalized = distanceSC;
       return pDC;
     }, { x: 0, y: 0 });
 
     // SC distance will be the same as pixel distance
     const minPointSC = { x: numericalScales.x(minPointDC.x), y: numericalScales.y(minPointDC.y) };
+    const minDistanceSC = this.getDistanceSq(clientSC, minPointSC);
 
     // if client pointer is more than tooltip radius pixels away from the closest point
     // NOTE: we compare the squares of the distance and tooltip radius
@@ -197,6 +198,7 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
       ?? layerArgs.scaleConfig.linearScales[axis]);
 
     // plotWidthSC and plotHeightSC give the width and height in pixels of either the overall plot, or of a band within that if applicable.
+    // NB these are derived from the original LayerArgs, so will be outdated if the plot has been resized since draw.
     const [plotWidthSC, plotHeightSC] = [scaleX, scaleY].map(s => Math.abs(s.range()[0] - s.range()[1]) || 1);
 
     // plotWidthDC and plotHeightDC give the extent of the data coordinates per axis.
