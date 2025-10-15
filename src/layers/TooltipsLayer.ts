@@ -29,9 +29,9 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     return diffX * diffX + diffY * diffY;
   };
 
-  private getDistanceSqSC = (coord1DC: Point, coord2DC: Point, yScalingFactor: number) => {
-    const coord1SC = { x: coord1DC.x, y: coord1DC.y * yScalingFactor };
-    const coord2SC = { x: coord2DC.x, y: coord2DC.y * yScalingFactor };
+  private getDistanceSqSC = (coord1DC: Point, coord2DC: Point, scalingFactors: XY<number>) => {
+    const coord1SC = { x: coord1DC.x * scalingFactors.x, y: coord1DC.y * scalingFactors.y };
+    const coord2SC = { x: coord2DC.x * scalingFactors.x, y: coord2DC.y * scalingFactors.y };
 
     return this.getDistanceSq(coord1SC, coord2SC);
   };
@@ -88,24 +88,21 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     // DC to SC
     const coordsDC = { x: numericalScales.x.invert(clientSC.x), y: numericalScales.y.invert(clientSC.y) };
 
+    // plotWidthDC and plotHeightDC give the extent of the data coordinates per axis.
+    const [plotWidthDC, plotHeightDC] = [numericalScales.x, numericalScales.y].map(s => Math.abs(s.domain()[0] - s.domain()[1]) || 1);
     // plotWidthSC and plotHeightSC give the width and height in pixels of either the overall plot, or of a band within that if applicable.
     // NB these are derived from the original LayerArgs, so will be outdated if the plot has been resized since draw.
     const [plotWidthSC, plotHeightSC] = [numericalScales.x, numericalScales.y].map(s => Math.abs(s.range()[0] - s.range()[1]) || 1);
 
-    // plotWidthDC and plotHeightDC give the extent of the data coordinates per axis.
-    const [plotWidthDC, plotHeightDC] = [numericalScales.x, numericalScales.y].map(s => Math.abs(s.domain()[0] - s.domain()[1]) || 1);
-
-    // Edge case: if any extent was 0, don't do any scaling.
-    if ([plotWidthSC, plotHeightSC, plotWidthDC, plotHeightDC].includes(0)) {
-      return 1;
-    }
-
     // Use scaling factors to normalize DC to account for
     // 1) the shape of the plot (which might be quite different from 1:1, especially if using categorical axes)
     // 2) different DC scales on x and y axes (including differences due to zooming)
-    const yScalingFactorForSvgExtents = plotHeightSC / plotWidthSC;
-    const yScalingFactorForDataExtents = plotWidthDC / plotHeightDC;
-    const yScalingFactor = yScalingFactorForSvgExtents * yScalingFactorForDataExtents;
+    let scalingFactors = { x: 1, y: 1 };
+    // Edge case: if any extent was 0, don't do any scaling.
+    if (![plotWidthSC, plotHeightSC, plotWidthDC, plotHeightDC].includes(0)) {
+      scalingFactors.x = plotWidthSC / plotWidthDC;
+      scalingFactors.y = plotHeightSC / plotHeightDC;
+    }
 
     // notice that the min point we want is DC because data points are always
     // going to use data coordinates but the minimum distance that we compare
@@ -120,7 +117,7 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
       if (bands.y !== pDC.bands?.y || bands.x !== pDC.bands?.x) {
         return minPDC;
       }
-      const distanceSC = this.getDistanceSqSC(coordsDC, pDC, yScalingFactor);
+      const distanceSC = this.getDistanceSqSC(coordsDC, pDC, scalingFactors);
       if (distanceSC >= minDistanceNormalized) return minPDC;
       minDistanceNormalized = distanceSC;
       return pDC;
