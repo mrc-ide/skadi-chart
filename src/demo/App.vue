@@ -335,7 +335,7 @@ const areaLogScaleY = ref<boolean>(false);
 const drawChartAreaLines = () => {
   new Chart({ logScale: { x: areaLogScaleX.value, y: areaLogScaleY.value }})
     .addAxes()
-    .addTraces(curvesAxesLabelGridZoomAndLogScale.map((l, i) => ({ ...l, fillArea: [true, false][i % 2] })))
+    .addTraces(curvesAxesLabelGridZoomAndLogScale.slice(0, 2).map((l, i) => ({ ...l, fillArea: [true, false][i % 2] })))
     .addZoom()
     .addTooltips(tooltipHtmlCallback)
     .appendTo(chartAreaLines.value!);
