@@ -253,7 +253,7 @@ const makeRandomCurvesForCategoricalAxis = (domain: string[], axis: "x" | "y"): 
 const tooltipHtmlCallback = (point: PointWithMetadata<Metadata>) => {
   return `<div style="color: ${point.metadata?.color || "black"};">X: ${point.x.toFixed(3)}, Y: ${point.y.toFixed(3)}`
     + (point.bands?.x ? `<br/>Band X: ${point.bands?.x}` : ``)
-    + (point.bands?.y ? `<br/>Band X: ${point.bands?.y}` : ``)
+    + (point.bands?.y ? `<br/>Band Y: ${point.bands?.y}` : ``)
     + `</div>`
 };
 
