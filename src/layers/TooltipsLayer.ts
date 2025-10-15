@@ -87,7 +87,6 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     // DC to SC
     const coordsDC = { x: numericalScales.x.invert(clientSC.x), y: numericalScales.y.invert(clientSC.y) };
 
-    // plotWidthDC and plotHeightDC give the extent of the data coordinates per axis.
     const [plotWidthDC, plotHeightDC] = [numericalScales.x, numericalScales.y].map(s => Math.abs(s.domain()[0] - s.domain()[1]) || 1);
     // plotWidthSC and plotHeightSC give the width and height in pixels of either the overall plot, or of a band within that if applicable.
     // NB these are derived from the original LayerArgs, so will be outdated if the plot has been resized since draw.
