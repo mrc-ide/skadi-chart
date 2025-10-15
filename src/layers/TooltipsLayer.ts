@@ -61,7 +61,6 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     layerArgs: LayerArgs,
     tooltip: D3Selection<HTMLDivElement>,
     flatPointsDC: PointWithMetadata<Metadata>[],
-    yScalingFactor: number,
   ) => {
     // d3.pointer converts coords from CC to SC
     const pointer = d3.pointer(eventCC);
@@ -88,6 +87,25 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     // scale.invert functions convert SC to DC, applying just scale converts from
     // DC to SC
     const coordsDC = { x: numericalScales.x.invert(clientSC.x), y: numericalScales.y.invert(clientSC.y) };
+
+    // plotWidthSC and plotHeightSC give the width and height in pixels of either the overall plot, or of a band within that if applicable.
+    // NB these are derived from the original LayerArgs, so will be outdated if the plot has been resized since draw.
+    const [plotWidthSC, plotHeightSC] = [numericalScales.x, numericalScales.y].map(s => Math.abs(s.range()[0] - s.range()[1]) || 1);
+
+    // plotWidthDC and plotHeightDC give the extent of the data coordinates per axis.
+    const [plotWidthDC, plotHeightDC] = [numericalScales.x, numericalScales.y].map(s => Math.abs(s.domain()[0] - s.domain()[1]) || 1);
+
+    // Edge case: if any extent was 0, don't do any scaling.
+    if ([plotWidthSC, plotHeightSC, plotWidthDC, plotHeightDC].includes(0)) {
+      return 1;
+    }
+
+    // Use scaling factors to normalize DC to account for
+    // 1) the shape of the plot (which might be quite different from 1:1, especially if using categorical axes)
+    // 2) different DC scales on x and y axes (including differences due to zooming)
+    const yScalingFactorForSvgExtents = plotHeightSC / plotWidthSC;
+    const yScalingFactorForDataExtents = plotWidthDC / plotHeightDC;
+    const yScalingFactor = yScalingFactorForSvgExtents * yScalingFactorForDataExtents;
 
     // notice that the min point we want is DC because data points are always
     // going to use data coordinates but the minimum distance that we compare
@@ -153,7 +171,19 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     }, [] as PointWithMetadata<Metadata>[]);
     flatPointsDC = scatterLayers.reduce((points, layer) => ([...layer.points, ...points]), flatPointsDC);
 
-    this.setMouseMove(layerArgs, tooltip, flatPointsDC);
+    const svg = layerArgs.coreLayers[LayerType.Svg];
+    let timerFlag: NodeJS.Timeout | undefined = undefined;
+    svg.on("mousemove", e => {
+      if (timerFlag === undefined && !this.hideTooltip) {
+        // in laggy situation there is a persistent phantom tooltip left behind.
+        // this gets rid of any other tooltips that are not meant to be there
+        document.querySelectorAll(`*[id*="${this.type}"]`)?.forEach(el => el.innerHTML = "");
+        this.handleMouseMove(e, layerArgs, tooltip, flatPointsDC);
+        timerFlag = setTimeout(() => {
+          timerFlag = undefined;
+        }, 25);
+      }
+    });
 
     this.brushStart = () => {
       this.hideTooltip = true;
@@ -161,56 +191,9 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     };
     this.afterZoom = () => {
       this.hideTooltip = false;
-      // We need to set the mousemove with a new y scaling factor, to take account of changed scales.
-      this.setMouseMove(layerArgs, tooltip, flatPointsDC);
     };
 
-    const svg = layerArgs.coreLayers[LayerType.Svg];
     svg.on("mouseleave", () => tooltip.remove());
     svg.on("mouseenter", () => document.body.append(tooltip.node()!));
   };
-
-  private setMouseMove = (layerArgs: LayerArgs, tooltip: D3Selection<HTMLDivElement>, flatPointsDC: PointWithMetadata<Metadata>[]) => {
-    const svg = layerArgs.coreLayers[LayerType.Svg];
-    const yScalingFactor = this.getYScalingFactor(layerArgs);
-    let timerFlag: NodeJS.Timeout | undefined = undefined;
-    svg.on("mousemove", e => {
-      if (timerFlag === undefined && !this.hideTooltip) {
-        // in laggy situation there is a persistent phantom tooltip left behind.
-        // this gets rid of any other tooltips that are not meant to be there
-        document.querySelectorAll(`*[id*="${this.type}"]`)?.forEach(el => el.innerHTML = "");
-        this.handleMouseMove(e, layerArgs, tooltip, flatPointsDC, yScalingFactor);
-        timerFlag = setTimeout(() => {
-          timerFlag = undefined;
-        }, 25);
-      }
-    });
-  }
-
-  // Get a scaling factor to normalize Y DC to account for
-  // 1) the shape of the plot (which might be quite different from 1:1, especially if using categorical axes)
-  // 2) different DC scales on x and y axes (including differences due to zooming)
-  // It's useful to pre-calculate this once per draw/zoom rather than per mousemove event.
-  private getYScalingFactor = (layerArgs: LayerArgs) => {
-    // If there is a categorical scale on either axis, use the numerical scale from a sample band; else use the basic numerical scale.
-    const [scaleX, scaleY] = (["x", "y"] as AxisType[]).map((axis) =>
-      Object.values(layerArgs.scaleConfig.categoricalScales[axis]?.bands || {})[0]
-      ?? layerArgs.scaleConfig.linearScales[axis]);
-
-    // plotWidthSC and plotHeightSC give the width and height in pixels of either the overall plot, or of a band within that if applicable.
-    // NB these are derived from the original LayerArgs, so will be outdated if the plot has been resized since draw.
-    const [plotWidthSC, plotHeightSC] = [scaleX, scaleY].map(s => Math.abs(s.range()[0] - s.range()[1]) || 1);
-
-    // plotWidthDC and plotHeightDC give the extent of the data coordinates per axis.
-    const [plotWidthDC, plotHeightDC] = [scaleX, scaleY].map(s => Math.abs(s.domain()[0] - s.domain()[1]) || 1);
-
-    // Edge case: if any extent was 0, don't do any scaling.
-    if ([plotWidthSC, plotHeightSC, plotWidthDC, plotHeightDC].includes(0)) {
-      return 1;
-    }
-
-    const yScalingFactorForSvgExtents = plotHeightSC / plotWidthSC;
-    const yScalingFactorForDataExtents = plotWidthDC / plotHeightDC;
-    return yScalingFactorForSvgExtents * yScalingFactorForDataExtents;
-  }
 }
