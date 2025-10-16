@@ -1,7 +1,7 @@
 import * as d3 from "@/d3";
 import { LayerType, OptionalLayer } from "./Layer";
 import { TracesLayer } from "./TracesLayer";
-import { D3Selection, LayerArgs, Point, PointWithMetadata, XY } from "@/types";
+import { AxisType, D3Selection, LayerArgs, Point, PointWithMetadata, ScaleNumeric, XY } from "@/types";
 import { ScatterLayer } from "./ScatterLayer";
 
 export type TooltipHtmlCallback<Metadata> =
@@ -28,16 +28,9 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     return diffX * diffX + diffY * diffY;
   };
 
-  private getFastDistanceSqSC = (coord1DC: Point, coord2DC: Point, rangeDC: XY<number>) => {
-    // we want the closest point based on pixels (SC) however if we just calculated
-    // the straight line distance between two points (DC) without scaling the coords
-    // then we would get the closest point if the axes were to scale. However if the
-    // svg was square and x axis extent was [0, 100], while y axis was [0, 1000], then
-    // one vertial pixel (SC) will account for 10 times the data distance (DC) as one
-    // horizontal pixel so we must scale by the range to get an accurate SC distance
-    // representation
-    const coord1SC = { x: coord1DC.x / rangeDC.x, y: coord1DC.y / rangeDC.y };
-    const coord2SC = { x: coord2DC.x / rangeDC.x, y: coord2DC.y / rangeDC.y };
+  private getDistanceSqSC = (coord1DC: Point, coord2DC: Point, scalingFactors: XY<number>) => {
+    const coord1SC = { x: coord1DC.x * scalingFactors.x, y: coord1DC.y * scalingFactors.y };
+    const coord2SC = { x: coord2DC.x * scalingFactors.x, y: coord2DC.y * scalingFactors.y };
 
     return this.getDistanceSq(coord1SC, coord2SC);
   };
@@ -67,15 +60,46 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     layerArgs: LayerArgs,
     tooltip: D3Selection<HTMLDivElement>,
     flatPointsDC: PointWithMetadata<Metadata>[],
-    rangeDC: XY<number>
   ) => {
     // d3.pointer converts coords from CC to SC
-    const [ clientXSC, clientYSC ] = d3.pointer(eventCC);
-    const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
+    const pointer = d3.pointer(eventCC);
+    const clientSC = { x: pointer[0], y: pointer[1] };
+    const numericalScales = { ...layerArgs.scaleConfig.linearScales };
+    const bands = { x: undefined, y: undefined } as Partial<XY<string>>;
+
+    // To get DC coordinates from SC coordinates in the case of band scales,
+    // we must first work out which band we are in.
+    Object.entries(layerArgs.scaleConfig.categoricalScales).forEach(([axis, catScaleConfig]) => {
+      if (catScaleConfig?.bands) {
+        const ax = axis as AxisType;
+        const [band, numScale] = Object.entries(catScaleConfig.bands).find(([category, numericalScale]) => {
+          const range = numericalScale.range();
+          return clientSC[ax] >= Math.min(...range) && clientSC[ax] <= Math.max(...range);
+        }) || [];
+        if (band && numScale) { // Mouse may be outside of any band
+          numericalScales[ax] = numScale;
+          bands[ax] = band;
+        }
+      }
+    });
 
     // scale.invert functions convert SC to DC, applying just scale converts from
     // DC to SC
-    const coordsDC = { x: scaleX.invert(clientXSC), y: scaleY.invert(clientYSC) };
+    const coordsDC = { x: numericalScales.x.invert(clientSC.x), y: numericalScales.y.invert(clientSC.y) };
+
+    const [plotWidthDC, plotHeightDC] = [numericalScales.x, numericalScales.y].map(s => Math.abs(s.domain()[0] - s.domain()[1]) || 1);
+    // plotWidthSC and plotHeightSC give the width and height in pixels of either the overall plot, or of a band within that if applicable.
+    // NB these are derived from the original LayerArgs, so will be outdated if the plot has been resized since draw.
+    const [plotWidthSC, plotHeightSC] = [numericalScales.x, numericalScales.y].map(s => Math.abs(s.range()[0] - s.range()[1]) || 1);
+
+    // Use scaling factors to normalize DC to account for:
+    // 1) the shape of the plot (which might be quite different from 1:1, especially if using categorical axes)
+    // 2) different DC scales on x and y axes (including differences due to zooming)
+    // Edge case: if divisor is 0, don't do any scaling.
+    let scalingFactors = {
+      x: plotWidthDC === 0 ? 1 : plotWidthSC / plotWidthDC,
+      y: plotHeightDC == 0 ? 1 : plotHeightSC / plotHeightDC,
+    };
 
     // notice that the min point we want is DC because data points are always
     // going to use data coordinates but the minimum distance that we compare
@@ -84,27 +108,23 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     // rather than data distance (which can be very different from visual
     // distance if the axes are not the same aspect ratio as the height and
     // width of the svg)
-    //
-    // NOTE: fastMinDistanceSC is not the actual SC distance, we use a crude way
-    // to calculate it quickly, it is going to be off by a scale factor. If
-    // we wanted to calculate the actual SC distance we would first need to
-    // convert DC to SC by using the scaleX and scaleY d3 functions however
-    // these are slow so we use our getFastDistanceSqSC function to quickly
-    // compute a proportional distance since we only care about the minimum
-    // point
-    let fastMinDistanceSC = Infinity;
+    let minDistanceNormalized = Infinity;
     const minPointDC = flatPointsDC.reduce((minPDC, pDC) => {
-      const distanceSC = this.getFastDistanceSqSC(coordsDC, pDC, rangeDC);
-      if (distanceSC >= fastMinDistanceSC) return minPDC;
-      fastMinDistanceSC = distanceSC;
+      // Only consider points in the band we are in
+      if (bands.y !== pDC.bands?.y || bands.x !== pDC.bands?.x) {
+        return minPDC;
+      }
+      const distanceSC = this.getDistanceSqSC(coordsDC, pDC, scalingFactors);
+      if (distanceSC >= minDistanceNormalized) return minPDC;
+      minDistanceNormalized = distanceSC;
       return pDC;
     }, { x: 0, y: 0 });
 
     // SC distance will be the same as pixel distance
-    const minPointSC = { x: scaleX(minPointDC.x), y: scaleY(minPointDC.y) };
+    const minPointSC = { x: numericalScales.x(minPointDC.x), y: numericalScales.y(minPointDC.y) };
     // Having found closest SC point, get its accurate distance to client point
     // to decide if tooltip should be shown
-    const minDistanceSC = this.getDistanceSq({ x: clientXSC, y: clientYSC }, minPointSC);
+    const minDistanceSC = this.getDistanceSq(clientSC, minPointSC);
 
     // if client pointer is more than tooltip radius pixels away from the closest point
     // NOTE: we compare the squares of the distance and tooltip radius
@@ -140,20 +160,12 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
       .style("pointer-events", "none") as any as D3Selection<HTMLDivElement>;
     
     let flatPointsDC = traceLayers.reduce((pointsWithMetadata, layer) => {
-      const layerPointsWithMetadata = layer.linesDC.flatMap(l => {
-        return l.points.map(p => ({ ...p, metadata: l.metadata }));
+      const layerPointsWithMetadata = layer.linesDC.flatMap(({ points, metadata, bands }) => {
+        return points.map(p => ({ ...p, metadata, bands }) );
       });
       return [...layerPointsWithMetadata, ...pointsWithMetadata];
     }, [] as PointWithMetadata<Metadata>[]);
-    flatPointsDC = scatterLayers.reduce((points, layer) => {
-      return [...layer.points.map(p => ({ x: p.x, y: p.y, metadata: p.metadata })), ...points];
-    }, flatPointsDC);
-
-    const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
-    const rangeXDC = scaleX.domain()[1] - scaleX.domain()[0];
-    const rangeYDC = scaleY.domain()[1] - scaleY.domain()[0];
-    // edge case if range is 0 then don't scale the coordinate
-    const rangeDC = { x: rangeXDC || 1, y: rangeYDC || 1 };
+    flatPointsDC = scatterLayers.reduce((points, layer) => ([...layer.points, ...points]), flatPointsDC);
 
     const svg = layerArgs.coreLayers[LayerType.Svg];
     let timerFlag: NodeJS.Timeout | undefined = undefined;
@@ -163,7 +175,7 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
         // in laggy situation there is a persistent phantom tooltip left behind.
         // this gets rid of any other tooltips that are not meant to be there
         document.querySelectorAll(`*[id*="${this.type}"]`)?.forEach(el => el.innerHTML = "");
-        this.handleMouseMove(e, layerArgs, tooltip, flatPointsDC, rangeDC);
+        this.handleMouseMove(e, layerArgs, tooltip, flatPointsDC);
         timerFlag = setTimeout(() => {
           timerFlag = undefined;
         }, 25);
