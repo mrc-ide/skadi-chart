@@ -92,15 +92,14 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     // NB these are derived from the original LayerArgs, so will be outdated if the plot has been resized since draw.
     const [plotWidthSC, plotHeightSC] = [numericalScales.x, numericalScales.y].map(s => Math.abs(s.range()[0] - s.range()[1]) || 1);
 
-    // Use scaling factors to normalize DC to account for
+    // Use scaling factors to normalize DC to account for:
     // 1) the shape of the plot (which might be quite different from 1:1, especially if using categorical axes)
     // 2) different DC scales on x and y axes (including differences due to zooming)
-    // Edge case: if any extent was 0, don't do any scaling.
-    let scalingFactors = { x: 1, y: 1 };
-    if (![plotWidthSC, plotHeightSC, plotWidthDC, plotHeightDC].includes(0)) {
-      scalingFactors.x = plotWidthSC / plotWidthDC;
-      scalingFactors.y = plotHeightSC / plotHeightDC;
-    }
+    // Edge case: if divisor is 0, don't do any scaling.
+    let scalingFactors = {
+      x: plotWidthDC === 0 ? 1 : plotWidthSC / plotWidthDC,
+      y: plotHeightDC == 0 ? 1 : plotHeightSC / plotHeightDC,
+    };
 
     // notice that the min point we want is DC because data points are always
     // going to use data coordinates but the minimum distance that we compare
