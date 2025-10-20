@@ -110,7 +110,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
     const currLineSC = this.lowResLinesSC[index];
     return (t: number) => {
       const intermediateLineSC = currLineSC.map(({x, y}) => this.getNewPoint!(x, y, t));
-      return customLineGen(intermediateLineSC, zoomExtents);
+      return customLineGen(intermediateLineSC, zoomExtents).join("");
     };
   };
 
@@ -137,7 +137,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
         y: [scales.y(currentExtentsDC.y[0]), scales.y(currentExtentsDC.y[1])],
       };
 
-      const linePathSC = customLineGen(this.lowResLinesSC[index], currentExtentsSC);
+      const linePathSC = customLineGen(this.lowResLinesSC[index], currentExtentsSC).join("");
       return layerArgs.coreLayers[LayerType.BaseLayer].append("path")
         .attr("id", `${layerArgs.getHtmlId(LayerType.Trace)}-${index}`)
         .attr("pointer-events", "none")
@@ -209,7 +209,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
       // without the user knowing
       this.updateLowResLinesSC(layerArgs);
       this.traces.forEach((t, index) => {
-        t.attr("d", customLineGen(this.lowResLinesSC[index], zoomExtentsSC))
+        t.attr("d", customLineGen(this.lowResLinesSC[index], zoomExtentsSC).join(""))
       });
     };
   };
