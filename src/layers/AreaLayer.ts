@@ -1,7 +1,7 @@
 // An area is applied to a trace if the line is configured with `fillArea` as true.
 // It reuses the line points from the trace layer to draw a filled area under the line.
 
-import { D3Selection, LayerArgs, Point, ZoomExtents } from "@/types";
+import { D3Selection, LayerArgs, LineConfig, Point, ScaleNumeric, XY, ZoomExtents } from "@/types";
 import { LayerType, OptionalLayer } from "./Layer";
 import { TracesLayer } from "./TracesLayer";
 import { numScales } from "@/helpers";
@@ -16,11 +16,32 @@ export class AreaLayer<Metadata> extends OptionalLayer {
     super();
   };
 
-  private loopyDoopyLine = (lineSegments: string[], firstYOriginPointSC: Point, lastYOriginPointSC: Point) => {
+  private loopyDoopyLine = (
+    lineSegments: string[],
+    firstYOriginPointSC: Point,
+    lastYOriginPointSC: Point,
+    lineDC: LineConfig<Metadata>,
+    layerArgs: LayerArgs,
+  ) => {
+    const scales = numScales(lineDC.bands, layerArgs);
     return getNewSvgPoint(firstYOriginPointSC, "M")
-      + lineSegments.map((segment) => {
-        console.log(segment.length === 0);
-        return "L" + segment.substring(1)
+      + lineSegments.map((segment, i) => {
+        const isLastSegment = i === lineSegments.length - 1;
+        const mySegment = "L" + segment.substring(1);
+        if (!isLastSegment) {
+          return mySegment;
+        } else {
+          const finalPointOfLineDC = lineDC.points[lineDC.points.length - 1];
+          const rightMaxSC = scales.x(finalPointOfLineDC.x);
+          const plotRightEdgeSC = layerArgs.bounds.width - layerArgs.bounds.margin.right;
+          const drawToX = Math.min(plotRightEdgeSC, rightMaxSC);
+          
+          const lastPointInSegmentSC = segment.split("L").at(-1)!;
+          const lastPointYSC = lastPointInSegmentSC.split(",")[1];
+
+          const pointThatTiesItAllUp = getNewSvgPoint({ x: drawToX, y: Number.parseFloat(lastPointYSC) }, "L")
+          return mySegment + pointThatTiesItAllUp;
+        }
       }).join("")
       + getNewSvgPoint(lastYOriginPointSC, "L")
       + "Z";
@@ -47,7 +68,9 @@ export class AreaLayer<Metadata> extends OptionalLayer {
       const linePathSC = this.loopyDoopyLine(
         customLineGen(currLineSC, currentExtentsSC, true),
         firstYOriginPoint,
-        lastYOriginPoint
+        lastYOriginPoint,
+        lineDC,
+        layerArgs,
       );
 
       return layerArgs.coreLayers[LayerType.BaseLayer].append("path")
@@ -83,7 +106,7 @@ export class AreaLayer<Metadata> extends OptionalLayer {
           const promise = path
             .transition()
             .duration(layerArgs.globals.animationDuration)
-            .attrTween("d", () => this.customTween(i, zoomExtentsSC))
+            .attrTween("d", () => this.customTween(i, zoomExtentsSC, layerArgs))
             .end();
           promises.push(promise);
         }
@@ -116,7 +139,9 @@ export class AreaLayer<Metadata> extends OptionalLayer {
         const linePathSC = this.loopyDoopyLine(
           customLineGen(this.tracesLayer.lowResLinesSC[index], zoomExtentsSC, true),
           firstYOriginPoint,
-          lastYOriginPoint
+          lastYOriginPoint,
+          lineDC,
+          layerArgs,
         );
 
         path.attr("d", linePathSC)
@@ -136,7 +161,7 @@ export class AreaLayer<Metadata> extends OptionalLayer {
   // d3 feeds the function we return from this function with t, which goes from
   // 0 to 1 with different jumps based on your ease, t = 0 is the start state of
   // your animation, t = 1 is the end state of your animation
-  private customTween = (index: number, zoomExtents: ZoomExtents) => {
+  private customTween = (index: number, zoomExtents: ZoomExtents, layerArgs: LayerArgs) => {
     const currLineSC = this.tracesLayer.lowResLinesSC[index];
     const getNewPoint = this.tracesLayer.getNewPoint!;
     const yOriginSC = this.preZoomYOriginSCs[this.tracesLayer.linesDC[index].bands?.y || "main"];
@@ -148,7 +173,9 @@ export class AreaLayer<Metadata> extends OptionalLayer {
       return this.loopyDoopyLine(
         customLineGen(intermediateLineSC, zoomExtents, true),
         firstYOriginPoint,
-        lastYOriginPoint
+        lastYOriginPoint,
+        this.tracesLayer.linesDC[index],
+        layerArgs,
       );
     }
   };
