@@ -16,6 +16,16 @@ export class AreaLayer<Metadata> extends OptionalLayer {
     super();
   };
 
+  private loopyDoopyLine = (lineSegments: string[], firstYOriginPointSC: Point, lastYOriginPointSC: Point) => {
+    return getNewSvgPoint(firstYOriginPointSC, "M")
+      + lineSegments.map((segment) => {
+        console.log(segment.length === 0);
+        return "L" + segment.substring(1)
+      }).join("")
+      + getNewSvgPoint(lastYOriginPointSC, "L")
+      + "Z";
+  }
+
   draw = (layerArgs: LayerArgs, currentExtentsDC: ZoomExtents) => {
     this.paths = this.tracesLayer.linesDC.map((lineDC, index) => {
       if (!lineDC.fillArea || layerArgs.chartOptions.logScale.y) {
@@ -30,11 +40,15 @@ export class AreaLayer<Metadata> extends OptionalLayer {
       };
 
       const currLineSC = this.tracesLayer.lowResLinesSC[index];
-      const linePathSC = customLineGen(currLineSC, currentExtentsSC, true);
-
       const yOriginSC = scales.y(0);
       const firstYOriginPoint = { ...currLineSC[0], y: yOriginSC };
       const lastYOriginPoint = { ...currLineSC[currLineSC.length - 1], y: yOriginSC };
+
+      const linePathSC = this.loopyDoopyLine(
+        customLineGen(currLineSC, currentExtentsSC, true),
+        firstYOriginPoint,
+        lastYOriginPoint
+      );
 
       return layerArgs.coreLayers[LayerType.BaseLayer].append("path")
         .attr("id", `${layerArgs.getHtmlId(LayerType.Area)}-${index}`)
@@ -42,7 +56,7 @@ export class AreaLayer<Metadata> extends OptionalLayer {
         .attr("fill", lineDC.style.color || "black")
         .attr("stroke", "none")
         .attr("opacity", lineDC.style.opacity ? lineDC.style.opacity / 2 : 0.5)
-        .attr("d", this.closedSVGPath(linePathSC, firstYOriginPoint, lastYOriginPoint));
+        .attr("d", linePathSC);
     });
 
     this.beforeZoom = () => {
@@ -94,14 +108,18 @@ export class AreaLayer<Metadata> extends OptionalLayer {
 
         const postZoomYOriginSC = numScales(lineDC.bands, layerArgs).y(0);
 
-        const linePathSC = customLineGen(this.tracesLayer.lowResLinesSC[index], zoomExtentsSC, true);
-
         const currLineSC = this.tracesLayer.lowResLinesSC[index];
 
         const firstYOriginPoint = { ...currLineSC[0], y: postZoomYOriginSC };
         const lastYOriginPoint = { ...currLineSC[currLineSC.length - 1], y: postZoomYOriginSC };
 
-        path.attr("d", this.closedSVGPath(linePathSC, firstYOriginPoint, lastYOriginPoint))
+        const linePathSC = this.loopyDoopyLine(
+          customLineGen(this.tracesLayer.lowResLinesSC[index], zoomExtentsSC, true),
+          firstYOriginPoint,
+          lastYOriginPoint
+        );
+
+        path.attr("d", linePathSC)
       });
     }
   }
@@ -124,12 +142,14 @@ export class AreaLayer<Metadata> extends OptionalLayer {
     const yOriginSC = this.preZoomYOriginSCs[this.tracesLayer.linesDC[index].bands?.y || "main"];
     return (t: number) => {
       const intermediateLineSC = currLineSC.map(({x, y}) => getNewPoint(x, y, t));
-      const intermediateLinePathSC = customLineGen(intermediateLineSC, zoomExtents, true);
 
       const firstYOriginPoint = getNewPoint(currLineSC[0].x, yOriginSC, t);
       const lastYOriginPoint = getNewPoint(currLineSC[currLineSC.length - 1].x, yOriginSC, t);
-
-      return this.closedSVGPath(intermediateLinePathSC, firstYOriginPoint, lastYOriginPoint)
+      return this.loopyDoopyLine(
+        customLineGen(intermediateLineSC, zoomExtents, true),
+        firstYOriginPoint,
+        lastYOriginPoint
+      );
     }
   };
 }

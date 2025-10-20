@@ -32,7 +32,9 @@ export const customLineGen = (lineSC: Point[], zoomExtents: ZoomExtents, fillAre
     if (wasLastPointInRange) {
       currentSegmentPath += getNewSvgPoint(lineSC[i], currentSegmentPath ? "L" : "M");
     } else if (isPointInRange) {
-      lineSegmentPaths.push(currentSegmentPath);
+      if (currentSegmentPath.length) {
+        lineSegmentPaths.push(currentSegmentPath);
+      }
       currentSegmentPath = "";
       // prev point will always exist, i.e. i will never be 0 in this branch
       // because wasLastPointInRange will always match isPointInRange for
@@ -43,7 +45,9 @@ export const customLineGen = (lineSC: Point[], zoomExtents: ZoomExtents, fillAre
     }
     wasLastPointInRange = isPointInRange;
   }
-  lineSegmentPaths.push(currentSegmentPath);
+  if (currentSegmentPath.length) {
+    lineSegmentPaths.push(currentSegmentPath);
+  }
 
   return lineSegmentPaths;
 };
