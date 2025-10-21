@@ -1,6 +1,7 @@
 import { D3Selection, LayerArgs, Lines, LineConfig, Point, ZoomExtents, ScaleNumeric, XY } from "@/types";
 import { LayerType, OptionalLayer } from "./Layer";
 import { numScales } from "@/helpers";
+import { customLineGen } from "@/customLineGen";
 
 export type TracesOptions = {
   RDPEpsilon: number | null
@@ -95,7 +96,7 @@ const RDPAlgorithm = (linesSC: Point[][], epsilon: number) => {
 export class TracesLayer<Metadata> extends OptionalLayer {
   type = LayerType.Trace;
   private traces: D3Selection<SVGPathElement>[] = [];
-  private lowResLinesSC: Point[][] = [];
+  lowResLinesSC: Point[][] = [];
   private getNewPoint: null | ((x: number, y: number, t: number) => Point) = null;
 
   constructor(public linesDC: Lines<Metadata>, public options: TracesOptions) {
@@ -109,47 +110,8 @@ export class TracesLayer<Metadata> extends OptionalLayer {
     const currLineSC = this.lowResLinesSC[index];
     return (t: number) => {
       const intermediateLineSC = currLineSC.map(({x, y}) => this.getNewPoint!(x, y, t));
-      return this.customLineGen(intermediateLineSC, zoomExtents);
+      return customLineGen(intermediateLineSC, zoomExtents).join("");
     };
-  };
-
-  private round = (num: number) => Math.floor(num * 10) / 10;
-
-  private getNewSvgPoint = (p: Point, moveOrLine: "M" | "L") => {
-    return moveOrLine + this.round(p.x) + "," + this.round(p.y);
-  }
-
-  private customLineGen = (lineSC: Point[], zoomExtents: ZoomExtents) => {
-    let retStr = "";
-    const { x, y } = lineSC[0];
-    let wasLastPointInRange = zoomExtents.x[0] <= x && x <= zoomExtents.x[1]
-                           && zoomExtents.y[1] <= y && y <= zoomExtents.y[0];
-
-    for (let i = 0; i < lineSC.length; i++) {
-      const { x, y } = lineSC[i];
-      const isPointInRange = zoomExtents.x[0] <= x && x <= zoomExtents.x[1]
-                          && zoomExtents.y[1] <= y && y <= zoomExtents.y[0];
-
-      // if last point in range we always want to add next point even if it
-      // isn't in range because we want the line to at least continue off the
-      // right edge of the svg
-      //
-      // if the last point wasn't in range but this point is, then we must be
-      // at the start of a new line segment so add the previous point too
-      // because we want the line to go off the left edge of the svg
-      if (wasLastPointInRange) {
-        retStr += this.getNewSvgPoint(lineSC[i], retStr ? "L" : "M");
-      } else if (isPointInRange) {
-        // prev point will always exist, i.e. i will never be 0 in this branch
-        // because wasLastPointInRange will always match isPointInRange for
-        // i = 0 so we have to fall into the previous branch
-        retStr += this.getNewSvgPoint(lineSC[i - 1], "M");
-        retStr += this.getNewSvgPoint(lineSC[i], "L");
-      }
-      wasLastPointInRange = isPointInRange;
-    }
-
-    return retStr;
   };
 
   private updateLowResLinesSC = (layerArgs: LayerArgs) => {
@@ -175,7 +137,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
         y: [scales.y(currentExtentsDC.y[0]), scales.y(currentExtentsDC.y[1])],
       };
 
-      const linePathSC = this.customLineGen(this.lowResLinesSC[index], currentExtentsSC);
+      const linePathSC = customLineGen(this.lowResLinesSC[index], currentExtentsSC).join("");
       return layerArgs.coreLayers[LayerType.BaseLayer].append("path")
         .attr("id", `${layerArgs.getHtmlId(LayerType.Trace)}-${index}`)
         .attr("pointer-events", "none")
@@ -247,7 +209,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
       // without the user knowing
       this.updateLowResLinesSC(layerArgs);
       this.traces.forEach((t, index) => {
-        t.attr("d", this.customLineGen(this.lowResLinesSC[index], zoomExtentsSC))
+        t.attr("d", customLineGen(this.lowResLinesSC[index], zoomExtentsSC).join(""))
       });
     };
   };

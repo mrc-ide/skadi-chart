@@ -318,6 +318,9 @@ export class Chart<Metadata = any> {
     const d3ScaleY = this.options.logScale.y ? d3.scaleLog : d3.scaleLinear;
     const numericalScaleY = d3ScaleY().domain(initialDomain.y).range(rangeY);
 
+    const maxScaleX = numericalScaleX.copy().domain([x.start, x.end]);
+    const maxScaleY = numericalScaleY.copy().domain([y.start, y.end]);
+
     let ticksX = 10;
     if (width < 500) ticksX = 6;
     if (width < 300) ticksX = 3;
@@ -340,6 +343,7 @@ export class Chart<Metadata = any> {
           x: this.createCategoricalScale(categoricalScales.x, rangeX, numericalScaleX, "x"),
           y: this.createCategoricalScale(categoricalScales.y, rangeY, numericalScaleY, "y"),
         },
+        maxScales: { x: maxScaleX, y: maxScaleY }
       },
       coreLayers: {
         [LayerType.Svg]: svg,
