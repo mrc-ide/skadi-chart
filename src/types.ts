@@ -53,7 +53,6 @@ export type LayerArgs = {
     linearScales: XY<ScaleNumeric>,
     scaleExtents: Scales,
     categoricalScales: Partial<XY<CategoricalScaleConfig>>,
-    maxScales: XY<ScaleNumeric>,
   },
   coreLayers: {
     [LayerType.Svg]: D3Selection<SVGSVGElement>,
@@ -70,17 +69,19 @@ export type Scales = XY<{ start: number, end: number }>
 export type PartialScales = Partial<XY<{ start?: number, end?: number }>>
 
 export type LineStyle = {
-  color?: string,
+  strokeColor?: string,
   opacity?: number,
-  strokeWidth?: number
-  strokeDasharray?: string
+  strokeWidth?: number,
+  strokeDasharray?: string,
+  fillColor?: string,
+  fillOpacity?: number
 }
 export type LineConfig<Metadata> = {
   points: Point[],
   style: LineStyle,
   metadata?: Metadata,
   bands?: Partial<XY<string>>,
-  fillArea?: boolean
+  fill?: boolean
 }
 export type Lines<Metadata> = LineConfig<Metadata>[]
 

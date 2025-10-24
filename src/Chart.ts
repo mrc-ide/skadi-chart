@@ -8,6 +8,8 @@ import { LayerType, LifecycleHooks, OptionalLayer } from "./layers/Layer";
 import { GridLayer } from "./layers/GridLayer";
 import html2canvas from "html2canvas";
 import { ScatterLayer } from "./layers/ScatterLayer";
+import { getXYMinMax } from "./helpers";
+import { AreaLayer } from "./layers/AreaLayer";
 
 // used for holding custom lifecycle hooks only - layer has no visual effect
 class CustomHooksLayer extends OptionalLayer {
@@ -134,6 +136,11 @@ export class Chart<Metadata = any> {
     return this;
   };
 
+  addArea = () => {
+    this.optionalLayers.push(new AreaLayer());
+    return this;
+  };
+
   addZoom = (options?: ZoomOptions) => {
     const optionsWithDefaults: ZoomOptions = {
       lockAxis: options?.lockAxis ?? null
@@ -193,21 +200,6 @@ export class Chart<Metadata = any> {
     return this;
   };
 
-  private getXYMinMax = (points: Point[]) => {
-    const scales: Scales = {
-      x: { start: Infinity, end: -Infinity },
-      y: { start: Infinity, end: -Infinity }
-    };
-    for (let i = 0; i < points.length; i++) {
-      const { x, y } = points[i];
-      if (x < scales.x.start) scales.x.start = x;
-      if (x > scales.x.end) scales.x.end = x;
-      if (y < scales.y.start) scales.y.start = y;
-      if (y > scales.y.end) scales.y.end = y;
-    }
-    return scales;
-  };
-
   private addLinearPadding = (range: Scales["x"], paddingFactor: number): Scales["x"] => {
     const rangeLinear = Math.abs(range.start - range.end);
     return {
@@ -238,7 +230,7 @@ export class Chart<Metadata = any> {
       return [...layer.points.map(p => ({ x: p.x, y: p.y })), ...points];
     }, flatPointsDC);
 
-    const minMax = this.getXYMinMax(flatPointsDC);
+    const minMax = getXYMinMax(flatPointsDC);
     const paddingFactorX = 0.02;
     const paddingFactorY = 0.03;
   
@@ -318,9 +310,6 @@ export class Chart<Metadata = any> {
     const d3ScaleY = this.options.logScale.y ? d3.scaleLog : d3.scaleLinear;
     const numericalScaleY = d3ScaleY().domain(initialDomain.y).range(rangeY);
 
-    const maxScaleX = numericalScaleX.copy().domain([x.start, x.end]);
-    const maxScaleY = numericalScaleY.copy().domain([y.start, y.end]);
-
     let ticksX = 10;
     if (width < 500) ticksX = 6;
     if (width < 300) ticksX = 3;
@@ -343,7 +332,6 @@ export class Chart<Metadata = any> {
           x: this.createCategoricalScale(categoricalScales.x, rangeX, numericalScaleX, "x"),
           y: this.createCategoricalScale(categoricalScales.y, rangeY, numericalScaleY, "y"),
         },
-        maxScales: { x: maxScaleX, y: maxScaleY }
       },
       coreLayers: {
         [LayerType.Svg]: svg,

@@ -1,7 +1,7 @@
 import { D3Selection, LayerArgs, Lines, LineConfig, Point, ZoomExtents, ScaleNumeric, XY } from "@/types";
 import { LayerType, OptionalLayer } from "./Layer";
 import { numScales } from "@/helpers";
-import { customLineGen } from "@/customLineGen";
+import { customLineGen } from "@/helpers";
 
 export type TracesOptions = {
   RDPEpsilon: number | null
@@ -97,7 +97,8 @@ export class TracesLayer<Metadata> extends OptionalLayer {
   type = LayerType.Trace;
   private traces: D3Selection<SVGPathElement>[] = [];
   lowResLinesSC: Point[][] = [];
-  private getNewPoint: null | ((x: number, y: number, t: number) => Point) = null;
+  getNewPoint: null | ((x: number, y: number, t: number) => Point) = null;
+  getNewPointInverse: null | ((x: number, y: number, t: number) => Point) = null;
 
   constructor(public linesDC: Lines<Metadata>, public options: TracesOptions) {
     super();
@@ -115,6 +116,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
   };
 
   private updateLowResLinesSC = (layerArgs: LayerArgs) => {
+    const { linearScales, categoricalScales } = layerArgs.scaleConfig;
     const linesSC = this.linesDC.map(l => {
       const scales = numScales(l.bands, layerArgs);
       return l.points.map(p => ({ x: scales.x(p.x), y: scales.y(p.y) }));
@@ -128,6 +130,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
 
   draw = (layerArgs: LayerArgs, currentExtentsDC: ZoomExtents) => {
     this.updateLowResLinesSC(layerArgs);
+    const { linearScales, categoricalScales } = layerArgs.scaleConfig;
 
     this.traces = this.linesDC.map((l, index) => {
       const scales = numScales(l.bands, layerArgs);
@@ -142,7 +145,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
         .attr("id", `${layerArgs.getHtmlId(LayerType.Trace)}-${index}`)
         .attr("pointer-events", "none")
         .attr("fill", "none")
-        .attr("stroke", l.style.color || "black")
+        .attr("stroke", l.style.strokeColor || "black")
         .attr("opacity", l.style.opacity || 1)
         .attr("stroke-width", l.style.strokeWidth || 0.5)
         .attr("stroke-dasharray", l.style.strokeDasharray || "")
@@ -182,6 +185,10 @@ export class TracesLayer<Metadata> extends OptionalLayer {
       this.getNewPoint = (x, y, t) => ({
         x: x * (t * scaleRelativeX + 1) - t * offsetXSC,
         y: y * (t * scaleRelativeY + 1) - t * offsetYSC
+      });
+      this.getNewPointInverse = (x, y, t) => ({
+        x: (x + t * offsetXSC) / (t * scaleRelativeX + 1),
+        y: (y + t * offsetYSC) / (t * scaleRelativeY + 1)
       });
     };
 

@@ -36,6 +36,9 @@
   <button @click="() => categoricalXAxisLogScaleX = !categoricalXAxisLogScaleX">Toggle log scale X</button>
   <button @click="() => categoricalXAxisLogScaleY = !categoricalXAxisLogScaleY">Toggle log scale Y</button>
 
+  <h1>Area</h1>
+  <div class="chart" ref="chartArea" id="chartArea"></div>
+
   <h1>Responsive chart (and dashed lines)</h1>
   <div class="chart-responsive" ref="chartResponsive" id="chartResponsive"></div>
 
@@ -77,6 +80,7 @@ const chartAxesLabelGridZoomAndLogScale = ref<HTMLDivElement | null>(null);
 const chartPointsAxesAndZoom = ref<HTMLDivElement | null>(null);
 const chartTooltips = ref<HTMLDivElement | null>(null);
 const chartResponsive = ref<HTMLDivElement | null>(null);
+const chartArea = ref<HTMLDivElement | null>(null);
 const chartStress = ref<HTMLDivElement | null>(null);
 const chartStressPoints = ref<HTMLDivElement | null>(null);
 const chartCustom = ref<HTMLDivElement | null>(null);
@@ -213,7 +217,7 @@ const makeRandomCurves = (props: typeof propsBasic) => {
       points: [],
       style: {
         opacity: Math.random() * props.opacityRange + props.opacityOffset,
-        color,
+        strokeColor: color,
         strokeWidth: Math.random() * 1
       },
       metadata: { color }
@@ -244,7 +248,7 @@ const makeRandomCurvesForCategoricalAxis = (domain: string[], axis: "x" | "y"): 
         return { ...p, y };
       }),
       bands: { [axis]: band },
-      style: { ...line.style, color },
+      style: { ...line.style, strokeColor: color },
       metadata: { ...line.metadata, color }
     }
   })
@@ -272,6 +276,12 @@ const pointsAxesLabelGridZoomAndLogScale = makeRandomPoints(pointPropsBasic);
 pointsAxesLabelGridZoomAndLogScale.forEach(p => p.x -= 0.5);
 const pointsPointsAxesAndZoom = makeRandomPoints(pointPropsBasic);
 const curvesTooltips = makeRandomCurves(propsBasic);
+const curvesArea = makeRandomCurves(propsBasic);
+curvesArea.forEach(c => {
+  c.fill = true;
+  c.style.fillColor = c.style.strokeColor;
+  c.style.fillOpacity = (c.style.opacity || 1) / 10;
+});
 const pointsTooltips = makeRandomPoints(pointPropsTooltips);
 const curvesResponsive = makeRandomCurves(propsBasic);
 const curvesCustom = makeRandomCurves(propsBasic);
@@ -372,6 +382,13 @@ onMounted(async () => {
     .addAxes()
     .addGridLines()
     .appendTo(chartAxesAndGrid.value!);
+
+  new Chart()
+    .addTraces(curvesArea)
+    .addAxes()
+    .addArea()
+    .addZoom()
+    .appendTo(chartArea.value!);
 
   new Chart()
     .addTraces(curvesAxesLabelsAndGrid)
