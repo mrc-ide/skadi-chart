@@ -138,6 +138,7 @@ describe("Chart tests", () => {
     const logXPaddingFactor = Math.exp(Math.log(5) * 0.02)
     const logYPaddingFactor = Math.exp(Math.log(3) * 0.03)
 
+    // + and - in log space become * and / in normal space
     expect(autoscaled.x.start).toBeCloseTo(1 / logXPaddingFactor);
     expect(autoscaled.y.start).toBeCloseTo(1 / logYPaddingFactor);
 

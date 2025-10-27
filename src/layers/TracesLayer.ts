@@ -80,7 +80,6 @@ const doRDP = (
     // slice1 and slice2 so we have to remove the duplicate point
     return [...res1.slice(0, -1), ...res2];
   } else {
-    // change code here to make it return indices 
     const startRoundedSC = roundPoint(pointsSC[slice[0]]);
     const endRoundedSC = roundPoint(pointsSC[slice[1]]);
     return [startRoundedSC, endRoundedSC];
