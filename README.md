@@ -107,6 +107,7 @@ class CustomLayer extends OptionalLayer {
 new Chart()
   .addAxes()
   .addTraces(lines)
+  .addArea()
   .addScatterPoints(points)
   .addGridLines()
   .addZoom()
@@ -164,6 +165,11 @@ the graph. This data will also be used for autoscaling the axes if you haven't p
 fixed scale.
   ```ts
   chart.addTraces(lines);
+  ```
+* `addArea` adds an [AreaLayer](./src/layers/AreaLayer.ts). This will add an area underneath
+the traces to the graph.
+  ```ts
+  chart.addArea();
   ```
 * `addScatterPoints` add a [ScatterLayer](./src/layers/ScatterLayer.ts). This will add
 scatter points to the graph. This data will also be used for autoscaling the axes if you

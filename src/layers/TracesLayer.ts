@@ -1,4 +1,4 @@
-import { D3Selection, LayerArgs, Lines, LineConfig, Point, ZoomExtents, ScaleNumeric, XY } from "@/types";
+import { D3Selection, LayerArgs, Lines, Point, ZoomExtents } from "@/types";
 import { LayerType, OptionalLayer } from "./Layer";
 import { numScales } from "@/helpers";
 import { customLineGen } from "@/helpers";
@@ -116,7 +116,6 @@ export class TracesLayer<Metadata> extends OptionalLayer {
   };
 
   private updateLowResLinesSC = (layerArgs: LayerArgs) => {
-    const { linearScales, categoricalScales } = layerArgs.scaleConfig;
     const linesSC = this.linesDC.map(l => {
       const scales = numScales(l.bands, layerArgs);
       return l.points.map(p => ({ x: scales.x(p.x), y: scales.y(p.y) }));
@@ -130,7 +129,6 @@ export class TracesLayer<Metadata> extends OptionalLayer {
 
   draw = (layerArgs: LayerArgs, currentExtentsDC: ZoomExtents) => {
     this.updateLowResLinesSC(layerArgs);
-    const { linearScales, categoricalScales } = layerArgs.scaleConfig;
 
     this.traces = this.linesDC.map((l, index) => {
       const scales = numScales(l.bands, layerArgs);

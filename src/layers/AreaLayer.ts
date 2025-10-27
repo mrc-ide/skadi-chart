@@ -1,5 +1,4 @@
-import * as d3 from "@/d3";
-import { D3Selection, LayerArgs, LineConfig, Lines, Point, ScaleNumeric, XY, ZoomExtents, ZoomProperties } from "@/types";
+import { LayerArgs, Point, ZoomExtents, ZoomProperties } from "@/types";
 import { LayerType, OptionalLayer } from "./Layer";
 import { TracesLayer } from "./TracesLayer";
 import { customLineGen, getSvgRectPath, getXYMinMax, numScales } from "@/helpers";
