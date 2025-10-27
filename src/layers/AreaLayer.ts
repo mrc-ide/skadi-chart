@@ -148,18 +148,68 @@ export class AreaLayer<Metadata> extends OptionalLayer {
         xMaxSC: tXMaxSC
       };
 
-      const tZoomTopLeftSC = traceLayer.getNewPointInverse!(zoomExtentsSC.x[0], zoomExtentsSC.y[0], t);
-      const tZoomBottomRightSC = traceLayer.getNewPointInverse!(zoomExtentsSC.x[1], zoomExtentsSC.y[1], t);
+      /*
+      The closeSvgPath method needs the zoomExtentsDC at time step t. In other words, as the graph zooms in
+      we need to find out what the data coordinate (DC) is of the corners of the svg at each time step t.
+      closeSvgPath then will use these boundaries to test if points are in the canvasPaths (which are in DC).
+      To get to DC, we have to use scale.invert on D3's scale, however the scale are has domain equal to the
+      zoom extents at t = 1. So we need to find out what zoom extents SC at some time t = T map to at time
+      t = 1.
 
-      const tTopLeftSC = traceLayer.getNewPoint!(tZoomTopLeftSC.x, tZoomTopLeftSC.y, 1);
-      const tBottomRightSC = traceLayer.getNewPoint!(tZoomBottomRightSC.x, tZoomBottomRightSC.y, 1);
+      To do this we will work out zoom extents SC at time t = 0 from t = T using getNewPointInverse (go backwards)
+      and then transform those to time t = 1 using getNewPoint (go forwards).
 
-      const tTopLeftDC = { x: scales.x.invert(tTopLeftSC.x), y: scales.y.invert(tTopLeftSC.y) };
-      const tBottomRightDC = { x: scales.x.invert(tBottomRightSC.x), y: scales.y.invert(tBottomRightSC.y) };
+      At some time step T, the zoomExtentsSC are always going to be the same as the corners of the svg don't
+      change their svg coordinates. We can use the getNewPointInverse function to find out where the zoom
+      extents at T, map to at t = 0 (start of the zoom). If we are zooming in, then the zoom extents at t = T
+      will map to a smaller rectangle at t = 0: (X's at time t = T map to a smaller box at t = 0)
+
+      t = 0                              t = T                     
+      __________________________         X________________________X
+      |   X                X   |         |                        |
+      |       __________       |         |                        |
+      |      /          \      |         |                        |
+      |     /            \     |   <--   |     ______________     |
+      |   X/              \X   |         |    /              \    |
+      |   /                \   |         |   /                \   |
+      |  /                  \  |         |  /                  \  |
+      | /                    \ |         | /                    \ |
+      __________________________         X________________________X
+
+      Now we can use getNewPoint on the zoom extents SC at time t = 0 and get zoom extents SC at t = 1:
+
+      t = 0                              t = 1                     
+                                       X                             X
+
+      __________________________         __________________________
+      |   X                X   |         |                        |
+      |       __________       |         |                        |
+      |      /          \      |         |                        |
+      |     /            \     |   -->   |                        |
+      |   X/              \X   |         |                        |
+      |   /                \   |         |   __________________   |
+      |  /                  \  |         |  /                  \  |
+      | /                    \ |         | /                    \ |
+      __________________________         __________________________
+                                         
+                                       X                            X
+
+      Once we have these zoom extents SC in time t = 1, we can use our scales (which are also at t = 1)
+      and use scale.invert to get the zoom extents DC which correspond to the zoom extents SC at time
+      t = T.
+      */
+      const topLeftSC_0 = traceLayer.getNewPointInverse!(zoomExtentsSC.x[0], zoomExtentsSC.y[0], t);
+      const bottomRightSC_0 = traceLayer.getNewPointInverse!(zoomExtentsSC.x[1], zoomExtentsSC.y[1], t);
+
+      const topLeftSC_1 = traceLayer.getNewPoint!(topLeftSC_0.x, topLeftSC_0.y, 1);
+      const bottomRightSC_1 = traceLayer.getNewPoint!(bottomRightSC_0.x, bottomRightSC_0.y, 1);
+
+      const topLeftDC_t = { x: scales.x.invert(topLeftSC_1.x), y: scales.y.invert(topLeftSC_1.y) };
+      const bottomRightDC_t = { x: scales.x.invert(bottomRightSC_1.x), y: scales.y.invert(bottomRightSC_1.y) };
 
       const tZoomExtentsDC: ZoomExtents = {
-        x: [tTopLeftDC.x, tBottomRightDC.x],
-        y: [tTopLeftDC.y, tBottomRightDC.y]
+        x: [topLeftDC_t.x, bottomRightDC_t.x],
+        y: [topLeftDC_t.y, bottomRightDC_t.y]
       };
 
       return this.closeSvgPath(tLineSegmentsSC, zoomExtentsSC, tZoomExtentsDC, tLineBoundaryInfo);
@@ -171,6 +221,11 @@ export class AreaLayer<Metadata> extends OptionalLayer {
     const [ bottomSC, topSC ] = zoomExtentsSC.y;
     const [ bottomDC, topDC ] = zoomExtentsDC.y;
 
+    // remember that in SC higher y values are lower on the screen
+    // this find the closest boundary to the x axis:
+    //   if x axis is in view, this is the x axis
+    //   if x axis is above the top of the svg, we treat the top extent as the x axis for closed area loops
+    //   if x axis is below the bottom of the svg, we treat the bottom extent as the x axis for closed area loops
     let yCoordOfXAxisBoundarySC: number;
     if (topSC < yCoordForXAxisSC && yCoordForXAxisSC < bottomSC) {
       yCoordOfXAxisBoundarySC = yCoordForXAxisSC;
@@ -187,46 +242,46 @@ export class AreaLayer<Metadata> extends OptionalLayer {
     const endXBoundaryDC = Math.min(zoomExtentsDC.x[1], xMaxDC);
     const midXBoundaryDC = (startXBoundaryDC + endXBoundaryDC) / 2;
 
-    if (lineSegmentsSC.length === 0) {
-      if (yCoordOfXAxisBoundarySC === yCoordForXAxisSC) {
-        // x axis in view
-        // test point above x axis and in between graph extents, if this is in area
-        // color rectangle above x axis, if not color below x axis, we use DC coords
-        // as the coordinates for reference
-        const testPoint: Point = {
-          x: midXBoundaryDC,
-          y: topDC / 2
-        };
-        const isPointAboveXAxisInArea = this.ctx.isPointInPath(canvasPath, testPoint.x, testPoint.y);
-        if (isPointAboveXAxisInArea) {
-          return getSvgRectPath(startXBoundarySC, endXBoundarySC, topSC, yCoordForXAxisSC);
-        } else {
-          return getSvgRectPath(startXBoundarySC, endXBoundarySC, bottomSC, yCoordForXAxisSC);
-        }
-      } else {
-        // x axis not in view so area always goes from top of box to bottom or
-        // there is no area
-        const testPoint: Point = {
-          x: midXBoundaryDC,
-          y: (topDC + bottomDC) / 2
-        };
-        const isPointInArea = this.ctx.isPointInPath(canvasPath, testPoint.x, testPoint.y);
-        if (isPointInArea) {
-          return getSvgRectPath(startXBoundarySC, endXBoundarySC, bottomSC, topSC);
-        } else {
-          return "";
-        }
-      }
+    if (lineSegmentsSC.length > 0) {
+      const firstPointY = lineSegmentsSC[0].split("L")[0].substring(1).split(",").map(parseFloat)[1];
+      const firstPart = `M${startXBoundarySC},${yCoordOfXAxisBoundarySC}L${startXBoundarySC},${firstPointY}`;
+
+      const lastPointY = lineSegmentsSC[lineSegmentsSC.length - 1].split("L").at(-1)!.split(",").map(parseFloat)[1];
+      const lastPart = `L${endXBoundarySC},${lastPointY}L${endXBoundarySC},${yCoordOfXAxisBoundarySC}Z`;
+
+      const fullPath = lineSegmentsSC.map(seg => "L" + seg.substring(1)).join("");
+
+      return firstPart + fullPath + lastPart;
     }
 
-    const firstPointY = lineSegmentsSC[0].split("L")[0].substring(1).split(",").map(parseFloat)[1];
-    const firstPart = `M${startXBoundarySC},${yCoordOfXAxisBoundarySC}L${startXBoundarySC},${firstPointY}`;
-
-    const lastPointY = lineSegmentsSC[lineSegmentsSC.length - 1].split("L").at(-1)!.split(",").map(parseFloat)[1];
-    const lastPart = `L${endXBoundarySC},${lastPointY}L${endXBoundarySC},${yCoordOfXAxisBoundarySC}Z`;
-
-    const fullPath = lineSegmentsSC.map(seg => "L" + seg.substring(1)).join("");
-
-    return firstPart + fullPath + lastPart;
+    if (yCoordOfXAxisBoundarySC === yCoordForXAxisSC) {
+      // x axis in view
+      // test point above x axis and in between graph extents, if this is in area
+      // color rectangle above x axis, if not color below x axis, we use DC coords
+      // as the coordinates for reference
+      const testPoint: Point = {
+        x: midXBoundaryDC,
+        y: topDC / 2
+      };
+      const isPointAboveXAxisInArea = this.ctx.isPointInPath(canvasPath, testPoint.x, testPoint.y);
+      if (isPointAboveXAxisInArea) {
+        return getSvgRectPath(startXBoundarySC, endXBoundarySC, topSC, yCoordForXAxisSC);
+      } else {
+        return getSvgRectPath(startXBoundarySC, endXBoundarySC, bottomSC, yCoordForXAxisSC);
+      }
+    } else {
+      // x axis not in view so area always goes from top of box to bottom or
+      // there is no area
+      const testPoint: Point = {
+        x: midXBoundaryDC,
+        y: (topDC + bottomDC) / 2
+      };
+      const isPointInArea = this.ctx.isPointInPath(canvasPath, testPoint.x, testPoint.y);
+      if (isPointInArea) {
+        return getSvgRectPath(startXBoundarySC, endXBoundarySC, bottomSC, topSC);
+      } else {
+        return "";
+      }
+    }
   };
 };

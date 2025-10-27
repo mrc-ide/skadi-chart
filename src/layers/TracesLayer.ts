@@ -184,6 +184,11 @@ export class TracesLayer<Metadata> extends OptionalLayer {
         x: x * (t * scaleRelativeX + 1) - t * offsetXSC,
         y: y * (t * scaleRelativeY + 1) - t * offsetYSC
       });
+      // this function is helpful to the area layer but convenient to define here.
+      // say we start at a point (x_0, y_0) and at time step t, we would get an intermediate
+      // point at time t, (x_t, y_t) = getNewPoint(x_0, y_0, t). we can apply
+      // getNewPointInverse to this intermediate to get the original point, i.e.
+      // getNewPointInverse(x_t, y_t, t) = (x_0, y_0)
       this.getNewPointInverse = (x, y, t) => ({
         x: (x + t * offsetXSC) / (t * scaleRelativeX + 1),
         y: (y + t * offsetYSC) / (t * scaleRelativeY + 1)
