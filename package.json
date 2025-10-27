@@ -1,5 +1,5 @@
 {
-  "name": "skadi-chart",
+  "name": "@reside-ic/skadi-chart",
   "version": "1.0.0",
   "type": "module",
   "files": [
