@@ -59,7 +59,7 @@ const doRDP = (
   let dMaxFastSC = 0;
   let index = 0;
   const abs = Math.abs;
-  for (let i = slice[0] + 1; i < slice[1] - 1; i++) {
+  for (let i = slice[0]; i < slice[1]; i++) {
     const dSC = abs(fastPerpendicularDistance(rangeYSC, rangeXSC, crossProductSC, pointsSC[i]));
     if (dSC > dMaxFastSC) {
       dMaxFastSC = dSC;
@@ -78,7 +78,9 @@ const doRDP = (
     const slice2 = [index, slice[1]] as [number, number];
     const res2 = doRDP(pointsSC, slice2, epsilon);
 
-    return [...res1, ...res2];
+    // we remove last element from res1 because we include index twice in
+    // slice1 and slice2 so we have to remove the duplicate point
+    return [...res1.slice(0, -1), ...res2];
   } else {
     const startRoundedSC = roundPoint(pointsSC[slice[0]]);
     const endRoundedSC = roundPoint(pointsSC[slice[1]]);
@@ -86,7 +88,7 @@ const doRDP = (
   }
 };
 
-const RDPAlgorithm = (linesSC: Point[][], epsilon: number) => {
+export const RDPAlgorithm = (linesSC: Point[][], epsilon: number) => {
   return linesSC.map(l => {
     const slice = [0, l.length - 1] as [number, number];
     return doRDP(l, slice, epsilon);
