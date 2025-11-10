@@ -7,11 +7,11 @@
   ],
   "main": "./dist/skadi-chart.umd.cjs",
   "module": "./dist/skadi-chart.js",
-  "types": "./dist/skadi-chart.d.ts",
+  "types": "./dist/reside-ic-skadi-chart.d.ts",
   "exports": {
     ".": {
       "import": {
-        "types": "./dist/skadi-chart.d.ts",
+        "types": "./dist/reside-ic-skadi-chart.d.ts",
         "default": "./dist/skadi-chart.js"
       },
       "require": "./dist/skadi-chart.umd.cjs"
@@ -19,7 +19,7 @@
   },
   "scripts": {
     "dev": "vite serve src/demo/",
-    "build": "vite build && vue-tsc -p tsconfig.build.json",
+    "build": "vite build && vue-tsc -p tsconfig.build.json && cp reside-ic-skadi-chart.d.ts dist/",
     "test:unit": "vitest",
     "test:e2e": "playwright test",
     "coverage": "vitest run --coverage"
