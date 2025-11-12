@@ -187,7 +187,7 @@ const makeRandomPointsForCategoricalAxis = (domain: string[], axis: "x" | "y"): 
   });
 };
 
-const makeRandomCurves = (props: typeof propsBasic) => {
+const makeRandomCurves = (props: typeof propsBasic, withArea?: boolean) => {
   const xPoints = Array.from({length: props.nX + 1}, (_, i) => i / props.nX);
   const lines: Lines<Metadata> = [];
   const makeYFunc = () => {
@@ -213,12 +213,17 @@ const makeRandomCurves = (props: typeof propsBasic) => {
 
   for (let l = 0; l < props.nL; l++) {
     const color = colors[randomIndex(colors.length)];
+    const addArea = !!withArea;
+    const opacity = Math.random() * props.opacityRange + props.opacityOffset;
     const line: Lines<Metadata>[number] = {
       points: [],
+      fill: !!withArea,
       style: {
-        opacity: Math.random() * props.opacityRange + props.opacityOffset,
+        opacity,
         strokeColor: color,
-        strokeWidth: Math.random() * 1
+        strokeWidth: Math.random() * 1,
+        fillColor: addArea ? color : undefined,
+        fillOpacity: addArea ? opacity / 10 : undefined
       },
       metadata: { color }
     };
@@ -276,12 +281,7 @@ const pointsAxesLabelGridZoomAndLogScale = makeRandomPoints(pointPropsBasic);
 pointsAxesLabelGridZoomAndLogScale.forEach(p => p.x -= 0.5);
 const pointsPointsAxesAndZoom = makeRandomPoints(pointPropsBasic);
 const curvesTooltips = makeRandomCurves(propsBasic);
-const curvesArea = makeRandomCurves(propsBasic);
-curvesArea.forEach(c => {
-  c.fill = true;
-  c.style.fillColor = c.style.strokeColor;
-  c.style.fillOpacity = (c.style.opacity || 1) / 10;
-});
+const curvesArea = makeRandomCurves({ ...propsBasic, nL: 5 }, true);
 const pointsTooltips = makeRandomPoints(pointPropsTooltips);
 const curvesResponsive = makeRandomCurves(propsBasic);
 const curvesCustom = makeRandomCurves(propsBasic);

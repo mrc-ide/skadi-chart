@@ -41,13 +41,14 @@ const chart = document.getElementById("chart") as HTMLDivElement;
 // example custom metadata: define a type that you can attach to lines or scatter points
 type Metadata = { type: "line" | "point" }
 
-// two straight lines
+// two straight lines, first one will also display the area underneath the trace
 const lines: Lines<Metadata> = [
     {
         points: [
             { x: 0, y: 0 },
             { x: 1, y: 1 },
         ],
+        fill: true,
         style: { color: "black" },
         metadata: { type: "line" }
     },
@@ -167,7 +168,7 @@ fixed scale.
   chart.addTraces(lines);
   ```
 * `addArea` adds an [AreaLayer](./src/layers/AreaLayer.ts). This will add an area underneath
-the traces to the graph.
+the traces that specify `{ fill: true }` property in their config to the graph.
   ```ts
   chart.addArea();
   ```

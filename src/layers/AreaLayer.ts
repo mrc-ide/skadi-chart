@@ -25,7 +25,8 @@ export class AreaLayer<Metadata> extends OptionalLayer {
   };
 
   draw(layerArgs: LayerArgs, currentExtentsDC: ZoomExtents): void {
-    // no x axis in y log scale
+    // When the y axis is in log scale, 0 is an impossible value for y, so
+    // there is no y = 0 line to fill to
     if (layerArgs.chartOptions.logScale.y) return;
 
     const traceLayers = layerArgs.optionalLayers
@@ -41,8 +42,15 @@ export class AreaLayer<Metadata> extends OptionalLayer {
 
         const { x: xMinMax } = getXYMinMax(line.points);
 
-        // we can just use DC points, we construct this to see if a point is in the
-        // area of a line, the scale does not matter
+        // For each line, we not create a "canvas point", which we will later
+        // use for determining whether a given point lies within the inside of
+        // a trace (via "isPointInPath")
+        //
+        // NB: The canvas and canvas paths are never rendered. They are just
+        // fed into the canvas "isPointInPath" builtin. Since we only care whether
+        // the point is inside or outside a curve, the scale can be anything as
+        // long as we are consistent. DC doesn't change on zoom, so by choosing
+        // that for our scale, we avoid the need to re-compute the canvas path.
         const pathDC = line.points.map(p => `L${p.x},${p.y}`).join("");
         const { x: firstPointX } = line.points[0];
         const firstPart = `M${firstPointX},${0}`;
@@ -82,6 +90,7 @@ export class AreaLayer<Metadata> extends OptionalLayer {
       const promises: Promise<void>[] = [];
       paths.forEach((layerPaths, layerIdx) => {
         layerPaths.forEach((p, lineIdx) => {
+          // no fill for this line
           if (!p) return;
       
           const promise = p
@@ -149,20 +158,28 @@ export class AreaLayer<Metadata> extends OptionalLayer {
       };
 
       /*
-      The closeSvgPath method needs the zoomExtentsDC at time step t. In other words, as the graph zooms in
+      The closeSvgPath method needs the zoomExtentsDC for time step t. In other words, as the graph zooms in
       we need to find out what the data coordinate (DC) is of the corners of the svg at each time step t.
       closeSvgPath then will use these boundaries to test if points are in the canvasPaths (which are in DC).
-      To get to DC, we have to use scale.invert on D3's scale, however the scale are has domain equal to the
-      zoom extents at t = 1. So we need to find out what zoom extents SC at some time t = T map to at time
-      t = 1.
+      
+      To get from SC to DC, we would normally use scale.invert on D3's scale, however during the zoom, at time
+      t = T, we don't know what the scales are. The only scales we have access to are those the zoom is
+      targetting for at time t = 1. 
 
-      To do this we will work out zoom extents SC at time t = 0 from t = T using getNewPointInverse (go backwards)
-      and then transform those to time t = 1 using getNewPoint (go forwards).
+      What we do know for t = T is the zoomExtentsSC. So we need a way to get from zoomExtentsSC at t = T to
+      the corresponding points at t = 1. Then we can use d3's scales for t = 1 to convert from SC to DC, giving
+      us the zoomExtentsDC corresponding to the current zoomExtentsSC at t = T.
 
-      At some time step T, the zoomExtentsSC are always going to be the same as the corners of the svg don't
-      change their svg coordinates. We can use the getNewPointInverse function to find out where the zoom
-      extents at T, map to at t = 0 (start of the zoom). If we are zooming in, then the zoom extents at t = T
-      will map to a smaller rectangle at t = 0: (X's at time t = T map to a smaller box at t = 0)
+      To do this we will work out the corresponding points at time t = 0 from zoomExtentsSC at t = T using
+      getNewPointInverse (go backwards) and then transform those to time t = 1 using getNewPoint (go forwards).
+
+      Note: the zoomExtentsSC are always going to be the same, since the corners of the svg don't change their
+      svg coordinates.
+
+      An example: If we are zooming in, then the zoom extents at t = T will map to a smaller rectangle at
+      t = 0: see diagram below, where X's show the corners of the zoom extents at different times (X's at time
+      t = T map to a smaller box at t = 0). We can get the corners of this smaller box using
+      `getNewPointInverse`:
 
       t = 0                              t = T                     
       __________________________         X________________________X
@@ -221,11 +238,15 @@ export class AreaLayer<Metadata> extends OptionalLayer {
     const [ bottomSC, topSC ] = zoomExtentsSC.y;
     const [ bottomDC, topDC ] = zoomExtentsDC.y;
 
-    // remember that in SC higher y values are lower on the screen
-    // this find the closest boundary to the x axis:
-    //   if x axis is in view, this is the x axis
-    //   if x axis is above the top of the svg, we treat the top extent as the x axis for closed area loops
-    //   if x axis is below the bottom of the svg, we treat the bottom extent as the x axis for closed area loops
+    // (Remember that in SC higher y values are lower on the screen)
+    // To assign `yCoordOfXAxisBoundarySC`, we choose a horizontal "boundary" to enclose
+    // the fill:
+    //   - if x axis is in view, we use the x axis itself
+    //   - if x axis is above the top of the plot, we use the top extent as if it were the x axis
+    //   - if x axis is below the bottom of the plot, we use the  bottom extent as if it were the
+    //     x axis
+    // The path closes the curve that the user has put by connecting the end of the curve to
+    // the start along this `yCoordOfXAxisBoundarySC`.
     let yCoordOfXAxisBoundarySC: number;
     if (topSC < yCoordForXAxisSC && yCoordForXAxisSC < bottomSC) {
       yCoordOfXAxisBoundarySC = yCoordForXAxisSC;
@@ -254,29 +275,34 @@ export class AreaLayer<Metadata> extends OptionalLayer {
       return firstPart + fullPath + lastPart;
     }
 
+    // Deal with cases where there are no line segments (that is, no points lie within the
+    // zoomed view)
     if (yCoordOfXAxisBoundarySC === yCoordForXAxisSC) {
-      // x axis in view
-      // test point above x axis and in between graph extents, if this is in area
+      // If the y coordinate of the x boundary, `yCoordOfXAxisBoundarySC`, is the same as
+      // that of the x axis (line y = 0), `yCoordForXAxisSC`, then we know the x axis is in
+      // view.
+      //
+      // Test a point above x axis and in between graph extents: if this is in area
       // color rectangle above x axis, if not color below x axis, we use DC coords
       // as the coordinates for reference
-      const testPoint: Point = {
+      const testPointDC: Point = {
         x: midXBoundaryDC,
         y: topDC / 2
       };
-      const isPointAboveXAxisInArea = this.ctx.isPointInPath(canvasPath, testPoint.x, testPoint.y);
+      const isPointAboveXAxisInArea = this.ctx.isPointInPath(canvasPath, testPointDC.x, testPointDC.y);
       if (isPointAboveXAxisInArea) {
         return getSvgRectPath(startXBoundarySC, endXBoundarySC, topSC, yCoordForXAxisSC);
       } else {
         return getSvgRectPath(startXBoundarySC, endXBoundarySC, bottomSC, yCoordForXAxisSC);
       }
     } else {
-      // x axis not in view so area always goes from top of box to bottom or
-      // there is no area
-      const testPoint: Point = {
+      // x axis not in view, so we either need a rectangle to fill the whole plot from top to bottom
+      // (if we are inside a fill area), or do nothing (if we are outside a fill area).
+      const testPointDC: Point = {
         x: midXBoundaryDC,
         y: (topDC + bottomDC) / 2
       };
-      const isPointInArea = this.ctx.isPointInPath(canvasPath, testPoint.x, testPoint.y);
+      const isPointInArea = this.ctx.isPointInPath(canvasPath, testPointDC.x, testPointDC.y);
       if (isPointInArea) {
         return getSvgRectPath(startXBoundarySC, endXBoundarySC, bottomSC, topSC);
       } else {

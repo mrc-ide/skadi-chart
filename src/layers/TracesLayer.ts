@@ -179,18 +179,18 @@ export class TracesLayer<Metadata> extends OptionalLayer {
       const scaleRelativeX = scalingX - 1;
       const scaleRelativeY = scalingY - 1;
 
-      // this function gives us the x coordinate at any point t (between 0 and 1) of the
-      // animation, t = 0 gives the x points of the original traces, t = 1 gives the zoomed
-      // in line x coordinates
+      // this function gives us the coordinates at any point t (between 0 and 1) of the
+      // animation, t = 0 gives the points of the original traces, t = 1 gives the zoomed
+      // in line coordinates
       this.getNewPoint = (x, y, t) => ({
         x: x * (t * scaleRelativeX + 1) - t * offsetXSC,
         y: y * (t * scaleRelativeY + 1) - t * offsetYSC
       });
       // this function is helpful to the area layer but convenient to define here.
-      // say we start at a point (x_0, y_0) and at time step t, we would get an intermediate
-      // point at time t, (x_t, y_t) = getNewPoint(x_0, y_0, t). we can apply
-      // getNewPointInverse to this intermediate to get the original point, i.e.
-      // getNewPointInverse(x_t, y_t, t) = (x_0, y_0)
+      // say we start at a point (x_0, y_0) for time t = 0. At time step t = T, we would
+      // get an intermediate point, (x_T, y_T) = getNewPoint(x_0, y_0, T). we can apply
+      // getNewPointInverse to this intermediate point to get the original point, i.e.
+      // getNewPointInverse(x_T, y_T, T) = (x_0, y_0)
       this.getNewPointInverse = (x, y, t) => ({
         x: (x + t * offsetXSC) / (t * scaleRelativeX + 1),
         y: (y + t * offsetYSC) / (t * scaleRelativeY + 1)

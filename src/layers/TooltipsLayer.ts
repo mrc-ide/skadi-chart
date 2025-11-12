@@ -72,7 +72,7 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     Object.entries(layerArgs.scaleConfig.categoricalScales).forEach(([axis, catScaleConfig]) => {
       if (catScaleConfig?.bands) {
         const ax = axis as AxisType;
-        const [band, numScale] = Object.entries(catScaleConfig.bands).find(([_, numericalScale]) => {
+        const [band, numScale] = Object.entries(catScaleConfig.bands).find(([category, numericalScale]) => {
           const range = numericalScale.range();
           return clientSC[ax] >= Math.min(...range) && clientSC[ax] <= Math.max(...range);
         }) || [];
