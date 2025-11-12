@@ -11,6 +11,7 @@ export enum LayerType {
   ClipPath = "clipPath",
   BaseLayer = "baseLayer",
   Axes = "axes",
+  Area = "area",
   Zoom = "zoom",
   Trace = "trace",
   Tooltip = "skadi-chart-tooltip",
