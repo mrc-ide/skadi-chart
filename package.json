@@ -1,17 +1,17 @@
 {
   "name": "@reside-ic/skadi-chart",
-  "version": "1.1.0",
+  "version": "1.1.2",
   "type": "module",
   "files": [
     "dist"
   ],
   "main": "./dist/skadi-chart.umd.cjs",
   "module": "./dist/skadi-chart.js",
-  "types": "./dist/reside-ic-skadi-chart.d.ts",
+  "types": "./dist/skadi-chart.d.ts",
   "exports": {
     ".": {
       "import": {
-        "types": "./dist/reside-ic-skadi-chart.d.ts",
+        "types": "./dist/skadi-chart.d.ts",
         "default": "./dist/skadi-chart.js"
       },
       "require": "./dist/skadi-chart.umd.cjs"
@@ -19,7 +19,7 @@
   },
   "scripts": {
     "dev": "vite serve src/demo/",
-    "build": "vite build && vue-tsc -p tsconfig.build.json && cp reside-ic-skadi-chart.d.ts dist/",
+    "build": "vite build && vue-tsc -p tsconfig.build.json && tsx scripts/renameModuleDeclaration.ts",
     "test:unit": "vitest",
     "test:e2e": "playwright test",
     "coverage": "vitest run --coverage"
@@ -50,6 +50,7 @@
     "@vue/tsconfig": "^0.7.0",
     "jsdom": "^26.0.0",
     "npm-run-all2": "^7.0.2",
+    "tsx": "^4.20.6",
     "typescript": "~5.7.3",
     "vite": "^6.0.11",
     "vite-plugin-vue-devtools": "^7.7.0",
