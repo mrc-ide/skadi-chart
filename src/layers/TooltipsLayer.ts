@@ -72,9 +72,13 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     Object.entries(layerArgs.scaleConfig.categoricalScales).forEach(([axis, catScaleConfig]) => {
       if (catScaleConfig?.bands) {
         const ax = axis as AxisType;
-        const [band, numScale] = Object.entries(catScaleConfig.bands).find(([category, numericalScale]) => {
-          const range = numericalScale.range();
-          return clientSC[ax] >= Math.min(...range) && clientSC[ax] <= Math.max(...range);
+        const [band, numScale] = Object.entries(catScaleConfig.bands).find(([category, numericalScale], index, entries) => {
+          // Check if clientSC[ax] is within this band's range but not within the next band's range (bands may overlap)
+          const currentBandRange = numericalScale.range();
+          const nextBandRange = entries[index + 1]?.[1].range();
+          const clientIsInsideCurrentBand = clientSC[ax] >= Math.min(...currentBandRange) && clientSC[ax] <= Math.max(...currentBandRange);
+          const clientIsInsideNextBand = nextBandRange ? (clientSC[ax] >= Math.min(...nextBandRange) && clientSC[ax] <= Math.max(...nextBandRange)) : false;
+          return clientIsInsideCurrentBand && !clientIsInsideNextBand;
         }) || [];
         if (band && numScale) { // Mouse may be outside of any band
           numericalScales[ax] = numScale;

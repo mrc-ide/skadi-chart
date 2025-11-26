@@ -100,11 +100,30 @@ export class AxesLayer extends OptionalLayer {
     const distanceFromSvgEdgeToAxis = axis === "x" ? margin.bottom : margin.left;
     const categoricalAxis = axisConstructor(categoricalScale).ticks(tickCount).tickSize(0)
       .tickPadding(distanceFromSvgEdgeToAxis * 0.3);
+    const categoricalAxisIdAttribute = `${getHtmlId(LayerType.Axes)}-categorical-${axis}`;
     svgLayer.append("g")
-      .attr("id", `${getHtmlId(LayerType.Axes)}-${axis}`)
+      .attr("id", categoricalAxisIdAttribute)
       .style("font-size", "0.75rem")
       .attr("transform", `translate(${translation.x},${translation.y})`)
       .call(categoricalAxis);
+
+    if (layerArgs.globals.bandOverlap[axis] > 0) {
+      // Move categorical axis labels to account for band overlap.
+      // We want the label to be centered in the part of each band that does not overlap the next band.
+      const firstBandStartSC = categoricalScale(categoricalScale.domain()[0]);
+      const secondBandStartSC = categoricalScale(categoricalScale.domain()[1]);
+      if (firstBandStartSC && secondBandStartSC) {
+        const nonOverlappingBandWidth = Math.abs(secondBandStartSC - firstBandStartSC);
+        svgLayer.select(`#${categoricalAxisIdAttribute}`).selectChildren(".tick").each((category, i, nodes) => {
+          const bandStart = categoricalScale(category as string);
+          const tick = d3.select(nodes[i]);
+          if (bandStart) {
+            const bandEnd = bandStart + categoricalScale.bandwidth();
+            tick.attr("transform", `translate(0,${bandEnd - nonOverlappingBandWidth / 2})`);
+          }
+        });
+      }
+    }
 
     const bandNumericalScales = Object.entries(layerArgs.scaleConfig.categoricalScales[axis]!.bands);
     bandNumericalScales.forEach(([category, bandNumericalScale]) => {
@@ -114,7 +133,7 @@ export class AxesLayer extends OptionalLayer {
         // Add a tick and label at [axis]=0 for each band
         this.drawNumericalAxis(axis, bandNumericalScale, { count: 1, padding: 6 }, layerArgs);
       }
-      if (categoricalScale.paddingInner()) {
+      if (categoricalScale.paddingInner() > 0) {
         this.drawLinePerpendicularToAxis(axis, bandStart, layerArgs);
       }
       this.drawLinePerpendicularToAxis(axis, bandStart + bandwidth, layerArgs);

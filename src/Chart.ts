@@ -24,7 +24,8 @@ export type ChartOptions = {
 
 type PartialChartOptions = {
   logScale?: Partial<XY<boolean>>,
-  animationDuration?: number
+  animationDuration?: number,
+  bandOverlap?: Partial<XY<number>>,
 }
 
 type CategoricalScales = Partial<XY<string[]>>;
@@ -41,7 +42,11 @@ export class Chart<Metadata = any> {
         count: 0,
         specifier: ".2~s", // an SI-prefix with 2 significant figures and no trailing zeros, 42e6 -> 42M
       }
-    }
+    },
+    bandOverlap: {
+      x: 0,
+      y: 0,
+    },
   };
   defaultMargin = { top: 20, bottom: 35, left: 50, right: 20 };
   exportToPng: ((name?: string) => void) | null = null;
@@ -56,10 +61,14 @@ export class Chart<Metadata = any> {
       logScale: {
         x: options?.logScale?.x ?? false,
         y: options?.logScale?.y ?? false
-      }
+      },
     };
     if (options?.animationDuration) {
       this.globals.animationDuration = options.animationDuration;
+    }
+    if (options?.bandOverlap) {
+      this.globals.bandOverlap.x = options.bandOverlap.x ?? 0;
+      this.globals.bandOverlap.y = options.bandOverlap.y ?? 0;
     }
     this.id = Math.random().toString(26).substring(2, 10);
 
@@ -329,8 +338,8 @@ export class Chart<Metadata = any> {
         linearScales: { x: numericalScaleX, y: numericalScaleY },
         scaleExtents: this.autoscaledMaxExtents,
         categoricalScales: {
-          x: this.createCategoricalScale(categoricalScales.x, rangeX, numericalScaleX, "x"),
-          y: this.createCategoricalScale(categoricalScales.y, rangeY, numericalScaleY, "y"),
+          x: this.createCategoricalScale(categoricalScales.x, rangeX, numericalScaleX, "x", this.globals.bandOverlap.x),
+          y: this.createCategoricalScale(categoricalScales.y, rangeY, numericalScaleY, "y", this.globals.bandOverlap.y),
         },
       },
       coreLayers: {
@@ -401,11 +410,12 @@ export class Chart<Metadata = any> {
     range: number[],
     numericalScale: ScaleNumeric,
     axis: AxisType,
+    bandOverlap: number,
   ): CategoricalScaleConfig | undefined => {
     if (!categories?.length) {
       return;
     }
-    const bandScale = d3.scaleBand().domain(categories).range(range);
+    const bandScale = d3.scaleBand().domain(categories).range(range).paddingInner(-bandOverlap);
     const bandwidth = bandScale.bandwidth();
     const bands = categories.reduce((acc, category) => {
       const bandStartSC = bandScale(category)!;

@@ -47,7 +47,8 @@ export type LayerArgs = {
   bounds: Bounds,
   globals: {
     animationDuration: number,
-    tickConfig: XY<TickConfig>;
+    tickConfig: XY<TickConfig>,
+    bandOverlap: XY<number>,
   },
   scaleConfig: {
     linearScales: XY<ScaleNumeric>,
