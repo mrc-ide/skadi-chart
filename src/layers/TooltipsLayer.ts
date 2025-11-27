@@ -73,12 +73,9 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
         // we must first work out which band we are in.
         const ax = axis as AxisType;
         const [band, numScale] = Object.entries(catScaleConfig.bands)
-          .sort(([_a, scaleA], [_b, scaleB]) => {
-            // Sort bands by their position on the axis
-            return (scaleB.range()[0] - scaleA.range()[0]!);
-          })
+          .sort(([_a, scaleA], [_b, scaleB]) => scaleB.range()[0] - scaleA.range()[0])
+          // Find the band where the client mouse position is within its range but not within the next band's range (bands may overlap)
           .find(([category, numericalScale], index, entries) => {
-            // Check if client mouse position is within this band's range but not within the next band's range (bands may overlap)
             const thisBandRange = numericalScale.range();
             const nextBandRange = entries[index + 1]?.[1].range();
             const clientIsInsideCurrentBand = clientSC[ax] >= Math.min(...thisBandRange) && clientSC[ax] <= Math.max(...thisBandRange);
