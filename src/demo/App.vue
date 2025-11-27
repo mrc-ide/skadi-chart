@@ -47,17 +47,6 @@
   </div>
   <div class="chart" ref="chartOverlappingBandsY" id="chartOverlappingBandsY"></div>
 
-  <h1>Categorical x axis with overlapping bands</h1>
-  <div style="margin-left: 100px">
-    <label for="bandOverlapX">Band overlap:</label><br />
-    <span>
-      0
-      <input type="range" min="0" max="3" step="0.1" v-model.number="bandOverlapX" />
-      3
-    </span>
-  </div>
-  <div class="chart" ref="chartOverlappingBandsX" id="chartOverlappingBandsX"></div>
-
   <h1>Area</h1>
   <div class="chart" ref="chartArea" id="chartArea"></div>
 
@@ -104,7 +93,6 @@ const chartTooltips = ref<HTMLDivElement | null>(null);
 const chartResponsive = ref<HTMLDivElement | null>(null);
 const chartCategoricalYAxis = ref<HTMLDivElement | null>(null);
 const chartCategoricalXAxis = ref<HTMLDivElement | null>(null);
-const chartOverlappingBandsX = ref<HTMLDivElement | null>(null);
 const chartOverlappingBandsY = ref<HTMLDivElement | null>(null);
 const chartArea = ref<HTMLDivElement | null>(null);
 const chartStress = ref<HTMLDivElement | null>(null);
@@ -311,7 +299,6 @@ const curvesResponsive = makeRandomCurves(propsBasic);
 const curvesCustom = makeRandomCurves(propsBasic);
 const curvesCategoricalXAxis = makeRandomCurvesForCategoricalAxis(categoricalXAxis, "x");
 const curvesCategoricalYAxis = makeRandomCurvesForCategoricalAxis(categoricalYAxis, "y");
-const curvesOverlappingBandsX = makeRandomCurvesForCategoricalAxis(categoricalXAxis, "x").slice(0, 4);
 const curvesOverlappingBandsY = makeRandomCurvesForCategoricalAxis(categoricalYAxis, "y", true);
 curvesOverlappingBandsY.forEach(line => {
   line.points = line.points.map(p => ({ ...p, y: Math.max(p.y, 0) }));
@@ -345,7 +332,6 @@ const axesLabels = { x: "Time", y: "Value" };
 
 const exportToPng = ref<(name?: string) => void>();
 
-const bandOverlapX = ref<number>(0.2);
 const bandOverlapY = ref<number>(1.5);
 const numericalAxesLogScaleX = ref<boolean>(false);
 const numericalAxesLogScaleY = ref<boolean>(false);
@@ -410,18 +396,6 @@ const drawchartOverlappingBandsY = () => {
 
 watch(bandOverlapY, drawchartOverlappingBandsY);
 
-const drawchartOverlappingBandsX = () => {
-  new Chart({ bandOverlap: { x: bandOverlapX.value } })
-    .addAxes({ x: "Time", y: "Category" })
-    .addTraces(curvesOverlappingBandsX)
-    .addArea()
-    .addZoom()
-    .addTooltips(tooltipHtmlCallback)
-    .appendTo(chartOverlappingBandsX.value!, scales, {}, { x: categoricalXAxis });
-};
-
-watch(bandOverlapX, drawchartOverlappingBandsX);
-
 onMounted(async () => {
   new Chart()
     .addTraces(curvesSparkLines)
@@ -477,7 +451,6 @@ onMounted(async () => {
   drawChartCategoricalXAxis();
 
   drawchartOverlappingBandsY();
-  drawchartOverlappingBandsX();
 
   curvesResponsive.forEach((l, i) => {
     l.style.strokeDasharray = `${i * 2} 5`
