@@ -109,17 +109,20 @@ export class AxesLayer extends OptionalLayer {
 
     if (layerArgs.globals.bandOverlap[axis] > 0) {
       // Move categorical axis labels to account for band overlap.
-      // We want the label to be centered in the part of each band that does not overlap the next band.
+      // We want the label to be centered within the part of each band that does not overlap the next band.
       const firstBandStartSC = categoricalScale(categoricalScale.domain()[0]);
       const secondBandStartSC = categoricalScale(categoricalScale.domain()[1]);
       if (firstBandStartSC && secondBandStartSC) {
         const nonOverlappingBandWidth = Math.abs(secondBandStartSC - firstBandStartSC);
         svgLayer.select(`#${categoricalAxisIdAttribute}`).selectChildren(".tick").each((category, i, nodes) => {
           const bandStart = categoricalScale(category as string);
-          const tick = d3.select(nodes[i]);
+          const categoryLabel = d3.select(nodes[i]);
           if (bandStart) {
-            const bandEnd = bandStart + categoricalScale.bandwidth();
-            tick.attr("transform", `translate(0,${bandEnd - nonOverlappingBandWidth / 2})`);
+            const translate = { x: 0, y: 0 };
+            const centerLabelInEntireBand = i === 0 && categoricalScale.domain().length === 2
+            const bandEnd = bandStart + bandwidth;
+            translate[axis] = bandEnd - (centerLabelInEntireBand ? bandwidth : nonOverlappingBandWidth) / 2;
+            categoryLabel.attr("transform", `translate(${translate.x},${translate.y})`);
           }
         });
       }
