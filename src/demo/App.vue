@@ -26,7 +26,7 @@
   <h1>Chart with tooltips</h1>
   <div class="chart" ref="chartTooltips" id="chartTooltips"></div>
 
-  <h1>Categorical y axis with traces and log scales</h1>
+  <h1>Categorical y axis with traces and log scales and configured margins</h1>
   <div class="chart" ref="chartCategoricalYAxis" id="chartCategoricalYAxis"></div>
   <button @click="() => categoricalYAxisLogScaleX = !categoricalYAxisLogScaleX">Toggle log scale X</button>
   <button @click="() => categoricalYAxisLogScaleY = !categoricalYAxisLogScaleY">Toggle log scale Y</button>
@@ -257,7 +257,7 @@ const tooltipHtmlCallback = (point: PointWithMetadata<Metadata>) => {
     + `</div>`
 };
 
-const categoricalYAxis = ["A", "B", "C", "D", "E"];
+const categoricalYAxis = ["Category A", "Category B", "Category C", "Category D", "Category E"];
 const categoricalXAxis = ["Left", "Right"];
 const chartCategoricalYAxis = ref<HTMLDivElement | null>(null);
 const chartCategoricalXAxis = ref<HTMLDivElement | null>(null);
@@ -328,12 +328,18 @@ const categoricalYAxisLogScaleY = ref<boolean>(false);
 
 const drawChartCategoricalYAxis = () => {
   new Chart({ logScale: { x: categoricalYAxisLogScaleX.value, y: categoricalYAxisLogScaleY.value }})
-    .addAxes({ x: "Time", y: "Category" })
+    .addAxes({ x: "Time", y: "Category" }, { y: 0.2, x: 0.4 })
     .addTraces(curvesCategoricalYAxis)
     .addScatterPoints(pointsCategoricalYAxis)
     .addZoom()
     .addTooltips(tooltipHtmlCallback)
-    .appendTo(chartCategoricalYAxis.value!, scales, {}, { y: categoricalYAxis });
+    .appendTo(
+      chartCategoricalYAxis.value!,
+      scales,
+      {},
+      { y: categoricalYAxis },
+      { left: 150, bottom: 70, right: 10 },
+    );
 };
 
 watch([categoricalYAxisLogScaleX, categoricalYAxisLogScaleY], () => {

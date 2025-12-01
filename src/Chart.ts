@@ -64,10 +64,15 @@ export class Chart<Metadata = any> {
     return this;
   };
 
-  addAxes = (labels: XYLabel = {}) => {
+  addAxes = (labels: XYLabel = {}, labelPositions?: Partial<XY<number>>) => {
     if (labels.x) this.defaultMargin.bottom = 80;
     if (labels.y) this.defaultMargin.left = 90;
-    this.optionalLayers.push(new AxesLayer(labels || {}));
+    this.optionalLayers.push(new AxesLayer(
+      labels || {},
+      {
+        x: labelPositions?.x ?? 1/3,
+        y: labelPositions?.y ?? 1/3,
+      }));
     return this;
   };
 
@@ -363,9 +368,10 @@ export class Chart<Metadata = any> {
     maxExtents: PartialScales = {},
     initialExtents: PartialScales = {},
     categoricalScales: CategoricalScales = {},
+    margins: Partial<Bounds["margin"]> = {},
   ) => {
     const drawWithBounds = (width: number, height: number) => {
-      const bounds = { width, height, margin: this.defaultMargin };
+      const bounds = { width, height, margin: { ...this.defaultMargin, ...margins } };
       this.draw(baseElement, bounds, maxExtents, initialExtents, categoricalScales);
     };
 

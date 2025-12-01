@@ -155,9 +155,11 @@ overview of the methods [Chart](./src/Chart.ts) class provides for adding layers
 
 * `addAxes` adds an [AxesLayer](./src/layers/AxesLayer.ts). This will draw axes with tick
 marks. The axes can be autoscaled based on your data or you can provide a fixed scale in
-the `appendTo` function below.
+the `appendTo` function below. Both the arguments are optional.
   ```ts
-  chart.addAxes();
+  labels = { x: "Time" }
+  labelPositions = { x: 0.5 } // Position the label halfway up the bottom margin
+  chart.addAxes(labels, labelPositions);
   ```
 * `addTraces` adds a [TracesLayer](./src/layers/TracesLayer.ts). This will add traces to
 the graph. This data will also be used for autoscaling the axes if you haven't provided a

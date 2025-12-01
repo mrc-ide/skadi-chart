@@ -1,6 +1,6 @@
 import * as d3 from "@/d3";
 import { LayerType, OptionalLayer } from "./Layer";
-import { AxisType, D3Selection, LayerArgs, ScaleNumeric, TickConfig, XYLabel } from "@/types";
+import { AxisType, D3Selection, LayerArgs, ScaleNumeric, TickConfig, XY, XYLabel } from "@/types";
 
 type AxisElements = ({
   layer: D3Selection<SVGGElement>,
@@ -15,7 +15,7 @@ type AxisElements = ({
 export class AxesLayer extends OptionalLayer {
   type = LayerType.Axes;
 
-  constructor(public labels: XYLabel) {
+  constructor(public labels: XYLabel, public labelPositions: XY<number>) {
     super();
   };
 
@@ -33,12 +33,12 @@ export class AxesLayer extends OptionalLayer {
       if (axis === "y") {
         const usableHeight = height - margin.top - margin.bottom;
         label.attr("x", - usableHeight / 2 - margin.top)
-          .attr("y", margin.left / 3)
+          .attr("y", margin.left * this.labelPositions.y)
           .attr("transform", "rotate(-90)")
       } else {
         const usableWidth = width - margin.left - margin.right;
         label.attr("x", usableWidth / 2 + margin.left)
-          .attr("y", height - margin.bottom / 3)
+          .attr("y", height - margin.bottom * this.labelPositions.x)
       }
     }
 
@@ -97,9 +97,9 @@ export class AxesLayer extends OptionalLayer {
 
     const bandwidth = categoricalScale.bandwidth();
 
-    const distanceFromSvgEdgeToAxis = axis === "x" ? margin.bottom : margin.left;
+    const axisMargin = axis === "x" ? margin.bottom : margin.left;
     const categoricalAxis = axisConstructor(categoricalScale).ticks(tickCount).tickSize(0)
-      .tickPadding(distanceFromSvgEdgeToAxis * 0.3);
+      .tickPadding(axisMargin * (1 - this.labelPositions?.[axis]) / 3);
     svgLayer.append("g")
       .attr("id", `${getHtmlId(LayerType.Axes)}-${axis}`)
       .style("font-size", "0.75rem")
