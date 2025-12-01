@@ -1,10 +1,10 @@
-import { D3Selection, LayerArgs } from "@/types";
+import { D3Selection, LayerArgs, XY } from "@/types";
 import { LayerType, OptionalLayer } from "./Layer";
 
 export class GridLayer extends OptionalLayer {
   type = LayerType.Grid;
 
-  constructor() {
+  constructor(public directions: { x: boolean; y: boolean }) {
     super();
   };
 
@@ -17,6 +17,7 @@ export class GridLayer extends OptionalLayer {
 
     const gridOpacity = 0.15;
     const gridStrokeWidth = 0.5;
+    const grids: Partial<XY<D3Selection<SVGGElement>>> = {};
 
     const addGridX = (g: D3Selection<SVGGElement>) => {
       g.selectAll("line")
@@ -44,24 +45,28 @@ export class GridLayer extends OptionalLayer {
         .attr("y2", (d: number) => scaleY(d))
     };
 
-    const gridX = svgLayer.append("g")
-      .call(addGridX)
-      .attr("opacity", gridOpacity)
-      .attr("id", `${getHtmlId(this.type)}-x`);
+    if (this.directions.x) {  
+      grids.x = svgLayer.append("g")
+        .call(addGridX)
+        .attr("opacity", gridOpacity)
+        .attr("id", `${getHtmlId(this.type)}-x`);
+    }
 
-    const gridY = svgLayer.append("g")
-      .call(addGridY)
-      .attr("opacity", gridOpacity)
-      .attr("id", `${getHtmlId(this.type)}-y`);
+    if (this.directions.y) {
+      grids.y = svgLayer.append("g")
+        .call(addGridY)
+        .attr("opacity", gridOpacity)
+        .attr("id", `${getHtmlId(this.type)}-y`);
+    };
 
     this.zoom = async () => {
-      const fadeOutX = gridX.selectAll("line")
+      const fadeOutX = grids.x?.selectAll("line")
         .transition()
         .duration(animationDuration / 2)
         .style("opacity", 0)
         .remove()
         .end();
-      const fadeOutY = gridY.selectAll("line")
+      const fadeOutY = grids.y?.selectAll("line")
         .transition()
         .duration(animationDuration / 2)
         .style("opacity", 0)
@@ -69,13 +74,13 @@ export class GridLayer extends OptionalLayer {
         .end();
       await Promise.all([fadeOutX, fadeOutY]);
 
-      const fadeInX = gridX.call(addGridX)
+      const fadeInX = grids.x?.call(addGridX)
         .style("opacity", 0)
         .transition()
         .duration(animationDuration / 2)
         .style("opacity", gridOpacity)
         .end();
-      const fadeInY = gridY.call(addGridY)
+      const fadeInY = grids.y?.call(addGridY)
         .style("opacity", 0)
         .transition()
         .duration(animationDuration / 2)

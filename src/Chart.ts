@@ -67,12 +67,15 @@ export class Chart<Metadata = any> {
   addAxes = (labels: XYLabel = {}) => {
     if (labels.x) this.defaultMargin.bottom = 80;
     if (labels.y) this.defaultMargin.left = 90;
-    this.optionalLayers.push(new AxesLayer(labels || {}));
+    this.optionalLayers.push(new AxesLayer(labels || {}, { x: true, y: true }));
     return this;
   };
 
-  addGridLines = () => {
-    this.optionalLayers.push(new GridLayer());
+  addGridLines = (directions?: Partial<XY<boolean>>) => {
+    this.optionalLayers.push(new GridLayer({
+      x: directions === undefined ? true : directions.x ?? false,
+      y: directions === undefined ? true : directions.y ?? false,
+    }));
     return this;
   };
 
