@@ -3,7 +3,7 @@ import { AxesLayer } from "./layers/AxesLayer";
 import { TracesLayer, TracesOptions } from "./layers/TracesLayer";
 import { ZoomLayer, ZoomOptions } from "./layers/ZoomLayer";
 import { TooltipHtmlCallback, TooltipsLayer } from "./layers/TooltipsLayer";
-import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, ZoomExtents, PartialScales, Point, Scales, ScatterPoints, XY, XYLabel, ScaleNumeric, AxisType, CategoricalScaleConfig, ClipPathBounds } from "./types";
+import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, ZoomExtents, PartialScales, Point, Scales, ScatterPoints, XY, XYLabel, ScaleNumeric, AxisType, CategoricalScaleConfig, ClipPathBounds, TickConfig } from "./types";
 import { LayerType, LifecycleHooks, OptionalLayer } from "./layers/Layer";
 import { GridLayer } from "./layers/GridLayer";
 import html2canvas from "html2canvas";
@@ -24,7 +24,8 @@ export type ChartOptions = {
 
 type PartialChartOptions = {
   logScale?: Partial<XY<boolean>>,
-  animationDuration?: number
+  animationDuration?: number,
+  tickConfig?: Partial<XY<Partial<TickConfig>>>,
 }
 
 type CategoricalScales = Partial<XY<string[]>>;
@@ -35,13 +36,7 @@ export class Chart<Metadata = any> {
   isResponsive: boolean = false;
   globals = {
     animationDuration: 350,
-    tickConfig: {
-      x: { count: 0 },
-      y: {
-        count: 0,
-        specifier: ".2~s", // an SI-prefix with 2 significant figures and no trailing zeros, 42e6 -> 42M
-      }
-    }
+    tickConfig: { x: { count: -1, specifier: "" }, y: { count: -1, specifier: "" } },
   };
   defaultMargin = { top: 20, bottom: 35, left: 50, right: 20 };
   exportToPng: ((name?: string) => void) | null = null;
@@ -60,6 +55,12 @@ export class Chart<Metadata = any> {
     };
     if (options?.animationDuration) {
       this.globals.animationDuration = options.animationDuration;
+    }
+    if (options?.tickConfig?.x) {
+      this.globals.tickConfig.x = { ...this.globals.tickConfig.x, ...options.tickConfig.x };
+    }
+    if (options?.tickConfig?.y) {
+      this.globals.tickConfig.y = { ...this.globals.tickConfig.y, ...options.tickConfig.y };
     }
     this.id = Math.random().toString(26).substring(2, 10);
 
@@ -339,15 +340,32 @@ export class Chart<Metadata = any> {
     const d3ScaleY = this.options.logScale.y ? d3.scaleLog : d3.scaleLinear;
     const numericalScaleY = d3ScaleY().domain(initialDomain.y).range(rangeY);
 
-    let ticksX = 10;
-    if (width < 500) ticksX = 6;
-    if (width < 300) ticksX = 3;
-    let ticksY = 10;
-    if (height < 400) ticksY = 6;
-    if (height < 200) ticksY = 3;
+    if (this.globals.tickConfig.x.count === -1) {
+      let ticksX = 10;
+      if (width < 500) ticksX = 6;
+      if (width < 300) ticksX = 3;
+      if (categoricalScales.x && categoricalScales.x.length) {
+        ticksX = 1;
+      }
+      this.globals.tickConfig.x.count = ticksX;
+    }
+    if (this.globals.tickConfig.y.count === -1) {
+      let ticksY = 10;
+      if (height < 400) ticksY = 6;
+      if (height < 200) ticksY = 3;
+      if (categoricalScales.y && categoricalScales.y.length) {
+        ticksY = 1;
+      }
+      this.globals.tickConfig.y.count = ticksY;
+    }
 
-    this.globals.tickConfig.x.count = ticksX;
-    this.globals.tickConfig.y.count = ticksY;
+    const defaultTickSpecifier = ".2~s"; // an SI-prefix with 2 significant figures and no trailing zeros, 42e6 -> 42M
+    if (this.globals.tickConfig.x.specifier === "") {
+      this.globals.tickConfig.x.specifier = defaultTickSpecifier;
+    }
+    if (this.globals.tickConfig.y.specifier === "") {
+      this.globals.tickConfig.y.specifier = defaultTickSpecifier;
+    }
 
     const layerArgs: LayerArgs = {
       id: this.id,

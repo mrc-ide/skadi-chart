@@ -44,7 +44,7 @@ export class AxesLayer extends OptionalLayer {
 
     return layerArgs.scaleConfig.categoricalScales[axis]
       ? this.drawCategoricalAxis(axis, layerArgs)
-      : this.drawNumericalAxis(axis, numericalScale, { ...layerArgs.globals.tickConfig[axis], padding: 12 }, layerArgs);
+      : this.drawNumericalAxis(axis, numericalScale, { padding: 12, size: 0, ...layerArgs.globals.tickConfig[axis] }, layerArgs);
   };
 
 
@@ -91,14 +91,13 @@ export class AxesLayer extends OptionalLayer {
     const { margin } = layerArgs.bounds;
     const svgLayer = layerArgs.coreLayers[LayerType.Svg];
     const { getHtmlId } = layerArgs;
-    const { count: tickCount } = layerArgs.globals.tickConfig[axis];
 
     const { translation, axisConstructor } = this.axisConfig(axis, layerArgs);
 
     const bandwidth = categoricalScale.bandwidth();
 
     const axisMargin = axis === "x" ? margin.bottom : margin.left;
-    const categoricalAxis = axisConstructor(categoricalScale).ticks(tickCount).tickSize(0)
+    const categoricalAxis = axisConstructor(categoricalScale).tickSize(0)
       .tickPadding(axisMargin * (1 - this.labelPositions?.[axis]) / 3);
     svgLayer.append("g")
       .attr("id", `${getHtmlId(LayerType.Axes)}-${axis}`)
@@ -110,9 +109,11 @@ export class AxesLayer extends OptionalLayer {
     bandNumericalScales.forEach(([category, bandNumericalScale]) => {
       const bandStart = categoricalScale(category)!;
       const bandDomain = bandNumericalScale.domain();
-      if (bandDomain[0] < 0 && bandDomain[1] > 0) {
+      const domainCrossesZero = bandDomain[0] < 0 && bandDomain[1] > 0;
+      if (domainCrossesZero) {
         // Add a tick and label at [axis]=0 for each band
-        this.drawNumericalAxis(axis, bandNumericalScale, { count: 1, padding: 6 }, layerArgs);
+        const tickConfig = { padding: 6, size: 0, ...layerArgs.globals.tickConfig[axis] };
+        this.drawNumericalAxis(axis, bandNumericalScale, tickConfig, layerArgs);
       }
       if (categoricalScale.paddingInner()) {
         this.drawLinePerpendicularToAxis(axis, bandStart, layerArgs);
@@ -126,15 +127,15 @@ export class AxesLayer extends OptionalLayer {
   private drawNumericalAxis = (
     axis: AxisType,
     scale: ScaleNumeric,
-    tickConfig: TickConfig & { padding: number },
+    tickConfig: TickConfig & { padding: number, size: number },
     layerArgs: LayerArgs
   ): AxisElements => {
     const { getHtmlId } = layerArgs;
-    const { count: tickCount, specifier: tickSpecifier, padding: tickPadding } = tickConfig;
+    const { count: tickCount, specifier: tickSpecifier, padding: tickPadding, size: tickSize } = tickConfig;
     const { translation, axisConstructor } = this.axisConfig(axis, layerArgs);
     let axisLine: D3Selection<SVGLineElement> | null = null;
 
-    const numericalAxis = axisConstructor(scale).ticks(tickCount, tickSpecifier).tickSize(0).tickPadding(tickPadding);
+    const numericalAxis = axisConstructor(scale).ticks(tickCount, tickSpecifier).tickSize(tickSize).tickPadding(tickPadding);
     const axisLayer = layerArgs.coreLayers[LayerType.Svg].append("g")
       .attr("id", `${getHtmlId(LayerType.Axes)}-${axis}`)
       .style("font-size", "0.75rem")

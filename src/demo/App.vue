@@ -343,7 +343,10 @@ const categoricalYAxisLogScaleX = ref<boolean>(false);
 const categoricalYAxisLogScaleY = ref<boolean>(false);
 
 const drawChartCategoricalYAxis = () => {
-  new Chart({ logScale: { x: categoricalYAxisLogScaleX.value, y: categoricalYAxisLogScaleY.value }})
+  new Chart({
+    logScale: { x: categoricalYAxisLogScaleX.value, y: categoricalYAxisLogScaleY.value },
+    tickConfig: { y: { specifier: ".0f" } }
+  })
     .addAxes({ x: "Time", y: "Category" }, { y: 0.2, x: 0.4 })
     .addGridLines({ x: true })
     .addTraces(curvesCategoricalYAxis)
@@ -367,7 +370,10 @@ const categoricalXAxisLogScaleX = ref<boolean>(false);
 const categoricalXAxisLogScaleY = ref<boolean>(false);
 
 const drawChartCategoricalXAxis = () => {
-  new Chart({ logScale: { x: categoricalXAxisLogScaleX.value, y: categoricalXAxisLogScaleY.value }})
+  new Chart({
+    logScale: { x: categoricalXAxisLogScaleX.value, y: categoricalXAxisLogScaleY.value },
+    tickConfig: { x: { count: 5 } }
+  })
     .addAxes({ x: "Category", y: "Value" })
     .addTraces(curvesCategoricalXAxis)
     .addScatterPoints(pointsCategoricalXAxis)
@@ -380,6 +386,24 @@ watch([categoricalXAxisLogScaleX, categoricalXAxisLogScaleY], () => {
   drawChartCategoricalXAxis();
 });
 
+// <<<<<<< HEAD
+// =======
+// const drawchartOverlappingBandsY = () => {
+//   new Chart({
+//     bandOverlap: { y: bandOverlapY.value },
+//     tickConfig: { x: { size: 8, padding: 2 } },
+//   })
+//     .addAxes({ x: "Time", y: "Category" })
+//     .addTraces(curvesOverlappingBandsY)
+//     .addArea()
+//     .addZoom()
+//     .addTooltips(tooltipHtmlCallback)
+//     .appendTo(chartOverlappingBandsY.value!, { x: scales.x, y: { ...scales.y, start: 0 } }, {}, { y: categoricalYAxis });
+// };
+
+// watch(bandOverlapY, drawchartOverlappingBandsY);
+
+// >>>>>>> b7dcbb6 (Make ticks configurable by user)
 onMounted(async () => {
   new Chart()
     .addTraces(curvesSparkLines)
@@ -444,7 +468,7 @@ onMounted(async () => {
     .makeResponsive()
     .appendTo(chartResponsive.value!);
 
-  new Chart()
+  new Chart({ tickConfig: { x: { size: 8, padding: 2 } } })
     .addAxes({ x: "Time", y: "Category" })
     .addTraces(curvesOverlappingBandsY)
     .addArea()
