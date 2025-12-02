@@ -31,7 +31,7 @@
   <button @click="() => categoricalYAxisLogScaleX = !categoricalYAxisLogScaleX">Toggle log scale X</button>
   <button @click="() => categoricalYAxisLogScaleY = !categoricalYAxisLogScaleY">Toggle log scale Y</button>
 
-  <h1>Categorical x axis with traces and log scales</h1>
+  <h1>Categorical x axis with traces, log scales, and band inner padding</h1>
   <div class="chart" ref="chartCategoricalXAxis" id="chartCategoricalXAxis"></div>
   <button @click="() => categoricalXAxisLogScaleX = !categoricalXAxisLogScaleX">Toggle log scale X</button>
   <button @click="() => categoricalXAxisLogScaleY = !categoricalXAxisLogScaleY">Toggle log scale Y</button>
@@ -371,7 +371,10 @@ const categoricalXAxisLogScaleX = ref<boolean>(false);
 const categoricalXAxisLogScaleY = ref<boolean>(false);
 
 const drawChartCategoricalXAxis = () => {
-  new Chart({ logScale: { x: categoricalXAxisLogScaleX.value, y: categoricalXAxisLogScaleY.value }})
+  new Chart({
+      logScale: { x: categoricalXAxisLogScaleX.value, y: categoricalXAxisLogScaleY.value },
+      bandInnerPadding: { x: 0.05, y: 0  },
+    })
     .addAxes({ x: "Category", y: "Value" })
     .addTraces(curvesCategoricalXAxis)
     .addScatterPoints(pointsCategoricalXAxis)

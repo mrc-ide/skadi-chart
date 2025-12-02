@@ -26,6 +26,7 @@ type PartialChartOptions = {
   logScale?: Partial<XY<boolean>>,
   animationDuration?: number,
   bandOverlap?: Partial<XY<number>>,
+  bandInnerPadding?: Partial<XY<number>>,
 }
 
 type CategoricalScales = Partial<XY<string[]>>;
@@ -57,6 +58,11 @@ export class Chart<Metadata = any> {
   };
 
   constructor(options?: PartialChartOptions) {
+    if ((options?.bandInnerPadding?.x && options?.bandOverlap?.x)
+      || (options?.bandInnerPadding?.y && options?.bandOverlap?.y)) {
+      throw new Error("Cannot set both bandInnerPadding and bandOverlap on the same axis");
+    }
+
     this.options = {
       logScale: {
         x: options?.logScale?.x ?? false,
@@ -69,6 +75,10 @@ export class Chart<Metadata = any> {
     if (options?.bandOverlap) {
       this.globals.bandPadding.x = options.bandOverlap.x === undefined ? 0: -options.bandOverlap.x;
       this.globals.bandPadding.y = options.bandOverlap.y === undefined ? 0: -options.bandOverlap.y;
+    }
+    if (options?.bandInnerPadding) {
+      this.globals.bandPadding.x = options.bandInnerPadding.x === undefined ? 0: options.bandInnerPadding.x;
+      this.globals.bandPadding.y = options.bandInnerPadding.y === undefined ? 0: options.bandInnerPadding.y;
     }
     this.id = Math.random().toString(26).substring(2, 10);
 
