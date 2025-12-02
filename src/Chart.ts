@@ -43,7 +43,7 @@ export class Chart<Metadata = any> {
         specifier: ".2~s", // an SI-prefix with 2 significant figures and no trailing zeros, 42e6 -> 42M
       }
     },
-    bandOverlap: {
+    bandPadding: {
       x: 0,
       y: 0,
     },
@@ -67,8 +67,8 @@ export class Chart<Metadata = any> {
       this.globals.animationDuration = options.animationDuration;
     }
     if (options?.bandOverlap) {
-      this.globals.bandOverlap.x = options.bandOverlap.x ?? 0;
-      this.globals.bandOverlap.y = options.bandOverlap.y ?? 0;
+      this.globals.bandPadding.x = options.bandOverlap.x === undefined ? 0: -options.bandOverlap.x;
+      this.globals.bandPadding.y = options.bandOverlap.y === undefined ? 0: -options.bandOverlap.y;
     }
     this.id = Math.random().toString(26).substring(2, 10);
 
@@ -270,6 +270,7 @@ export class Chart<Metadata = any> {
   ) => {
     const getHtmlId = (layer: LayerType[keyof LayerType]) => `${layer}-${this.id}`;
     const { height, width, margin } = bounds;
+    const bandPadding = this.globals.bandPadding;
     this.autoscaledMaxExtents = this.processScales(maxExtents);
  
     const svg = d3.create("svg")
@@ -338,8 +339,8 @@ export class Chart<Metadata = any> {
         linearScales: { x: numericalScaleX, y: numericalScaleY },
         scaleExtents: this.autoscaledMaxExtents,
         categoricalScales: {
-          x: this.createCategoricalScale(categoricalScales.x, rangeX, numericalScaleX, "x", this.globals.bandOverlap.x),
-          y: this.createCategoricalScale(categoricalScales.y, rangeY, numericalScaleY, "y", this.globals.bandOverlap.y),
+          x: this.createCategoricalScale(categoricalScales.x, rangeX, numericalScaleX, "x", bandPadding.x),
+          y: this.createCategoricalScale(categoricalScales.y, rangeY, numericalScaleY, "y", bandPadding.y),
         },
       },
       coreLayers: {
@@ -410,12 +411,12 @@ export class Chart<Metadata = any> {
     range: number[],
     numericalScale: ScaleNumeric,
     axis: AxisType,
-    bandOverlap: number,
+    bandPadding: number,
   ): CategoricalScaleConfig | undefined => {
     if (!categories?.length) {
       return;
     }
-    const bandScale = d3.scaleBand().domain(categories).range(range).paddingInner(-bandOverlap);
+    const bandScale = d3.scaleBand().domain(categories).range(range).paddingInner(bandPadding);
     const bandwidth = bandScale.bandwidth();
     const bands = categories.reduce((acc, category) => {
       const bandStartSC = bandScale(category)!;

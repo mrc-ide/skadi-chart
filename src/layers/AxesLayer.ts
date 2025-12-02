@@ -107,7 +107,7 @@ export class AxesLayer extends OptionalLayer {
       .attr("transform", `translate(${translation.x},${translation.y})`)
       .call(categoricalAxis);
 
-    if (layerArgs.globals.bandOverlap[axis] > 0) {
+    if (layerArgs.globals.bandPadding[axis] < 0) {
       // Move categorical axis labels to account for band overlap.
       // We want the label to be centered within the part of each band that does not overlap the next band.
       const firstBandStartSC = categoricalScale(categoricalScale.domain()[0]);
