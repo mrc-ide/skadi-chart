@@ -61,12 +61,16 @@ class SkadiChartTest {
     });
   };
 
-  expectGridlines = () => {
+  expectGridlines = (directions: XY<boolean> = { x: true, y: true }) => {
     return this.addTest(async () => {
-      const xGrid = await this.selector(LayerType.Grid, "x");
-      expect(xGrid).toHaveLength(1);
-      const yGrid = await this.selector(LayerType.Grid, "y");
-      expect(yGrid).toHaveLength(1);
+      if (directions.x) {
+        const xGrid = await this.selector(LayerType.Grid, "x");
+        expect(xGrid).toHaveLength(1);
+      }
+      if (directions.y) {
+        const yGrid = await this.selector(LayerType.Grid, "y");
+        expect(yGrid).toHaveLength(1);
+      }
     });
   };
 
@@ -179,6 +183,25 @@ test("basic traces and tooltips", async ({ page }) => {
     .expectNPoints(1000)
     .expectTooltip()
     .end()
+});
+
+test("categorical y axis", async ({ page }) => {
+  await new SkadiChartTest(page, "chartCategoricalYAxis")
+    .expectNTraces(10)
+    .expectNPoints(1000)
+    .expectLabels({ x: "Time", y: "Category" })
+    .expectGridlines({ x: true, y: false })
+    .expectZoom()
+    .end();
+});
+
+test("categorical x axis", async ({ page }) => {
+  await new SkadiChartTest(page, "chartCategoricalXAxis")
+    .expectNTraces(10)
+    .expectNPoints(1000)
+    .expectLabels({ x: "Category", y: "Value" })
+    .expectZoom()
+    .end();
 });
 
 test("custom chart works as expected", async ({ page }) => {
