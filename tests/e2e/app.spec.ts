@@ -52,12 +52,12 @@ class SkadiChartTest {
     });
   };
 
-  expectAxes = () => {
+  expectAxes = (numberOfAxes: XY<number> = { x: 1, y: 1 }) => {
     return this.addTest(async () => {
       const xAxis = await this.selector(LayerType.Axes, "x");
-      expect(xAxis).toHaveLength(1);
+      expect(xAxis).toHaveLength(numberOfAxes.x);
       const yAxis = await this.selector(LayerType.Axes, "y");
-      expect(yAxis).toHaveLength(1);
+      expect(yAxis).toHaveLength(numberOfAxes.y);
     });
   };
 
@@ -179,6 +179,26 @@ test("basic traces and tooltips", async ({ page }) => {
     .expectNPoints(1000)
     .expectTooltip()
     .end()
+});
+
+test("categorical y axis", async ({ page }) => {
+  await new SkadiChartTest(page, "chartCategoricalYAxis")
+    .expectNTraces(10)
+    .expectNPoints(1000)
+    .expectAxes({ x: 1, y: 5 })
+    .expectLabels({ x: "Time", y: "Category" })
+    .expectZoom()
+    .end();
+});
+
+test("categorical x axis", async ({ page }) => {
+  await new SkadiChartTest(page, "chartCategoricalXAxis")
+    .expectNTraces(10)
+    .expectNPoints(1000)
+    .expectAxes({ x: 2, y: 1 })
+    .expectLabels({ x: "Category", y: "Value" })
+    .expectZoom()
+    .end();
 });
 
 test("custom chart works as expected", async ({ page }) => {
