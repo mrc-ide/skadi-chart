@@ -139,9 +139,17 @@ export class AxesLayer extends OptionalLayer {
         // Draw a line at the start of each band.
         this.drawLinePerpendicularToAxis(axis, bandStart, layerArgs);
       }
-      // If there is positive inter-band padding, or the domain crosses 0, add a tick and label at [axis]=0 for each band.
-      if (paddingInner > 0 || bandDomain[0] < 0 && bandDomain[1] > 0) {
-        this.drawNumericalAxis(axis, bandNumericalScale, { count: 1, padding: 6 }, layerArgs);
+      // If there is positive inter-band padding, or the domain crosses 0, draw a numerical axis for each band.
+      const domainCrossesZero = bandDomain[0] < 0 && bandDomain[1] > 0;
+      if (paddingInner > 0 || domainCrossesZero) {
+        // If the domain crosses 0, add a tick and label at [axis]=0 for each band.
+        // Otherwise, draw the numerical axis according to the global tick config (as long as there is some inter-band padding)
+        const tickConfig = {
+          ...layerArgs.globals.tickConfig[axis],
+          padding: 6,
+          count: domainCrossesZero ? 1 : layerArgs.globals.tickConfig[axis].count,
+        };
+        this.drawNumericalAxis(axis, bandNumericalScale, tickConfig, layerArgs);
       }
     });
 

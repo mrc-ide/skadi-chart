@@ -373,7 +373,7 @@ const categoricalXAxisLogScaleY = ref<boolean>(false);
 const drawChartCategoricalXAxis = () => {
   new Chart({
       logScale: { x: categoricalXAxisLogScaleX.value, y: categoricalXAxisLogScaleY.value },
-      bandInnerPadding: { x: 0.05, y: 0  },
+      bandInnerPadding: { x: 0.1, y: 0  },
     })
     .addAxes({ x: "Category", y: "Value" })
     .addTraces(curvesCategoricalXAxis)
