@@ -201,6 +201,15 @@ test("categorical x axis", async ({ page }) => {
     .end();
 });
 
+test("categorical y axis with overlapping bands", async ({ page }) => {
+  await new SkadiChartTest(page, "chartOverlappingBandsY")
+    .expectNTraces(10)
+    .expectAxes({ x: 1, y: 0 }) // No numerical y-axes since bands overlap
+    .expectLabels({ x: "Time", y: "Category" })
+    .expectZoom()
+    .end();
+});
+
 test("custom chart works as expected", async ({ page }) => {
   await new SkadiChartTest(page, "chartCustom")
     .expectNTraces(10)
