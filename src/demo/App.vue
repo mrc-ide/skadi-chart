@@ -392,10 +392,20 @@ watch([categoricalXAxisLogScaleX, categoricalXAxisLogScaleY], () => {
 });
 
 const drawchartOverlappingBandsY = () => {
-  new Chart({
-    bandOverlap: { y: bandOverlapY.value },
-    tickConfig: { x: { size: 8, padding: 2 } },
-  })
+  const tickConfig = {
+    x: {
+      size: 8,
+      padding: 2,
+    },
+    y: {}
+  };
+  if (bandOverlapY.value === 0) {
+    tickConfig.y = {
+      count: 0.5, // 'count: 0.5' shows 1 tick in the case that the scale starts at 0.
+      specifier: ".0f",
+    };
+  }
+  new Chart({ bandOverlap: { y: bandOverlapY.value }, tickConfig })
     .addAxes({ x: "Time", y: "Category" })
     .addTraces(curvesOverlappingBandsY)
     .addArea()
