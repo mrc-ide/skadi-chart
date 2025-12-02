@@ -44,7 +44,7 @@ export class AxesLayer extends OptionalLayer {
 
     return layerArgs.scaleConfig.categoricalScales[axis]
       ? this.drawCategoricalAxis(axis, layerArgs)
-      : this.drawNumericalAxis(axis, numericalScale, { ...layerArgs.globals.tickConfig[axis], padding: 12 }, layerArgs);
+      : this.drawNumericalAxis(axis, numericalScale, { padding: 12, size: 0, ...layerArgs.globals.tickConfig[axis] }, layerArgs);
   };
 
 
@@ -91,14 +91,13 @@ export class AxesLayer extends OptionalLayer {
     const { margin } = layerArgs.bounds;
     const svgLayer = layerArgs.coreLayers[LayerType.Svg];
     const { getHtmlId } = layerArgs;
-    const { count: tickCount } = layerArgs.globals.tickConfig[axis];
 
     const { translation, axisConstructor } = this.axisConfig(axis, layerArgs);
 
     const bandwidth = categoricalScale.bandwidth();
 
     const distanceFromSvgEdgeToAxis = axis === "x" ? margin.bottom : margin.left;
-    const categoricalAxis = axisConstructor(categoricalScale).ticks(tickCount).tickSize(0)
+    const categoricalAxis = axisConstructor(categoricalScale).tickSize(0)
       .tickPadding(distanceFromSvgEdgeToAxis * 0.3);
     const categoricalAxisIdAttribute = `${getHtmlId(LayerType.Axes)}-categorical-${axis}`;
     svgLayer.append("g")
@@ -130,25 +129,15 @@ export class AxesLayer extends OptionalLayer {
 
     const bandNumericalScales = Object.entries(layerArgs.scaleConfig.categoricalScales[axis]!.bands);
     bandNumericalScales.forEach(([category, bandNumericalScale]) => {
-      const bandStart = categoricalScale(category)!;
-      const bandDomain = bandNumericalScale.domain();
-      // Draw a line at the end of each band.
-      this.drawLinePerpendicularToAxis(axis, bandStart + bandwidth, layerArgs);
       const paddingInner = categoricalScale.paddingInner();
+      const bandStart = categoricalScale(category)!;
+      const bandEnd = bandStart + bandwidth;
+      this.drawLinePerpendicularToAxis(axis, bandEnd, layerArgs);
       if (paddingInner > 0) {
-        // Draw a line at the start of each band.
         this.drawLinePerpendicularToAxis(axis, bandStart, layerArgs);
       }
-      // If there is positive inter-band padding, or the domain crosses 0, draw a numerical axis for each band.
-      const domainCrossesZero = bandDomain[0] < 0 && bandDomain[1] > 0;
-      if (paddingInner > 0 || domainCrossesZero) {
-        // If the domain crosses 0, add a tick and label at [axis]=0 for each band.
-        // Otherwise, draw the numerical axis according to the global tick config (as long as there is some inter-band padding)
-        const tickConfig = {
-          ...layerArgs.globals.tickConfig[axis],
-          padding: 6,
-          count: domainCrossesZero ? 1 : layerArgs.globals.tickConfig[axis].count,
-        };
+      if (paddingInner >= 0) {
+        const tickConfig = { padding: 6, size: 0, ...layerArgs.globals.tickConfig[axis] };
         this.drawNumericalAxis(axis, bandNumericalScale, tickConfig, layerArgs);
       }
     });
@@ -159,15 +148,15 @@ export class AxesLayer extends OptionalLayer {
   private drawNumericalAxis = (
     axis: AxisType,
     scale: ScaleNumeric,
-    tickConfig: TickConfig & { padding: number },
+    tickConfig: TickConfig & { padding: number, size: number },
     layerArgs: LayerArgs
   ): AxisElements => {
     const { getHtmlId } = layerArgs;
-    const { count: tickCount, specifier: tickSpecifier, padding: tickPadding } = tickConfig;
+    const { count: tickCount, specifier: tickSpecifier, padding: tickPadding, size: tickSize } = tickConfig;
     const { translation, axisConstructor } = this.axisConfig(axis, layerArgs);
     let axisLine: D3Selection<SVGLineElement> | null = null;
 
-    const numericalAxis = axisConstructor(scale).ticks(tickCount, tickSpecifier).tickSize(0).tickPadding(tickPadding);
+    const numericalAxis = axisConstructor(scale).ticks(tickCount, tickSpecifier).tickSize(tickSize).tickPadding(tickPadding);
     const axisLayer = layerArgs.coreLayers[LayerType.Svg].append("g")
       .attr("id", `${getHtmlId(LayerType.Axes)}-${axis}`)
       .style("font-size", "0.75rem")

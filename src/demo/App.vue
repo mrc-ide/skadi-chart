@@ -354,7 +354,10 @@ const categoricalYAxisLogScaleX = ref<boolean>(false);
 const categoricalYAxisLogScaleY = ref<boolean>(false);
 
 const drawChartCategoricalYAxis = () => {
-  new Chart({ logScale: { x: categoricalYAxisLogScaleX.value, y: categoricalYAxisLogScaleY.value }})
+  new Chart({
+    logScale: { x: categoricalYAxisLogScaleX.value, y: categoricalYAxisLogScaleY.value },
+    tickConfig: { y: { specifier: ".0f" } }
+  })
     .addAxes({ x: "Time", y: "Category" })
     .addTraces(curvesCategoricalYAxis)
     .addScatterPoints(pointsCategoricalYAxis)
@@ -372,9 +375,10 @@ const categoricalXAxisLogScaleY = ref<boolean>(false);
 
 const drawChartCategoricalXAxis = () => {
   new Chart({
-      logScale: { x: categoricalXAxisLogScaleX.value, y: categoricalXAxisLogScaleY.value },
-      bandInnerPadding: { x: 0.1, y: 0  },
-    })
+    logScale: { x: categoricalXAxisLogScaleX.value, y: categoricalXAxisLogScaleY.value },
+    bandInnerPadding: { x: 0.1, y: 0  },
+    tickConfig: { x: { count: 5 } }
+  })
     .addAxes({ x: "Category", y: "Value" })
     .addTraces(curvesCategoricalXAxis)
     .addScatterPoints(pointsCategoricalXAxis)
@@ -388,7 +392,10 @@ watch([categoricalXAxisLogScaleX, categoricalXAxisLogScaleY], () => {
 });
 
 const drawchartOverlappingBandsY = () => {
-  new Chart({ bandOverlap: { y: bandOverlapY.value } })
+  new Chart({
+    bandOverlap: { y: bandOverlapY.value },
+    tickConfig: { x: { size: 8, padding: 2 } },
+  })
     .addAxes({ x: "Time", y: "Category" })
     .addTraces(curvesOverlappingBandsY)
     .addArea()
