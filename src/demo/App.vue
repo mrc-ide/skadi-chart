@@ -386,24 +386,6 @@ watch([categoricalXAxisLogScaleX, categoricalXAxisLogScaleY], () => {
   drawChartCategoricalXAxis();
 });
 
-// <<<<<<< HEAD
-// =======
-// const drawchartOverlappingBandsY = () => {
-//   new Chart({
-//     bandOverlap: { y: bandOverlapY.value },
-//     tickConfig: { x: { size: 8, padding: 2 } },
-//   })
-//     .addAxes({ x: "Time", y: "Category" })
-//     .addTraces(curvesOverlappingBandsY)
-//     .addArea()
-//     .addZoom()
-//     .addTooltips(tooltipHtmlCallback)
-//     .appendTo(chartOverlappingBandsY.value!, { x: scales.x, y: { ...scales.y, start: 0 } }, {}, { y: categoricalYAxis });
-// };
-
-// watch(bandOverlapY, drawchartOverlappingBandsY);
-
-// >>>>>>> b7dcbb6 (Make ticks configurable by user)
 onMounted(async () => {
   new Chart()
     .addTraces(curvesSparkLines)

@@ -44,7 +44,7 @@ export class AxesLayer extends OptionalLayer {
 
     return layerArgs.scaleConfig.categoricalScales[axis]
       ? this.drawCategoricalAxis(axis, layerArgs)
-      : this.drawNumericalAxis(axis, numericalScale, { padding: 12, size: 0, ...layerArgs.globals.tickConfig[axis] }, layerArgs);
+      : this.drawNumericalAxis(axis, numericalScale, layerArgs, 12);
   };
 
 
@@ -112,8 +112,7 @@ export class AxesLayer extends OptionalLayer {
       const domainCrossesZero = bandDomain[0] < 0 && bandDomain[1] > 0;
       if (domainCrossesZero) {
         // Add a tick and label at [axis]=0 for each band
-        const tickConfig = { padding: 6, size: 0, ...layerArgs.globals.tickConfig[axis] };
-        this.drawNumericalAxis(axis, bandNumericalScale, tickConfig, layerArgs);
+        this.drawNumericalAxis(axis, bandNumericalScale, layerArgs, 6);
       }
       if (categoricalScale.paddingInner()) {
         this.drawLinePerpendicularToAxis(axis, bandStart, layerArgs);
@@ -127,15 +126,18 @@ export class AxesLayer extends OptionalLayer {
   private drawNumericalAxis = (
     axis: AxisType,
     scale: ScaleNumeric,
-    tickConfig: TickConfig & { padding: number, size: number },
-    layerArgs: LayerArgs
+    layerArgs: LayerArgs,
+    defaultTickPadding: number,
   ): AxisElements => {
     const { getHtmlId } = layerArgs;
-    const { count: tickCount, specifier: tickSpecifier, padding: tickPadding, size: tickSize } = tickConfig;
+    const tickConfig = layerArgs.globals.tickConfig[axis];
     const { translation, axisConstructor } = this.axisConfig(axis, layerArgs);
     let axisLine: D3Selection<SVGLineElement> | null = null;
 
-    const numericalAxis = axisConstructor(scale).ticks(tickCount, tickSpecifier).tickSize(tickSize).tickPadding(tickPadding);
+    const numericalAxis = axisConstructor(scale)
+      .ticks(tickConfig.count, tickConfig.specifier)
+      .tickSize(tickConfig.size ?? 0)
+      .tickPadding(tickConfig.padding ?? defaultTickPadding);
     const axisLayer = layerArgs.coreLayers[LayerType.Svg].append("g")
       .attr("id", `${getHtmlId(LayerType.Axes)}-${axis}`)
       .style("font-size", "0.75rem")
