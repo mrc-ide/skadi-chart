@@ -155,10 +155,12 @@ overview of the methods [Chart](./src/Chart.ts) class provides for adding layers
 
 * `addAxes` adds an [AxesLayer](./src/layers/AxesLayer.ts). This will draw axes with tick
 marks. The axes can be autoscaled based on your data or you can provide a fixed scale in
-the `appendTo` function below. Both the arguments are optional.
+the `appendTo` function below. Both the arguments are optional. Note that the values passed in
+the `labelPositions` argument are proportions: for example, `{ x: 0.5 }` would mean to position
+the axis label halfway (50%) between the bottom edge of the graph and the bottom edge of the svg.
   ```ts
   labels = { x: "Time" }
-  labelPositions = { x: 0.5 } // Position the label halfway up the bottom margin
+  labelPositions = { x: 0.5 }
   chart.addAxes(labels, labelPositions);
   ```
 * `addTraces` adds a [TracesLayer](./src/layers/TracesLayer.ts). This will add traces to
