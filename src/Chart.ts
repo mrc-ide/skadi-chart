@@ -67,7 +67,7 @@ export class Chart<Metadata = any> {
   addAxes = (labels: XYLabel = {}) => {
     if (labels.x) this.defaultMargin.bottom = 80;
     if (labels.y) this.defaultMargin.left = 90;
-    this.optionalLayers.push(new AxesLayer(labels || {}, { x: true, y: true }));
+    this.optionalLayers.push(new AxesLayer(labels || {}));
     return this;
   };
 
