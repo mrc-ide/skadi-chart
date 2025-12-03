@@ -329,6 +329,7 @@ const categoricalYAxisLogScaleY = ref<boolean>(false);
 const drawChartCategoricalYAxis = () => {
   new Chart({ logScale: { x: categoricalYAxisLogScaleX.value, y: categoricalYAxisLogScaleY.value }})
     .addAxes({ x: "Time", y: "Category" }, { y: 0.2, x: 0.4 })
+    .addGridLines({ x: true })
     .addTraces(curvesCategoricalYAxis)
     .addScatterPoints(pointsCategoricalYAxis)
     .addZoom()
