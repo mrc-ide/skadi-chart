@@ -71,8 +71,11 @@ export class Chart<Metadata = any> {
     return this;
   };
 
-  addGridLines = () => {
-    this.optionalLayers.push(new GridLayer());
+  addGridLines = (directions?: Partial<XY<boolean>>) => {
+    this.optionalLayers.push(new GridLayer({
+      x: directions === undefined ? true : directions.x ?? false,
+      y: directions === undefined ? true : directions.y ?? false,
+    }));
     return this;
   };
 
