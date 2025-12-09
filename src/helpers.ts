@@ -6,17 +6,22 @@ const getNewSvgPoint = (p: Point, moveOrLine: "M" | "L") => {
   return moveOrLine + round(p.x) + "," + round(p.y);
 }
 
-export const customLineGen = (lineSC: Point[], zoomExtents: ZoomExtents) => {
+export const customLineGen = (lineSC: Point[], layerArgs: LayerArgs) => {
+  const { width, height, margin } = layerArgs.clipPathBounds;
+  const clipPathExtents = {
+    x: [margin.left, width - margin.right],
+    y: [height - margin.bottom, margin.top]
+  };
   const lineSegmentPaths: string[] = [];
   let currLineSegment = "";
   const { x, y } = lineSC[0];
-  let wasLastPointInRange = zoomExtents.x[0] <= x && x <= zoomExtents.x[1]
-                         && zoomExtents.y[1] <= y && y <= zoomExtents.y[0];
+  let wasLastPointInRange = clipPathExtents.x[0] <= x && x <= clipPathExtents.x[1]
+                         && clipPathExtents.y[1] <= y && y <= clipPathExtents.y[0];
 
   for (let i = 0; i < lineSC.length; i++) {
     const { x, y } = lineSC[i];
-    const isPointInRange = zoomExtents.x[0] <= x && x <= zoomExtents.x[1]
-                        && zoomExtents.y[1] <= y && y <= zoomExtents.y[0];
+    const isPointInRange = clipPathExtents.x[0] <= x && x <= clipPathExtents.x[1]
+                        && clipPathExtents.y[1] <= y && y <= clipPathExtents.y[0];
 
     // if last point in range we always want to add next point even if it
     // isn't in range because we want the line to at least continue off the
