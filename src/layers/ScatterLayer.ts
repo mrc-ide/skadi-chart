@@ -9,10 +9,33 @@ export class ScatterLayer<Metadata> extends OptionalLayer {
     super();
   };
 
+  private filterNegativePoints = (points: ScatterPoints<Metadata>, axis: "x" | "y") => {
+    const filteredPoints = points.filter(p => p[axis] >= 0);
+    if (filteredPoints.length !== points.length) {
+      console.warn(
+        `You have tried to use ${axis} axis `
+         + `band overlap but there are points with `
+         + `${axis} coordinates that are < 0`
+      );
+    }
+    return filteredPoints;
+  };
+
   draw = (layerArgs: LayerArgs) => {
     const baseLayer = layerArgs.coreLayers[LayerType.BaseLayer];
     const { animationDuration } = layerArgs.globals;
     const { getHtmlId } = layerArgs;
+
+    const bandOverlaps = {
+      x: layerArgs.scaleConfig.categoricalScales.x?.bandOverlap || 0,
+      y: layerArgs.scaleConfig.categoricalScales.y?.bandOverlap || 0,
+    };
+    if (layerArgs.scaleConfig.categoricalScales.x && bandOverlaps.x > 0) {
+      this.points = this.filterNegativePoints(this.points, "x");
+    }
+    if (layerArgs.scaleConfig.categoricalScales.y && bandOverlaps.y > 0) {
+      this.points = this.filterNegativePoints(this.points, "y");
+    }
 
     const scatter = baseLayer.append("g");
     const scatterPoints = this.points.map((p, index) => {

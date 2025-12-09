@@ -32,6 +32,7 @@ export type ScaleNumeric = d3.ScaleContinuousNumeric<number, number, never>
 export type CategoricalScaleConfig = {
   main: d3.ScaleBand<string>, // The main categorical scale
   bands: Record<string, ScaleNumeric> // Numerical scales within each category for banded data
+  bandOverlap: number
 }
 export type TickConfig = { count: number, specifier?: string }
 

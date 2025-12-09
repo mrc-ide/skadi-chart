@@ -99,7 +99,8 @@ export class AxesLayer extends OptionalLayer {
 
     const distanceFromSvgEdgeToAxis = axis === "x" ? margin.bottom : margin.left;
     const categoricalAxis = axisConstructor(categoricalScale).ticks(tickCount).tickSize(0)
-      .tickPadding(distanceFromSvgEdgeToAxis * 0.3);
+      .tickPadding(distanceFromSvgEdgeToAxis * 0.3)
+      .tickFormat((d) => d.match(/__extra_category_\d+__/) ? "" : d as string);
     svgLayer.append("g")
       .attr("id", `${getHtmlId(LayerType.Axes)}-${axis}`)
       .style("font-size", "0.75rem")
