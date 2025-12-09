@@ -39,6 +39,9 @@
   <h1>Area</h1>
   <div class="chart" ref="chartArea" id="chartArea"></div>
 
+  <h1>Ridgeline plot (configurable clip-path)</h1>
+  <div class="chart" ref="chartOverlappingBandsY" id="chartOverlappingBandsY"></div>
+
   <h1>Responsive chart (and dashed lines)</h1>
   <div class="chart-responsive" ref="chartResponsive" id="chartResponsive"></div>
 
@@ -79,6 +82,7 @@ const chartAxesLabelGridAndZoom = ref<HTMLDivElement | null>(null);
 const chartAxesLabelGridZoomAndLogScale = ref<HTMLDivElement | null>(null);
 const chartPointsAxesAndZoom = ref<HTMLDivElement | null>(null);
 const chartTooltips = ref<HTMLDivElement | null>(null);
+const chartOverlappingBandsY = ref<HTMLDivElement | null>(null);
 const chartResponsive = ref<HTMLDivElement | null>(null);
 const chartArea = ref<HTMLDivElement | null>(null);
 const chartStress = ref<HTMLDivElement | null>(null);
@@ -337,19 +341,13 @@ const categoricalYAxisLogScaleX = ref<boolean>(false);
 const categoricalYAxisLogScaleY = ref<boolean>(false);
 
 const drawChartCategoricalYAxis = () => {
-  const curvesOverlappingBandsY = makeRandomCurvesForCategoricalAxis(categoricalYAxis, "y", true);
-  curvesOverlappingBandsY.forEach(line => {
-    line.points = line.points.map(p => ({ ...p, y: Math.max(p.y, 0) }));
-  });
-
   new Chart({ logScale: { x: categoricalYAxisLogScaleX.value, y: categoricalYAxisLogScaleY.value }})
     .addAxes({ x: "Time", y: "Category" })
-    .addTraces(curvesOverlappingBandsY)
-    .addArea()
-    // .addScatterPoints(pointsCategoricalYAxis)
+    .addTraces(curvesCategoricalYAxis)
+    .addScatterPoints(pointsCategoricalYAxis)
     .addZoom()
     .addTooltips(tooltipHtmlCallback)
-    .appendTo(chartCategoricalYAxis.value!, { x: scales.x, y: { ...scales.y, start: 0 } }, {}, { y: categoricalYAxis }, { y: 3 });
+    .appendTo(chartCategoricalYAxis.value!, { x: scales.x, y: { ...scales.y, start: 0 } }, {}, { y: categoricalYAxis });
 };
 
 watch([categoricalYAxisLogScaleX, categoricalYAxisLogScaleY], () => {
@@ -372,6 +370,27 @@ const drawChartCategoricalXAxis = () => {
 watch([categoricalXAxisLogScaleX, categoricalXAxisLogScaleY], () => {
   drawChartCategoricalXAxis();
 });
+
+const drawChartOverlappingBandsY = () => {
+  const curvesOverlappingBandsY = makeRandomCurvesForCategoricalAxis(categoricalYAxis, "y", true);
+  curvesOverlappingBandsY.forEach(line => {
+    line.points = line.points.map(p => ({ ...p, y: Math.max(p.y, 0) }));
+  });
+
+  new Chart({ logScale: { x: categoricalYAxisLogScaleX.value, y: categoricalYAxisLogScaleY.value }})
+    .addAxes({ x: "Time", y: "Category" })
+    .addTraces(curvesOverlappingBandsY)
+    .addArea()
+    .addZoom()
+    .addTooltips(tooltipHtmlCallback)
+    .appendTo(
+      chartOverlappingBandsY.value!,
+      { x: scales.x, y: { start: 0, end: scales.y.end / 3 } },
+      {},
+      { y: categoricalYAxis },
+      { margin: { top: -100 } },
+    );
+};
 
 onMounted(async () => {
   new Chart()
@@ -436,6 +455,8 @@ onMounted(async () => {
     .addGridLines()
     .makeResponsive()
     .appendTo(chartResponsive.value!);
+
+  drawChartOverlappingBandsY();
 
   class CustomLayer extends OptionalLayer {
     type = LayerType.Custom;

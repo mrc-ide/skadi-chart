@@ -1,4 +1,4 @@
-import { D3Selection, LayerArgs, Lines, Point, XY, ZoomExtents } from "@/types";
+import { D3Selection, LayerArgs, Lines, Point, ZoomExtents } from "@/types";
 import { LayerType, OptionalLayer } from "./Layer";
 import { numScales } from "@/helpers";
 import { customLineGen } from "@/helpers";
@@ -109,11 +109,11 @@ export class TracesLayer<Metadata> extends OptionalLayer {
   // d3 feeds the function we return from this function with t, which goes from
   // 0 to 1 with different jumps based on your ease, t = 0 is the start state of
   // your animation, t = 1 is the end state of your animation
-  private customTween = (index: number, zoomExtents: ZoomExtents) => {
+  private customTween = (index: number, layerArgs: LayerArgs) => {
     const currLineSC = this.lowResLinesSC[index];
     return (t: number) => {
       const intermediateLineSC = currLineSC.map(({x, y}) => this.getNewPoint!(x, y, t));
-      return customLineGen(intermediateLineSC, zoomExtents).join("");
+      return customLineGen(intermediateLineSC, layerArgs).join("");
     };
   };
 
@@ -129,42 +129,11 @@ export class TracesLayer<Metadata> extends OptionalLayer {
     }
   };
 
-  private filterLinesForBandOverlap = (lines: Lines<Metadata>, axis: "x" | "y") => {
-    let warningMsg = "";
-    const filteredLines = lines.filter((l) => {
-      const filteredPoints = l.points.filter(p => p[axis] >= 0);
-      if (filteredPoints.length !== l.points.length) {
-        warningMsg += `You have tried to use ${axis} axis `
-          + `band overlap but there are points with `
-          + `${axis} coordinates that are < 0\n`;
-      }
-      return filteredPoints.length === l.points.length;
-    });
-    if (warningMsg) {
-      console.warn(warningMsg);
-    }
-    return filteredLines;
-  };
-
   draw = (layerArgs: LayerArgs, currentExtentsDC: ZoomExtents) => {
-    if (layerArgs.scaleConfig.categoricalScales.x?.bandOverlap) {
-      this.linesDC = this.filterLinesForBandOverlap(this.linesDC, "x");
-    }
-    if (layerArgs.scaleConfig.categoricalScales.y?.bandOverlap) {
-      this.linesDC = this.filterLinesForBandOverlap(this.linesDC, "y");
-    }
-
     this.updateLowResLinesSC(layerArgs);
 
     this.traces = this.linesDC.map((l, index) => {
-      const scales = numScales(l.bands, layerArgs);
-
-      const currentExtentsSC: ZoomExtents = {
-        x: [scales.x(currentExtentsDC.x[0]), scales.x(currentExtentsDC.x[1])],
-        y: [scales.y(currentExtentsDC.y[0]), scales.y(currentExtentsDC.y[1])],
-      };
-
-      const linePathSC = customLineGen(this.lowResLinesSC[index], currentExtentsSC).join("");
+      const linePathSC = customLineGen(this.lowResLinesSC[index], layerArgs).join("");
       return layerArgs.coreLayers[LayerType.BaseLayer].append("path")
         .attr("id", `${layerArgs.getHtmlId(LayerType.Trace)}-${index}`)
         .attr("pointer-events", "none")
@@ -223,19 +192,13 @@ export class TracesLayer<Metadata> extends OptionalLayer {
 
     // the zoom layer updates scaleX and scaleY which change our customLineGen function
     this.zoom = async zoomExtentsDC => {
-      const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
-      const zoomExtentsSC: ZoomExtents = {
-        x: [scaleX(zoomExtentsDC.x[0]), scaleX(zoomExtentsDC.x[1])],
-        y: [scaleY(zoomExtentsDC.y[0]), scaleY(zoomExtentsDC.y[1])],
-      };
-
       const promises: Promise<void>[] = [];
       for (let i = 0; i < this.linesDC.length; i++) {
         const promise = this.traces[i]
           .transition()
           .duration(layerArgs.globals.animationDuration)
           // we do a custom animation because it is faster than d3's default
-          .attrTween("d", () => this.customTween(i, zoomExtentsSC))
+          .attrTween("d", () => this.customTween(i, layerArgs))
           .end();
         promises.push(promise);
       };
@@ -245,7 +208,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
       // without the user knowing
       this.updateLowResLinesSC(layerArgs);
       this.traces.forEach((t, index) => {
-        t.attr("d", customLineGen(this.lowResLinesSC[index], zoomExtentsSC).join(""))
+        t.attr("d", customLineGen(this.lowResLinesSC[index], layerArgs).join(""))
       });
     };
   };

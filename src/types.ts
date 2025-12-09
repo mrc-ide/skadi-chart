@@ -23,6 +23,7 @@ export type Bounds = {
     left: number, right: number
   }
 }
+export type ClipPathBounds = Partial<Omit<Bounds, "margin">> & { margin?: Partial<Bounds["margin"]> }
 
 export type D3Selection<Element extends d3.BaseType> = d3.Selection<Element, Point, null, undefined>
 
@@ -32,7 +33,6 @@ export type ScaleNumeric = d3.ScaleContinuousNumeric<number, number, never>
 export type CategoricalScaleConfig = {
   main: d3.ScaleBand<string>, // The main categorical scale
   bands: Record<string, ScaleNumeric> // Numerical scales within each category for banded data
-  bandOverlap: number
 }
 export type TickConfig = { count: number, specifier?: string }
 
@@ -46,6 +46,7 @@ export type LayerArgs = {
   id: string,
   getHtmlId: (layer: LayerType) => string,
   bounds: Bounds,
+  clipPathBounds: Bounds,
   globals: {
     animationDuration: number,
     tickConfig: XY<TickConfig>;
