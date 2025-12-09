@@ -42,7 +42,7 @@ export class AreaLayer<Metadata> extends OptionalLayer {
 
         const { x: xMinMax } = getXYMinMax(line.points);
 
-        // For each line, we not create a "canvas point", which we will later
+        // For each line, we now create a "canvas path", which we will later
         // use for determining whether a given point lies within the inside of
         // a trace (via "isPointInPath")
         //
