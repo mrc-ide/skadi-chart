@@ -1,7 +1,7 @@
 import * as d3 from "@/d3";
 import { LayerType, OptionalLayer } from "./Layer";
 import { TracesLayer } from "./TracesLayer";
-import { AxisType, D3Selection, LayerArgs, Point, PointWithMetadata, ScaleNumeric, XY } from "@/types";
+import { AxisType, D3Selection, LayerArgs, Point, PointWithMetadata, XY } from "@/types";
 import { ScatterLayer } from "./ScatterLayer";
 
 export type TooltipHtmlCallback<Metadata> =
