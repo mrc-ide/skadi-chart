@@ -258,6 +258,7 @@ export class Chart<Metadata = any> {
     maxExtents: PartialScales,
     initialExtents: PartialScales,
     categoricalScales: Partial<XY<string[]>> = {},
+    bandOverlap: Partial<XY<number>> = {},
   ) => {
     const getHtmlId = (layer: LayerType[keyof LayerType]) => `${layer}-${this.id}`;
     const { height, width, margin } = bounds;
@@ -302,6 +303,15 @@ export class Chart<Metadata = any> {
       initialDomain.y = [y.start, y.end];
     }
 
+    if (Number(bandOverlap.x) > 0 && this.autoscaledMaxExtents.x.start !== 0) {
+      console.warn(`You have set a band overlap for the x axis but the x axis extent does not begin at 0. The band overlap will be ignored.`);
+      bandOverlap.x = 0;
+    }
+    if (Number(bandOverlap.y) > 0 && this.autoscaledMaxExtents.y.start !== 0) {
+      console.warn(`You have set a band overlap for the y axis but the y axis extent does not begin at 0. The band overlap will be ignored.`);
+      bandOverlap.y = 0;
+    }
+
     const rangeX = [margin.left, width - margin.right];
     const rangeY = [height - margin.bottom, margin.top];
 
@@ -329,8 +339,8 @@ export class Chart<Metadata = any> {
         linearScales: { x: numericalScaleX, y: numericalScaleY },
         scaleExtents: this.autoscaledMaxExtents,
         categoricalScales: {
-          x: this.createCategoricalScale(categoricalScales.x, rangeX, numericalScaleX, "x"),
-          y: this.createCategoricalScale(categoricalScales.y, rangeY, numericalScaleY, "y"),
+          x: this.createCategoricalScale(categoricalScales.x, rangeX, numericalScaleX, "x", bandOverlap.x),
+          y: this.createCategoricalScale(categoricalScales.y, rangeY, numericalScaleY, "y", bandOverlap.y),
         },
       },
       coreLayers: {
@@ -355,10 +365,11 @@ export class Chart<Metadata = any> {
     maxExtents: PartialScales = {},
     initialExtents: PartialScales = {},
     categoricalScales: CategoricalScales = {},
+    bandOverlap: Partial<XY<number>> = {},
   ) => {
     const drawWithBounds = (width: number, height: number) => {
       const bounds = { width, height, margin: this.defaultMargin };
-      this.draw(baseElement, bounds, maxExtents, initialExtents, categoricalScales);
+      this.draw(baseElement, bounds, maxExtents, initialExtents, categoricalScales, bandOverlap);
     };
 
     const { width, height } = baseElement.getBoundingClientRect();
@@ -401,20 +412,29 @@ export class Chart<Metadata = any> {
     range: number[],
     numericalScale: ScaleNumeric,
     axis: AxisType,
+    bandOverlap: number = 0,
   ): CategoricalScaleConfig | undefined => {
     if (!categories?.length) {
       return;
     }
-    const bandScale = d3.scaleBand().domain(categories).range(range);
+    const categoriesIncludingExtras = [...categories];
+    if (bandOverlap > 0) {
+      // If bands overlap, we need to allow extra head-room for the last category
+      // so that points at the top of the last band are not clipped.
+      for (let i = 0; i < bandOverlap; i++) {
+        categoriesIncludingExtras.push(`__extra_category_${i}__`);
+      }
+    }
+    const bandScale = d3.scaleBand().domain(categoriesIncludingExtras).range(range);
     const bandwidth = bandScale.bandwidth();
     const bands = categories.reduce((acc, category) => {
       const bandStartSC = bandScale(category)!;
       const bandRange = axis === "x"
-        ? [bandStartSC, bandStartSC + bandwidth]
-        : [bandStartSC + bandwidth, bandStartSC];
+        ? [bandStartSC, bandStartSC + bandwidth * bandOverlap]
+        : [bandStartSC + bandwidth, bandStartSC - bandwidth * bandOverlap];
       acc[category] = numericalScale.copy().range(bandRange);
       return acc;
     }, {} as Record<string, ScaleNumeric>)
-    return { main: bandScale, bands };
+    return { main: bandScale, bands, bandOverlap };
   }
 };

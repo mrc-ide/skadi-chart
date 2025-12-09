@@ -1,4 +1,4 @@
-import { D3Selection, LayerArgs, Lines, Point, ZoomExtents } from "@/types";
+import { D3Selection, LayerArgs, Lines, Point, XY, ZoomExtents } from "@/types";
 import { LayerType, OptionalLayer } from "./Layer";
 import { numScales } from "@/helpers";
 import { customLineGen } from "@/helpers";
@@ -129,7 +129,31 @@ export class TracesLayer<Metadata> extends OptionalLayer {
     }
   };
 
+  private filterLinesForBandOverlap = (lines: Lines<Metadata>, axis: "x" | "y") => {
+    let warningMsg = "";
+    const filteredLines = lines.filter((l) => {
+      const filteredPoints = l.points.filter(p => p[axis] >= 0);
+      if (filteredPoints.length !== l.points.length) {
+        warningMsg += `You have tried to use ${axis} axis `
+          + `band overlap but there are points with `
+          + `${axis} coordinates that are < 0\n`;
+      }
+      return filteredPoints.length === l.points.length;
+    });
+    if (warningMsg) {
+      console.warn(warningMsg);
+    }
+    return filteredLines;
+  };
+
   draw = (layerArgs: LayerArgs, currentExtentsDC: ZoomExtents) => {
+    if (layerArgs.scaleConfig.categoricalScales.x?.bandOverlap) {
+      this.linesDC = this.filterLinesForBandOverlap(this.linesDC, "x");
+    }
+    if (layerArgs.scaleConfig.categoricalScales.y?.bandOverlap) {
+      this.linesDC = this.filterLinesForBandOverlap(this.linesDC, "y");
+    }
+
     this.updateLowResLinesSC(layerArgs);
 
     this.traces = this.linesDC.map((l, index) => {

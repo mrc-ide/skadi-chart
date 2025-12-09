@@ -236,8 +236,8 @@ const makeRandomCurves = (props: typeof propsBasic, withArea?: boolean) => {
   return lines;
 };
 
-const makeRandomCurvesForCategoricalAxis = (domain: string[], axis: "x" | "y"): Lines<Metadata> => {
-  return makeRandomCurves(propsBasic).map((line, index) => {
+const makeRandomCurvesForCategoricalAxis = (domain: string[], axis: "x" | "y", withArea?: boolean): Lines<Metadata> => {
+  return makeRandomCurves(propsBasic, withArea).map((line, index) => {
     const band = domain[index % domain.length];
     const color = colors[index % domain.length];
 
@@ -337,13 +337,19 @@ const categoricalYAxisLogScaleX = ref<boolean>(false);
 const categoricalYAxisLogScaleY = ref<boolean>(false);
 
 const drawChartCategoricalYAxis = () => {
+  const curvesOverlappingBandsY = makeRandomCurvesForCategoricalAxis(categoricalYAxis, "y", true);
+  curvesOverlappingBandsY.forEach(line => {
+    line.points = line.points.map(p => ({ ...p, y: Math.max(p.y, 0) }));
+  });
+
   new Chart({ logScale: { x: categoricalYAxisLogScaleX.value, y: categoricalYAxisLogScaleY.value }})
     .addAxes({ x: "Time", y: "Category" })
-    .addTraces(curvesCategoricalYAxis)
-    .addScatterPoints(pointsCategoricalYAxis)
+    .addTraces(curvesOverlappingBandsY)
+    .addArea()
+    // .addScatterPoints(pointsCategoricalYAxis)
     .addZoom()
     .addTooltips(tooltipHtmlCallback)
-    .appendTo(chartCategoricalYAxis.value!, scales, {}, { y: categoricalYAxis });
+    .appendTo(chartCategoricalYAxis.value!, { x: scales.x, y: { ...scales.y, start: 0 } }, {}, { y: categoricalYAxis }, { y: 3 });
 };
 
 watch([categoricalYAxisLogScaleX, categoricalYAxisLogScaleY], () => {
