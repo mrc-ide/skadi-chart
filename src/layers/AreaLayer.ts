@@ -245,7 +245,7 @@ export class AreaLayer<Metadata> extends OptionalLayer {
     //   - if x axis is above the top of the plot, we use the top extent as if it were the x axis
     //   - if x axis is below the bottom of the plot, we use the  bottom extent as if it were the
     //     x axis
-    // The path closes the curve that the user has put by connecting the end of the curve to
+    // The path closes the curve by connecting the end to
     // the start along this `yCoordOfXAxisBoundarySC`.
     let yCoordOfXAxisBoundarySC: number;
     if (topSC < yCoordForXAxisSC && yCoordForXAxisSC < bottomSC) {
