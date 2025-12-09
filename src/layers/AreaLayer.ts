@@ -49,7 +49,7 @@ export class AreaLayer<Metadata> extends OptionalLayer {
         // NB: The canvas and canvas paths are never rendered. They are just
         // fed into the canvas "isPointInPath" builtin. Since we only care whether
         // the point is inside or outside a curve, the scale can be anything as
-        // long as we are consistent. DC doesn't change on zoom, so by choosing
+        // long as the point and curve use the same scale. DC doesn't change on zoom, so by choosing
         // that for our scale, we avoid the need to re-compute the canvas path.
         const pathDC = line.points.map(p => `L${p.x},${p.y}`).join("");
         const { x: firstPointX } = line.points[0];
