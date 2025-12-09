@@ -31,10 +31,21 @@
   <button @click="() => categoricalYAxisLogScaleX = !categoricalYAxisLogScaleX">Toggle log scale X</button>
   <button @click="() => categoricalYAxisLogScaleY = !categoricalYAxisLogScaleY">Toggle log scale Y</button>
 
-  <h1>Categorical x axis with traces and log scales</h1>
+  <h1>Categorical x axis with traces, log scales, and band inner padding</h1>
   <div class="chart" ref="chartCategoricalXAxis" id="chartCategoricalXAxis"></div>
   <button @click="() => categoricalXAxisLogScaleX = !categoricalXAxisLogScaleX">Toggle log scale X</button>
   <button @click="() => categoricalXAxisLogScaleY = !categoricalXAxisLogScaleY">Toggle log scale Y</button>
+
+  <h1>Categorical y axis with overlapping bands (as for ridgeplot)</h1>
+  <div style="margin-left: 100px">
+    <label for="bandOverlapY">Band overlap:</label><br />
+    <span>
+      0
+      <input type="range" min="0" max="3" step="0.1" v-model.number="bandOverlapY" />
+      3
+    </span>
+  </div>
+  <div class="chart" ref="chartOverlappingBandsY" id="chartOverlappingBandsY"></div>
 
   <h1>Area</h1>
   <div class="chart" ref="chartArea" id="chartArea"></div>
@@ -80,6 +91,9 @@ const chartAxesLabelGridZoomAndLogScale = ref<HTMLDivElement | null>(null);
 const chartPointsAxesAndZoom = ref<HTMLDivElement | null>(null);
 const chartTooltips = ref<HTMLDivElement | null>(null);
 const chartResponsive = ref<HTMLDivElement | null>(null);
+const chartCategoricalYAxis = ref<HTMLDivElement | null>(null);
+const chartCategoricalXAxis = ref<HTMLDivElement | null>(null);
+const chartOverlappingBandsY = ref<HTMLDivElement | null>(null);
 const chartArea = ref<HTMLDivElement | null>(null);
 const chartStress = ref<HTMLDivElement | null>(null);
 const chartStressPoints = ref<HTMLDivElement | null>(null);
@@ -236,8 +250,8 @@ const makeRandomCurves = (props: typeof propsBasic, withArea?: boolean) => {
   return lines;
 };
 
-const makeRandomCurvesForCategoricalAxis = (domain: string[], axis: "x" | "y"): Lines<Metadata> => {
-  return makeRandomCurves(propsBasic).map((line, index) => {
+const makeRandomCurvesForCategoricalAxis = (domain: string[], axis: "x" | "y", withArea?: boolean): Lines<Metadata> => {
+  return makeRandomCurves(propsBasic, withArea).map((line, index) => {
     const band = domain[index % domain.length];
     const color = colors[index % domain.length];
 
@@ -268,8 +282,6 @@ const tooltipHtmlCallback = (point: PointWithMetadata<Metadata>) => {
 
 const categoricalYAxis = ["A", "B", "C", "D", "E"];
 const categoricalXAxis = ["Left", "Right"];
-const chartCategoricalYAxis = ref<HTMLDivElement | null>(null);
-const chartCategoricalXAxis = ref<HTMLDivElement | null>(null);
 const curvesSparkLines = makeRandomCurves(propsBasic);
 const curvesOnlyAxes = makeRandomCurves(propsBasic);
 const curvesAxesAndGrid = makeRandomCurves(propsBasic);
@@ -287,6 +299,10 @@ const curvesResponsive = makeRandomCurves(propsBasic);
 const curvesCustom = makeRandomCurves(propsBasic);
 const curvesCategoricalXAxis = makeRandomCurvesForCategoricalAxis(categoricalXAxis, "x");
 const curvesCategoricalYAxis = makeRandomCurvesForCategoricalAxis(categoricalYAxis, "y");
+const curvesOverlappingBandsY = makeRandomCurvesForCategoricalAxis(categoricalYAxis, "y", true);
+curvesOverlappingBandsY.forEach(line => {
+  line.points = line.points.map(p => ({ ...p, y: Math.max(p.y, 0) }));
+});
 const pointsCategoricalXAxis = makeRandomPointsForCategoricalAxis(categoricalXAxis, "x");
 const pointsCategoricalYAxis = makeRandomPointsForCategoricalAxis(categoricalYAxis, "y");
 
@@ -316,6 +332,7 @@ const axesLabels = { x: "Time", y: "Value" };
 
 const exportToPng = ref<(name?: string) => void>();
 
+const bandOverlapY = ref<number>(1.5);
 const numericalAxesLogScaleX = ref<boolean>(false);
 const numericalAxesLogScaleY = ref<boolean>(false);
 
@@ -354,7 +371,10 @@ const categoricalXAxisLogScaleX = ref<boolean>(false);
 const categoricalXAxisLogScaleY = ref<boolean>(false);
 
 const drawChartCategoricalXAxis = () => {
-  new Chart({ logScale: { x: categoricalXAxisLogScaleX.value, y: categoricalXAxisLogScaleY.value }})
+  new Chart({
+      logScale: { x: categoricalXAxisLogScaleX.value, y: categoricalXAxisLogScaleY.value },
+      bandInnerPadding: { x: 0.1, y: 0  },
+    })
     .addAxes({ x: "Category", y: "Value" })
     .addTraces(curvesCategoricalXAxis)
     .addScatterPoints(pointsCategoricalXAxis)
@@ -366,6 +386,18 @@ const drawChartCategoricalXAxis = () => {
 watch([categoricalXAxisLogScaleX, categoricalXAxisLogScaleY], () => {
   drawChartCategoricalXAxis();
 });
+
+const drawchartOverlappingBandsY = () => {
+  new Chart({ bandOverlap: { y: bandOverlapY.value } })
+    .addAxes({ x: "Time", y: "Category" })
+    .addTraces(curvesOverlappingBandsY)
+    .addArea()
+    .addZoom()
+    .addTooltips(tooltipHtmlCallback)
+    .appendTo(chartOverlappingBandsY.value!, { x: scales.x, y: { ...scales.y, start: 0 } }, {}, { y: categoricalYAxis });
+};
+
+watch(bandOverlapY, drawchartOverlappingBandsY);
 
 onMounted(async () => {
   new Chart()
@@ -420,6 +452,8 @@ onMounted(async () => {
 
   drawChartCategoricalYAxis();
   drawChartCategoricalXAxis();
+
+  drawchartOverlappingBandsY();
 
   curvesResponsive.forEach((l, i) => {
     l.style.strokeDasharray = `${i * 2} 5`

@@ -24,7 +24,9 @@ export type ChartOptions = {
 
 type PartialChartOptions = {
   logScale?: Partial<XY<boolean>>,
-  animationDuration?: number
+  animationDuration?: number,
+  bandOverlap?: Partial<XY<number>>,
+  bandInnerPadding?: Partial<XY<number>>,
 }
 
 type CategoricalScales = Partial<XY<string[]>>;
@@ -41,7 +43,11 @@ export class Chart<Metadata = any> {
         count: 0,
         specifier: ".2~s", // an SI-prefix with 2 significant figures and no trailing zeros, 42e6 -> 42M
       }
-    }
+    },
+    bandPadding: {
+      x: 0,
+      y: 0,
+    },
   };
   defaultMargin = { top: 20, bottom: 35, left: 50, right: 20 };
   exportToPng: ((name?: string) => void) | null = null;
@@ -52,14 +58,27 @@ export class Chart<Metadata = any> {
   };
 
   constructor(options?: PartialChartOptions) {
+    if ((options?.bandInnerPadding?.x && options?.bandOverlap?.x)
+      || (options?.bandInnerPadding?.y && options?.bandOverlap?.y)) {
+      throw new Error("Cannot set both bandInnerPadding and bandOverlap on the same axis");
+    }
+
     this.options = {
       logScale: {
         x: options?.logScale?.x ?? false,
         y: options?.logScale?.y ?? false
-      }
+      },
     };
     if (options?.animationDuration) {
       this.globals.animationDuration = options.animationDuration;
+    }
+    if (options?.bandOverlap) {
+      this.globals.bandPadding.x = options.bandOverlap.x === undefined ? 0: -options.bandOverlap.x;
+      this.globals.bandPadding.y = options.bandOverlap.y === undefined ? 0: -options.bandOverlap.y;
+    }
+    if (options?.bandInnerPadding) {
+      this.globals.bandPadding.x = options.bandInnerPadding.x === undefined ? 0: options.bandInnerPadding.x;
+      this.globals.bandPadding.y = options.bandInnerPadding.y === undefined ? 0: options.bandInnerPadding.y;
     }
     this.id = Math.random().toString(26).substring(2, 10);
 
@@ -261,6 +280,7 @@ export class Chart<Metadata = any> {
   ) => {
     const getHtmlId = (layer: LayerType[keyof LayerType]) => `${layer}-${this.id}`;
     const { height, width, margin } = bounds;
+    const bandPadding = this.globals.bandPadding;
     this.autoscaledMaxExtents = this.processScales(maxExtents);
  
     const svg = d3.create("svg")
@@ -329,8 +349,8 @@ export class Chart<Metadata = any> {
         linearScales: { x: numericalScaleX, y: numericalScaleY },
         scaleExtents: this.autoscaledMaxExtents,
         categoricalScales: {
-          x: this.createCategoricalScale(categoricalScales.x, rangeX, numericalScaleX, "x"),
-          y: this.createCategoricalScale(categoricalScales.y, rangeY, numericalScaleY, "y"),
+          x: this.createCategoricalScale(categoricalScales.x, rangeX, numericalScaleX, "x", bandPadding.x),
+          y: this.createCategoricalScale(categoricalScales.y, rangeY, numericalScaleY, "y", bandPadding.y),
         },
       },
       coreLayers: {
@@ -401,11 +421,12 @@ export class Chart<Metadata = any> {
     range: number[],
     numericalScale: ScaleNumeric,
     axis: AxisType,
+    bandPadding: number,
   ): CategoricalScaleConfig | undefined => {
     if (!categories?.length) {
       return;
     }
-    const bandScale = d3.scaleBand().domain(categories).range(range);
+    const bandScale = d3.scaleBand().domain(categories).range(range).paddingInner(bandPadding);
     const bandwidth = bandScale.bandwidth();
     const bands = categories.reduce((acc, category) => {
       const bandStartSC = bandScale(category)!;

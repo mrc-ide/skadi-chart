@@ -65,20 +65,28 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     const pointer = d3.pointer(eventCC);
     const clientSC = { x: pointer[0], y: pointer[1] };
     const numericalScales = { ...layerArgs.scaleConfig.linearScales };
-    const bands = { x: undefined, y: undefined } as Partial<XY<string>>;
+    const hoveredBand = { x: undefined, y: undefined } as Partial<XY<string>>;
 
-    // To get DC coordinates from SC coordinates in the case of band scales,
-    // we must first work out which band we are in.
     Object.entries(layerArgs.scaleConfig.categoricalScales).forEach(([axis, catScaleConfig]) => {
       if (catScaleConfig?.bands) {
+        // To get DC coordinates from SC coordinates in the case of band scales,
+        // we must first work out which band we are in.
         const ax = axis as AxisType;
-        const [band, numScale] = Object.entries(catScaleConfig.bands).find(([category, numericalScale]) => {
-          const range = numericalScale.range();
-          return clientSC[ax] >= Math.min(...range) && clientSC[ax] <= Math.max(...range);
-        }) || [];
+        const [band, numScale] = Object.entries(catScaleConfig.bands)
+          .sort(([_a, scaleA], [_b, scaleB]) => scaleB.range()[0] - scaleA.range()[0])
+          // Find the band where the client mouse position is within its range but not within the next band's range (bands may overlap)
+          .find(([category, numericalScale], index, entries) => {
+            const thisBandRange = numericalScale.range();
+            const nextBandRange = entries[index + 1]?.[1].range();
+            const clientIsInsideCurrentBand = clientSC[ax] >= Math.min(...thisBandRange) && clientSC[ax] <= Math.max(...thisBandRange);
+            const clientIsInsideNextBand = !!nextBandRange
+              ? (clientSC[ax] >= Math.min(...nextBandRange) && clientSC[ax] <= Math.max(...nextBandRange))
+              : false;
+            return clientIsInsideCurrentBand && !clientIsInsideNextBand;
+          }) || [];
         if (band && numScale) { // Mouse may be outside of any band
           numericalScales[ax] = numScale;
-          bands[ax] = band;
+          hoveredBand[ax] = band;
         }
       }
     });
@@ -111,7 +119,7 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     let minDistanceNormalized = Infinity;
     const minPointDC = flatPointsDC.reduce((minPDC, pDC) => {
       // Only consider points in the band we are in
-      if (bands.y !== pDC.bands?.y || bands.x !== pDC.bands?.x) {
+      if (hoveredBand.y !== pDC.bands?.y || hoveredBand.x !== pDC.bands?.x) {
         return minPDC;
       }
       const distanceSC = this.getDistanceSqSC(coordsDC, pDC, scalingFactors);
