@@ -52,12 +52,12 @@ class SkadiChartTest {
     });
   };
 
-  expectAxes = () => {
+  expectAxes = (numberOfAxes: XY<number> = { x: 1, y: 1 }) => {
     return this.addTest(async () => {
       const xAxis = await this.selector(LayerType.Axes, "x");
-      expect(xAxis).toHaveLength(1);
+      expect(xAxis).toHaveLength(numberOfAxes.x);
       const yAxis = await this.selector(LayerType.Axes, "y");
-      expect(yAxis).toHaveLength(1);
+      expect(yAxis).toHaveLength(numberOfAxes.y);
     });
   };
 
@@ -116,6 +116,16 @@ class SkadiChartTest {
     });
   };
 
+  expectClipPath = (marginTop: number = 20) => {
+    return this.addTest(async () => {
+      const clipPath = await this.selector(LayerType.ClipPath);
+      expect(clipPath).toHaveLength(1);
+      const rect = clipPath[0].locator("rect");
+      expect(rect).toHaveCount(1);
+      expect(rect.getAttribute("y")).resolves.toBe(marginTop.toString());
+    });
+  }
+
   end = async () => {
     for (let i = 0; i < this.tests.length; i++) {
       await this.tests[i];
@@ -149,6 +159,7 @@ test("basic traces and axes and grid and labels", async ({ page }) => {
   await new SkadiChartTest(page, "chartAxesLabelsAndGrid")
     .expectNTraces(10)
     .expectAxes()
+    .expectClipPath()
     .expectGridlines()
     .expectLabels({ x: "Time", y: "Value" })
     .end()
@@ -179,6 +190,39 @@ test("basic traces and tooltips", async ({ page }) => {
     .expectNPoints(1000)
     .expectTooltip()
     .end()
+});
+
+test("categorical y axis", async ({ page }) => {
+  await new SkadiChartTest(page, "chartCategoricalYAxis")
+    .expectNTraces(10)
+    .expectNPoints(1000)
+    .expectAxes({ x: 1, y: 6 })
+    .expectTooltip()
+    .expectLabels({ x: "Time", y: "Category" })
+    .expectZoom()
+    .end();
+});
+
+test("categorical x axis", async ({ page }) => {
+  await new SkadiChartTest(page, "chartCategoricalXAxis")
+    .expectNTraces(10)
+    .expectNPoints(1000)
+    .expectAxes({ x: 1, y: 1 })
+    .expectTooltip()
+    .expectLabels({ x: "Category", y: "Value" })
+    .expectZoom()
+    .end();
+});
+
+test("categorical y axis with overlapping bands", async ({ page }) => {
+  await new SkadiChartTest(page, "chartOverlappingBandsY")
+    .expectNTraces(10)
+    .expectAxes({ x: 1, y: 1 })
+    .expectTooltip()
+    .expectLabels({ x: "Time", y: "Category" })
+    .expectZoom()
+    .expectClipPath(-100)
+    .end();
 });
 
 test("custom chart works as expected", async ({ page }) => {
