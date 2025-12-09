@@ -36,6 +36,9 @@
   <button @click="() => categoricalXAxisLogScaleX = !categoricalXAxisLogScaleX">Toggle log scale X</button>
   <button @click="() => categoricalXAxisLogScaleY = !categoricalXAxisLogScaleY">Toggle log scale Y</button>
 
+  <h1>Area</h1>
+  <div class="chart" ref="chartArea" id="chartArea"></div>
+
   <h1>Responsive chart (and dashed lines)</h1>
   <div class="chart-responsive" ref="chartResponsive" id="chartResponsive"></div>
 
@@ -77,6 +80,7 @@ const chartAxesLabelGridZoomAndLogScale = ref<HTMLDivElement | null>(null);
 const chartPointsAxesAndZoom = ref<HTMLDivElement | null>(null);
 const chartTooltips = ref<HTMLDivElement | null>(null);
 const chartResponsive = ref<HTMLDivElement | null>(null);
+const chartArea = ref<HTMLDivElement | null>(null);
 const chartStress = ref<HTMLDivElement | null>(null);
 const chartStressPoints = ref<HTMLDivElement | null>(null);
 const chartCustom = ref<HTMLDivElement | null>(null);
@@ -183,7 +187,7 @@ const makeRandomPointsForCategoricalAxis = (domain: string[], axis: "x" | "y"): 
   });
 };
 
-const makeRandomCurves = (props: typeof propsBasic) => {
+const makeRandomCurves = (props: typeof propsBasic, withArea?: boolean) => {
   const xPoints = Array.from({length: props.nX + 1}, (_, i) => i / props.nX);
   const lines: Lines<Metadata> = [];
   const makeYFunc = () => {
@@ -209,12 +213,17 @@ const makeRandomCurves = (props: typeof propsBasic) => {
 
   for (let l = 0; l < props.nL; l++) {
     const color = colors[randomIndex(colors.length)];
+    const addArea = !!withArea;
+    const opacity = Math.random() * props.opacityRange + props.opacityOffset;
     const line: Lines<Metadata>[number] = {
       points: [],
+      fill: !!withArea,
       style: {
-        opacity: Math.random() * props.opacityRange + props.opacityOffset,
-        color,
-        strokeWidth: Math.random() * 1
+        opacity,
+        strokeColor: color,
+        strokeWidth: Math.random() * 1,
+        fillColor: addArea ? color : undefined,
+        fillOpacity: addArea ? opacity / 10 : undefined
       },
       metadata: { color }
     };
@@ -244,7 +253,7 @@ const makeRandomCurvesForCategoricalAxis = (domain: string[], axis: "x" | "y"): 
         return { ...p, y };
       }),
       bands: { [axis]: band },
-      style: { ...line.style, color },
+      style: { ...line.style, strokeColor: color },
       metadata: { ...line.metadata, color }
     }
   })
@@ -272,6 +281,7 @@ const pointsAxesLabelGridZoomAndLogScale = makeRandomPoints(pointPropsBasic);
 pointsAxesLabelGridZoomAndLogScale.forEach(p => p.x -= 0.5);
 const pointsPointsAxesAndZoom = makeRandomPoints(pointPropsBasic);
 const curvesTooltips = makeRandomCurves(propsBasic);
+const curvesArea = makeRandomCurves({ ...propsBasic, nL: 5 }, true);
 const pointsTooltips = makeRandomPoints(pointPropsTooltips);
 const curvesResponsive = makeRandomCurves(propsBasic);
 const curvesCustom = makeRandomCurves(propsBasic);
@@ -373,6 +383,13 @@ onMounted(async () => {
     .addAxes()
     .addGridLines()
     .appendTo(chartAxesAndGrid.value!);
+
+  new Chart()
+    .addTraces(curvesArea)
+    .addAxes()
+    .addArea()
+    .addZoom()
+    .appendTo(chartArea.value!);
 
   new Chart()
     .addTraces(curvesAxesLabelsAndGrid)

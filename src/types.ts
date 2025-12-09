@@ -69,16 +69,19 @@ export type Scales = XY<{ start: number, end: number }>
 export type PartialScales = Partial<XY<{ start?: number, end?: number }>>
 
 export type LineStyle = {
-  color?: string,
+  strokeColor?: string,
   opacity?: number,
-  strokeWidth?: number
-  strokeDasharray?: string
+  strokeWidth?: number,
+  strokeDasharray?: string,
+  fillColor?: string,
+  fillOpacity?: number
 }
 export type LineConfig<Metadata> = {
   points: Point[],
   style: LineStyle,
   metadata?: Metadata,
-  bands?: Partial<XY<string>>
+  bands?: Partial<XY<string>>,
+  fill?: boolean
 }
 export type Lines<Metadata> = LineConfig<Metadata>[]
 
