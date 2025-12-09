@@ -293,6 +293,8 @@ const curvesCategoricalXAxis = makeRandomCurvesForCategoricalAxis(categoricalXAx
 const curvesCategoricalYAxis = makeRandomCurvesForCategoricalAxis(categoricalYAxis, "y");
 const pointsCategoricalXAxis = makeRandomPointsForCategoricalAxis(categoricalXAxis, "x");
 const pointsCategoricalYAxis = makeRandomPointsForCategoricalAxis(categoricalYAxis, "y");
+const curvesOverlappingBandsY = makeRandomCurvesForCategoricalAxis(categoricalYAxis, "y", true);
+curvesOverlappingBandsY.forEach(l => l.points = l.points.map(p => ({ ...p, y: Math.max(p.y, 0) })));
 
 const scales: Scales = { x: {start: 0, end: 1}, y: {start: -3e6, end: 3e6} };
 
@@ -347,7 +349,7 @@ const drawChartCategoricalYAxis = () => {
     .addScatterPoints(pointsCategoricalYAxis)
     .addZoom()
     .addTooltips(tooltipHtmlCallback)
-    .appendTo(chartCategoricalYAxis.value!, { x: scales.x, y: { ...scales.y, start: 0 } }, {}, { y: categoricalYAxis });
+    .appendTo(chartCategoricalYAxis.value!, scales, {}, { y: categoricalYAxis });
 };
 
 watch([categoricalYAxisLogScaleX, categoricalYAxisLogScaleY], () => {
@@ -370,27 +372,6 @@ const drawChartCategoricalXAxis = () => {
 watch([categoricalXAxisLogScaleX, categoricalXAxisLogScaleY], () => {
   drawChartCategoricalXAxis();
 });
-
-const drawChartOverlappingBandsY = () => {
-  const curvesOverlappingBandsY = makeRandomCurvesForCategoricalAxis(categoricalYAxis, "y", true);
-  curvesOverlappingBandsY.forEach(line => {
-    line.points = line.points.map(p => ({ ...p, y: Math.max(p.y, 0) }));
-  });
-
-  new Chart({ logScale: { x: categoricalYAxisLogScaleX.value, y: categoricalYAxisLogScaleY.value }})
-    .addAxes({ x: "Time", y: "Category" })
-    .addTraces(curvesOverlappingBandsY)
-    .addArea()
-    .addZoom()
-    .addTooltips(tooltipHtmlCallback)
-    .appendTo(
-      chartOverlappingBandsY.value!,
-      { x: scales.x, y: { start: 0, end: scales.y.end / 3 } },
-      {},
-      { y: categoricalYAxis },
-      { margin: { top: -100 } },
-    );
-};
 
 onMounted(async () => {
   new Chart()
@@ -456,7 +437,19 @@ onMounted(async () => {
     .makeResponsive()
     .appendTo(chartResponsive.value!);
 
-  drawChartOverlappingBandsY();
+  new Chart()
+    .addAxes({ x: "Time", y: "Category" })
+    .addTraces(curvesOverlappingBandsY)
+    .addArea()
+    .addZoom()
+    .addTooltips(tooltipHtmlCallback)
+    .appendTo(
+      chartOverlappingBandsY.value!,
+      { x: scales.x, y: { start: 0, end: scales.y.end / 3 } }, // Limit y scale to force values to exceed band height
+      {},
+      { y: categoricalYAxis },
+      { margin: { top: -100 } },
+    );
 
   class CustomLayer extends OptionalLayer {
     type = LayerType.Custom;

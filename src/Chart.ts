@@ -337,6 +337,7 @@ export class Chart<Metadata = any> {
     let ticksY = 10;
     if (height < 400) ticksY = 6;
     if (height < 200) ticksY = 3;
+
     this.globals.tickConfig.x.count = ticksX;
     this.globals.tickConfig.y.count = ticksY;
 
