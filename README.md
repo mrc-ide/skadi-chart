@@ -49,7 +49,7 @@ const lines: Lines<Metadata> = [
             { x: 1, y: 1 },
         ],
         fill: true,
-        style: { color: "black" },
+        style: { color: "black", fillColor: "blue", fillOpacity: 0.5 },
         metadata: { type: "line" }
     },
     {
