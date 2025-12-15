@@ -39,6 +39,9 @@
   <h1>Area</h1>
   <div class="chart" ref="chartArea" id="chartArea"></div>
 
+  <h1>Ridgeline plot (configurable clip-path)</h1>
+  <div class="chart" ref="chartOverlappingBandsY" id="chartOverlappingBandsY"></div>
+
   <h1>Responsive chart (and dashed lines)</h1>
   <div class="chart-responsive" ref="chartResponsive" id="chartResponsive"></div>
 
@@ -79,6 +82,7 @@ const chartAxesLabelGridAndZoom = ref<HTMLDivElement | null>(null);
 const chartAxesLabelGridZoomAndLogScale = ref<HTMLDivElement | null>(null);
 const chartPointsAxesAndZoom = ref<HTMLDivElement | null>(null);
 const chartTooltips = ref<HTMLDivElement | null>(null);
+const chartOverlappingBandsY = ref<HTMLDivElement | null>(null);
 const chartResponsive = ref<HTMLDivElement | null>(null);
 const chartArea = ref<HTMLDivElement | null>(null);
 const chartStress = ref<HTMLDivElement | null>(null);
@@ -236,8 +240,8 @@ const makeRandomCurves = (props: typeof propsBasic, withArea?: boolean) => {
   return lines;
 };
 
-const makeRandomCurvesForCategoricalAxis = (domain: string[], axis: "x" | "y"): Lines<Metadata> => {
-  return makeRandomCurves(propsBasic).map((line, index) => {
+const makeRandomCurvesForCategoricalAxis = (domain: string[], axis: "x" | "y", withArea?: boolean): Lines<Metadata> => {
+  return makeRandomCurves(propsBasic, withArea).map((line, index) => {
     const band = domain[index % domain.length];
     const color = colors[index % domain.length];
 
@@ -289,6 +293,8 @@ const curvesCategoricalXAxis = makeRandomCurvesForCategoricalAxis(categoricalXAx
 const curvesCategoricalYAxis = makeRandomCurvesForCategoricalAxis(categoricalYAxis, "y");
 const pointsCategoricalXAxis = makeRandomPointsForCategoricalAxis(categoricalXAxis, "x");
 const pointsCategoricalYAxis = makeRandomPointsForCategoricalAxis(categoricalYAxis, "y");
+const curvesOverlappingBandsY = makeRandomCurvesForCategoricalAxis(categoricalYAxis, "y", true);
+curvesOverlappingBandsY.forEach(l => l.points = l.points.map(p => ({ ...p, y: Math.max(p.y, 0) })));
 
 const scales: Scales = { x: {start: 0, end: 1}, y: {start: -3e6, end: 3e6} };
 
@@ -431,6 +437,20 @@ onMounted(async () => {
     .addGridLines()
     .makeResponsive()
     .appendTo(chartResponsive.value!);
+
+  new Chart()
+    .addAxes({ x: "Time", y: "Category" })
+    .addTraces(curvesOverlappingBandsY)
+    .addArea()
+    .addZoom()
+    .addTooltips(tooltipHtmlCallback)
+    .appendTo(
+      chartOverlappingBandsY.value!,
+      { x: scales.x, y: { start: 0, end: scales.y.end / 3 } }, // Limit y scale to force values to exceed band height
+      {},
+      { y: categoricalYAxis },
+      { margin: { top: -100 } },
+    );
 
   class CustomLayer extends OptionalLayer {
     type = LayerType.Custom;

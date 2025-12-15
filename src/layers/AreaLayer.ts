@@ -76,7 +76,7 @@ export class AreaLayer<Metadata> extends OptionalLayer {
           x: [scales.x(currentExtentsDC.x[0]), scales.x(currentExtentsDC.x[1])],
           y: [scales.y(currentExtentsDC.y[0]), scales.y(currentExtentsDC.y[1])],
         };
-        const lineSegmentsSC = customLineGen(lineSC, currentExtentsSC);
+        const lineSegmentsSC = customLineGen(lineSC, layerArgs);
         const closedLineSC = this.closeSvgPath(lineSegmentsSC, currentExtentsSC, currentExtentsDC, lineBoundaryInfo);
 
         return layerArgs.coreLayers[LayerType.BaseLayer].append("path")
@@ -124,7 +124,7 @@ export class AreaLayer<Metadata> extends OptionalLayer {
             y: [scales.y(zoomExtentsDC.y[0]), scales.y(zoomExtentsDC.y[1])],
           };
           const currLineSC = traceLayers[layerIdx].lowResLinesSC[lineIdx];
-          const lineSegmentsSC = customLineGen(currLineSC, zoomExtentsSC);
+          const lineSegmentsSC = customLineGen(currLineSC, layerArgs);
 
           const closedPath = this.closeSvgPath(lineSegmentsSC, zoomExtentsSC, zoomExtentsDC, this.lineBoundaryInfo[layerIdx][lineIdx]!);
           p.attr("d", closedPath);
@@ -145,7 +145,7 @@ export class AreaLayer<Metadata> extends OptionalLayer {
 
     return (t: number) => {
       const tLineSC = currLineSC.map(({x, y}) => traceLayer.getNewPoint!(x, y, t));
-      const tLineSegmentsSC = customLineGen(tLineSC, zoomExtentsSC);
+      const tLineSegmentsSC = customLineGen(tLineSC, layerArgs);
 
       const tYCoordForXAxisSC = traceLayer.getNewPoint!(0, yCoordForXAxisSC, t).y;
       const tXMinSC = traceLayer.getNewPoint!(xMinSC, 0, t).x;

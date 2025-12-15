@@ -3,7 +3,7 @@ import { AxesLayer } from "./layers/AxesLayer";
 import { TracesLayer, TracesOptions } from "./layers/TracesLayer";
 import { ZoomLayer, ZoomOptions } from "./layers/ZoomLayer";
 import { TooltipHtmlCallback, TooltipsLayer } from "./layers/TooltipsLayer";
-import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, ZoomExtents, PartialScales, Point, Scales, ScatterPoints, XY, XYLabel, ScaleNumeric, AxisType, CategoricalScaleConfig } from "./types";
+import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, ZoomExtents, PartialScales, Point, Scales, ScatterPoints, XY, XYLabel, ScaleNumeric, AxisType, CategoricalScaleConfig, ClipPathBounds } from "./types";
 import { LayerType, LifecycleHooks, OptionalLayer } from "./layers/Layer";
 import { GridLayer } from "./layers/GridLayer";
 import html2canvas from "html2canvas";
@@ -255,12 +255,39 @@ export class Chart<Metadata = any> {
     };
   };
 
+  private appendClipPath = (
+    bounds: Bounds,
+    clipPathBoundsOptions: ClipPathBounds,
+    svg: D3Selection<SVGSVGElement>,
+    getHtmlId: (layer: LayerType[keyof LayerType]) => string,
+  ) => {
+    const clipPathBounds = {
+      ...bounds,
+      ...clipPathBoundsOptions,
+      margin: {
+        ...bounds.margin,
+        ...clipPathBoundsOptions.margin
+      }
+    } as Bounds;
+    const { width, height, margin } = clipPathBounds;
+    const clipPath = svg.append("defs")
+      .append("svg:clipPath")
+      .attr("id", getHtmlId(LayerType.ClipPath)) as any as D3Selection<SVGClipPathElement>;
+    clipPath.append("svg:rect")
+      .attr("width", width - margin.right - margin.left)
+      .attr("height", height - margin.bottom - margin.top)
+      .attr("x", margin.left)
+      .attr("y", margin.top);
+    return { clipPath, clipPathBounds };
+  }
+
   private draw = (
     baseElement: HTMLDivElement,
     bounds: Bounds,
     maxExtents: PartialScales,
     initialExtents: PartialScales,
     categoricalScales: Partial<XY<string[]>> = {},
+    clipPathBoundsOptions: ClipPathBounds = {},
   ) => {
     const getHtmlId = (layer: LayerType[keyof LayerType]) => `${layer}-${this.id}`;
     const { height, width, margin } = bounds;
@@ -271,16 +298,10 @@ export class Chart<Metadata = any> {
       .attr("width", "100%")
       .attr("height", "100%")
       .attr("viewBox", `0 0 ${width} ${height}`)
+      .attr("style", "overflow: visible;")
       .attr("preserveAspectRatio", "xMinYMin") as any as D3Selection<SVGSVGElement>;
 
-    const clipPath = svg.append("defs")
-      .append("svg:clipPath")
-      .attr("id", getHtmlId(LayerType.ClipPath)) as any as D3Selection<SVGClipPathElement>;
-    clipPath.append("svg:rect")
-      .attr("width", width - margin.right - margin.left)
-      .attr("height", height - margin.bottom - margin.top)
-      .attr("x", margin.left)
-      .attr("y", margin.top);
+    const { clipPath, clipPathBounds } = this.appendClipPath(bounds, clipPathBoundsOptions, svg, getHtmlId);
 
     const baseLayer = svg.append('g')
       .attr("id", getHtmlId(LayerType.BaseLayer))
@@ -327,6 +348,7 @@ export class Chart<Metadata = any> {
       id: this.id,
       getHtmlId,
       bounds,
+      clipPathBounds: clipPathBounds,
       globals: this.globals,
       scaleConfig: {
         linearScales: { x: numericalScaleX, y: numericalScaleY },
@@ -358,10 +380,11 @@ export class Chart<Metadata = any> {
     maxExtents: PartialScales = {},
     initialExtents: PartialScales = {},
     categoricalScales: CategoricalScales = {},
+    clipPathBoundsOptions: ClipPathBounds = {},
   ) => {
     const drawWithBounds = (width: number, height: number) => {
       const bounds = { width, height, margin: this.defaultMargin };
-      this.draw(baseElement, bounds, maxExtents, initialExtents, categoricalScales);
+      this.draw(baseElement, bounds, maxExtents, initialExtents, categoricalScales, clipPathBoundsOptions);
     };
 
     const { width, height } = baseElement.getBoundingClientRect();
