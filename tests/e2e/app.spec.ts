@@ -61,12 +61,16 @@ class SkadiChartTest {
     });
   };
 
-  expectGridlines = () => {
+  expectGridlines = (directions: XY<boolean> = { x: true, y: true }) => {
     return this.addTest(async () => {
-      const xGrid = await this.selector(LayerType.Grid, "x");
-      expect(xGrid).toHaveLength(1);
-      const yGrid = await this.selector(LayerType.Grid, "y");
-      expect(yGrid).toHaveLength(1);
+      if (directions.x) {
+        const xGrid = await this.selector(LayerType.Grid, "x");
+        expect(xGrid).toHaveLength(1);
+      }
+      if (directions.y) {
+        const yGrid = await this.selector(LayerType.Grid, "y");
+        expect(yGrid).toHaveLength(1);
+      }
     });
   };
 
@@ -199,6 +203,7 @@ test("categorical y axis", async ({ page }) => {
     .expectAxes({ x: 1, y: 6 })
     .expectTooltip()
     .expectLabels({ x: "Time", y: "Category" })
+    .expectGridlines({ x: true, y: false })
     .expectZoom()
     .end();
 });
