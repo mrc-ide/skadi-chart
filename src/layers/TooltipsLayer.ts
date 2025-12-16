@@ -15,24 +15,39 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
   type = LayerType.Tooltip;
   tooltipRadiusSq = 25 * 25;
 
-  constructor(public tooltipHtmlCallback: TooltipHtmlCallback<Metadata>) {
+  // The `distanceAxis` option allows tooltips to calculate the 'closest point' to
+  // the cursor based on the point's distance along only one axis.
+  // For example, in a histogram or a bar chart you may want to show the tooltip for
+  // the nearest x value regardless of y distance.
+  constructor(
+    public tooltipHtmlCallback: TooltipHtmlCallback<Metadata>,
+    public distanceAxis?: "x" | "y",
+    public highlightPoint?: boolean,
+  ) {
     super();
   };
 
   // this function returns the straight line distance squared between two points
   // and doesn't care about coordinates since it is just distance so you can give
   // it DC, SC or CC
-  private getDistanceSq = (coord1: Point, coord2: Point) => {
+  private getDistanceSq = (coord1: Point, coord2: Point, axis?: "x" | "y") => {
     const diffX = coord1.x - coord2.x;
     const diffY = coord1.y - coord2.y;
-    return diffX * diffX + diffY * diffY;
+    switch (axis) {
+      case "x":
+        return diffX * diffX;
+      case "y":
+        return diffY * diffY;
+      default:
+        return diffX * diffX + diffY * diffY;
+    }
   };
 
-  private getDistanceSqSC = (coord1DC: Point, coord2DC: Point, scalingFactors: XY<number>) => {
+  private getDistanceSqSC = (coord1DC: Point, coord2DC: Point, scalingFactors: XY<number>, axis?: "x" | "y") => {
     const coord1SC = { x: coord1DC.x * scalingFactors.x, y: coord1DC.y * scalingFactors.y };
     const coord2SC = { x: coord2DC.x * scalingFactors.x, y: coord2DC.y * scalingFactors.y };
 
-    return this.getDistanceSq(coord1SC, coord2SC);
+    return this.getDistanceSq(coord1SC, coord2SC, axis);
   };
 
   private convertSCPointToCC = (pointSC: Point, layerArgs: LayerArgs) => {
@@ -119,6 +134,14 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
         return minPDC;
       }
       const distanceSC = this.getDistanceSqSC(coordsDC, pDC, scalingFactors);
+      if (this.distanceAxis) {
+        // If using distanceAxis, compare distances along that axis first.
+        // If points have equal distance on that axis (as in a stacked bar chart, or a histogram with multiple traces),
+        // use full distance to break ties.
+        const distanceOnAxisSC = this.getDistanceSqSC(coordsDC, pDC, scalingFactors, this.distanceAxis);
+        const minDistanceOnAxisSC = this.getDistanceSqSC(coordsDC, minPDC, scalingFactors, this.distanceAxis);
+        if (distanceOnAxisSC > minDistanceOnAxisSC) return minPDC;
+      }
       if (distanceSC >= minDistanceNormalized) return minPDC;
       minDistanceNormalized = distanceSC;
       return pDC;

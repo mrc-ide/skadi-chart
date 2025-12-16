@@ -39,7 +39,7 @@
   <h1>Area</h1>
   <div class="chart" ref="chartArea" id="chartArea"></div>
 
-  <h1>Ridgeline plot (configurable clip-path)</h1>
+  <h1>Ridgeline plot with configurable clip-path and axis-constrained tooltips</h1>
   <div class="chart" ref="chartOverlappingBandsY" id="chartOverlappingBandsY"></div>
 
   <h1>Responsive chart (and dashed lines)</h1>
@@ -443,7 +443,7 @@ onMounted(async () => {
     .addTraces(curvesOverlappingBandsY)
     .addArea()
     .addZoom()
-    .addTooltips(tooltipHtmlCallback)
+    .addTooltips(tooltipHtmlCallback, "x")
     .appendTo(
       chartOverlappingBandsY.value!,
       { x: scales.x, y: { start: 0, end: scales.y.end / 3 } }, // Limit y scale to force values to exceed band height
