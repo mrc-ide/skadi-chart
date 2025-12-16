@@ -22,7 +22,6 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
   constructor(
     public tooltipHtmlCallback: TooltipHtmlCallback<Metadata>,
     public distanceAxis?: "x" | "y",
-    public highlightPoint?: boolean,
   ) {
     super();
   };
