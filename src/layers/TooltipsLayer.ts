@@ -21,9 +21,11 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
   // the nearest x value regardless of y distance.
   constructor(
     public tooltipHtmlCallback: TooltipHtmlCallback<Metadata>,
+    public radiusPx = 25,
     public distanceAxis?: "x" | "y",
   ) {
     super();
+    this.tooltipRadiusSq = radiusPx * radiusPx;
   };
 
   // this function returns the straight line distance squared between two points

@@ -192,11 +192,12 @@ Each layer itself defines how it zooms so this will let the user zoom on your gr
 * `addTooltips` adds a [TooltipLayer](./src/layers/TooltipsLayer.ts) which adds tooltips
 to the chart. For traces and points this means the tooltip will appear pointing to the
 closest point in the graph to the cursor (once it is within a threshold). You must provide
-a callback returning HTML to render the tooltip. You may optionally specify an axis; if you do,
-then the 'closest point' will be determined by the distance from the cursor on that axis.
+a callback returning HTML to render the tooltip. You may optionally configure the radius (px)
+within which a point triggers the tooltip to be displayed. You may also optionally specify an axis;
+if you do, then the 'closest point' will be determined by the distance from the cursor on that axis.
 For example, you may want to show the tooltip for the nearest x value regardless of y distance.
   ```ts
-  chart.addTooltips(tooltipHtmlCallback, "x");
+  chart.addTooltips(tooltipHtmlCallback, 25, "x");
   ```
 * `makeResponsive` is not really a layer but will make your graph responsive (redraw on change
 to container bounds and changes to window size).
