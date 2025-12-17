@@ -343,24 +343,18 @@ export class Chart<Metadata = any> {
     const d3ScaleY = this.options.logScale.y ? d3.scaleLog : d3.scaleLinear;
     const numericalScaleY = d3ScaleY().domain(initialDomain.y).range(rangeY);
 
-    if (this.globals.tickConfig.x.count === undefined) {
-      let ticksX = 10;
-      if (width < 500) ticksX = 6;
-      if (width < 300) ticksX = 3;
-      if (categoricalScales.x && categoricalScales.x.length) {
-        ticksX = 1;
+    Object.entries(this.globals.tickConfig).forEach(([axis, tickConfig]) => {
+      const ax = axis as AxisType;
+      if (tickConfig.count === undefined) {
+        let count = 10;
+        if (width < 450) count = 6;
+        if (width < 250) count = 3;
+        if (categoricalScales[ax] && categoricalScales[ax].length) {
+          count = 1;
+        }
+        this.globals.tickConfig[ax].count = count;
       }
-      this.globals.tickConfig.x.count = ticksX;
-    }
-    if (this.globals.tickConfig.y.count === undefined) {
-      let ticksY = 10;
-      if (height < 400) ticksY = 6;
-      if (height < 200) ticksY = 3;
-      if (categoricalScales.y && categoricalScales.y.length) {
-        ticksY = 1;
-      }
-      this.globals.tickConfig.y.count = ticksY;
-    }
+    });
 
     const layerArgs: LayerArgs = {
       id: this.id,
