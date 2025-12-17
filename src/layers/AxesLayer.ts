@@ -134,7 +134,7 @@ export class AxesLayer extends OptionalLayer {
     let axisLine: D3Selection<SVGLineElement> | null = null;
 
     const numericalAxis = axisConstructor(scale)
-      .ticks(tickCount, tickSpecifier)
+      .ticks(tickCount ?? 0, tickSpecifier)
       .tickSize(tickSize ?? 0)
       .tickPadding(tickPadding ?? defaultTickPadding);
     const axisLayer = layerArgs.coreLayers[LayerType.Svg].append("g")

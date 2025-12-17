@@ -36,7 +36,10 @@ export class Chart<Metadata = any> {
   isResponsive: boolean = false;
   globals = {
     animationDuration: 350,
-    tickConfig: { x: { count: -1, specifier: "" }, y: { count: -1, specifier: "" } },
+    tickConfig: {
+      x: { specifier: ".2~s" }, // an SI-prefix with 2 significant figures and no trailing zeros, 42e6 -> 42M
+      y: { specifier: ".2~s" },
+    } as XY<TickConfig>,
   };
   defaultMargin = { top: 20, bottom: 35, left: 50, right: 20 };
   exportToPng: ((name?: string) => void) | null = null;
@@ -340,7 +343,7 @@ export class Chart<Metadata = any> {
     const d3ScaleY = this.options.logScale.y ? d3.scaleLog : d3.scaleLinear;
     const numericalScaleY = d3ScaleY().domain(initialDomain.y).range(rangeY);
 
-    if (this.globals.tickConfig.x.count === -1) {
+    if (this.globals.tickConfig.x.count === undefined) {
       let ticksX = 10;
       if (width < 500) ticksX = 6;
       if (width < 300) ticksX = 3;
@@ -349,7 +352,7 @@ export class Chart<Metadata = any> {
       }
       this.globals.tickConfig.x.count = ticksX;
     }
-    if (this.globals.tickConfig.y.count === -1) {
+    if (this.globals.tickConfig.y.count === undefined) {
       let ticksY = 10;
       if (height < 400) ticksY = 6;
       if (height < 200) ticksY = 3;
@@ -357,14 +360,6 @@ export class Chart<Metadata = any> {
         ticksY = 1;
       }
       this.globals.tickConfig.y.count = ticksY;
-    }
-
-    const defaultTickSpecifier = ".2~s"; // an SI-prefix with 2 significant figures and no trailing zeros, 42e6 -> 42M
-    if (this.globals.tickConfig.x.specifier === "") {
-      this.globals.tickConfig.x.specifier = defaultTickSpecifier;
-    }
-    if (this.globals.tickConfig.y.specifier === "") {
-      this.globals.tickConfig.y.specifier = defaultTickSpecifier;
     }
 
     const layerArgs: LayerArgs = {
