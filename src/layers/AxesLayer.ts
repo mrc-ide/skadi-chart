@@ -109,8 +109,7 @@ export class AxesLayer extends OptionalLayer {
     bandNumericalScales.forEach(([category, bandNumericalScale]) => {
       const bandStart = categoricalScale(category)!;
       const bandDomain = bandNumericalScale.domain();
-      const domainCrossesZero = bandDomain[0] < 0 && bandDomain[1] > 0;
-      if (domainCrossesZero) {
+      if (bandDomain[0] < 0 && bandDomain[1] > 0) {
         // Add a tick and label at [axis]=0 for each band
         this.drawNumericalAxis(axis, bandNumericalScale, layerArgs, 6);
       }
@@ -130,14 +129,14 @@ export class AxesLayer extends OptionalLayer {
     defaultTickPadding: number,
   ): AxisElements => {
     const { getHtmlId } = layerArgs;
-    const tickConfig = layerArgs.globals.tickConfig[axis];
+    const { count: tickCount, specifier: tickSpecifier, padding: tickPadding, size: tickSize } = layerArgs.globals.tickConfig[axis];
     const { translation, axisConstructor } = this.axisConfig(axis, layerArgs);
     let axisLine: D3Selection<SVGLineElement> | null = null;
 
     const numericalAxis = axisConstructor(scale)
-      .ticks(tickConfig.count, tickConfig.specifier)
-      .tickSize(tickConfig.size ?? 0)
-      .tickPadding(tickConfig.padding ?? defaultTickPadding);
+      .ticks(tickCount, tickSpecifier)
+      .tickSize(tickSize ?? 0)
+      .tickPadding(tickPadding ?? defaultTickPadding);
     const axisLayer = layerArgs.coreLayers[LayerType.Svg].append("g")
       .attr("id", `${getHtmlId(LayerType.Axes)}-${axis}`)
       .style("font-size", "0.75rem")
