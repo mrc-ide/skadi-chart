@@ -1,7 +1,7 @@
 import * as d3 from "@/d3";
 import { LayerType, OptionalLayer } from "./Layer";
 import { TracesLayer } from "./TracesLayer";
-import { AxisType, D3Selection, LayerArgs, Point, PointWithMetadata, ScaleNumeric, XY } from "@/types";
+import { AxisType, D3Selection, LayerArgs, Point, PointWithMetadata, XY } from "@/types";
 import { ScatterLayer } from "./ScatterLayer";
 
 export type TooltipHtmlCallback<Metadata> =
@@ -71,14 +71,18 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     // we must first work out which band we are in.
     Object.entries(layerArgs.scaleConfig.categoricalScales).forEach(([axis, catScaleConfig]) => {
       if (catScaleConfig?.bands) {
+        const [finalCategory, finalBand] = Object.entries(catScaleConfig.bands).at(-1) || [];
         const ax = axis as AxisType;
         const [band, numScale] = Object.entries(catScaleConfig.bands).find(([category, numericalScale]) => {
           const range = numericalScale.range();
           return clientSC[ax] >= Math.min(...range) && clientSC[ax] <= Math.max(...range);
         }) || [];
-        if (band && numScale) { // Mouse may be outside of any band
+        if (band && numScale) {
           numericalScales[ax] = numScale;
           bands[ax] = band;
+        } else if (!!finalBand && clientSC[ax] < finalBand.range()[0]) {
+          numericalScales[ax] = finalBand || numericalScales[ax];
+          bands[ax] = finalCategory;
         }
       }
     });

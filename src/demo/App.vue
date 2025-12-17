@@ -36,6 +36,12 @@
   <button @click="() => categoricalXAxisLogScaleX = !categoricalXAxisLogScaleX">Toggle log scale X</button>
   <button @click="() => categoricalXAxisLogScaleY = !categoricalXAxisLogScaleY">Toggle log scale Y</button>
 
+  <h1>Area</h1>
+  <div class="chart" ref="chartArea" id="chartArea"></div>
+
+  <h1>Ridgeline plot (configurable clip-path)</h1>
+  <div class="chart" ref="chartOverlappingBandsY" id="chartOverlappingBandsY"></div>
+
   <h1>Responsive chart (and dashed lines)</h1>
   <div class="chart-responsive" ref="chartResponsive" id="chartResponsive"></div>
 
@@ -76,7 +82,9 @@ const chartAxesLabelGridAndZoom = ref<HTMLDivElement | null>(null);
 const chartAxesLabelGridZoomAndLogScale = ref<HTMLDivElement | null>(null);
 const chartPointsAxesAndZoom = ref<HTMLDivElement | null>(null);
 const chartTooltips = ref<HTMLDivElement | null>(null);
+const chartOverlappingBandsY = ref<HTMLDivElement | null>(null);
 const chartResponsive = ref<HTMLDivElement | null>(null);
+const chartArea = ref<HTMLDivElement | null>(null);
 const chartStress = ref<HTMLDivElement | null>(null);
 const chartStressPoints = ref<HTMLDivElement | null>(null);
 const chartCustom = ref<HTMLDivElement | null>(null);
@@ -183,7 +191,7 @@ const makeRandomPointsForCategoricalAxis = (domain: string[], axis: "x" | "y"): 
   });
 };
 
-const makeRandomCurves = (props: typeof propsBasic) => {
+const makeRandomCurves = (props: typeof propsBasic, withArea?: boolean) => {
   const xPoints = Array.from({length: props.nX + 1}, (_, i) => i / props.nX);
   const lines: Lines<Metadata> = [];
   const makeYFunc = () => {
@@ -209,12 +217,17 @@ const makeRandomCurves = (props: typeof propsBasic) => {
 
   for (let l = 0; l < props.nL; l++) {
     const color = colors[randomIndex(colors.length)];
+    const addArea = !!withArea;
+    const opacity = Math.random() * props.opacityRange + props.opacityOffset;
     const line: Lines<Metadata>[number] = {
       points: [],
+      fill: !!withArea,
       style: {
-        opacity: Math.random() * props.opacityRange + props.opacityOffset,
-        color,
-        strokeWidth: Math.random() * 1
+        opacity,
+        strokeColor: color,
+        strokeWidth: Math.random() * 1,
+        fillColor: addArea ? color : undefined,
+        fillOpacity: addArea ? opacity / 10 : undefined
       },
       metadata: { color }
     };
@@ -227,8 +240,8 @@ const makeRandomCurves = (props: typeof propsBasic) => {
   return lines;
 };
 
-const makeRandomCurvesForCategoricalAxis = (domain: string[], axis: "x" | "y"): Lines<Metadata> => {
-  return makeRandomCurves(propsBasic).map((line, index) => {
+const makeRandomCurvesForCategoricalAxis = (domain: string[], axis: "x" | "y", withArea?: boolean): Lines<Metadata> => {
+  return makeRandomCurves(propsBasic, withArea).map((line, index) => {
     const band = domain[index % domain.length];
     const color = colors[index % domain.length];
 
@@ -244,7 +257,7 @@ const makeRandomCurvesForCategoricalAxis = (domain: string[], axis: "x" | "y"): 
         return { ...p, y };
       }),
       bands: { [axis]: band },
-      style: { ...line.style, color },
+      style: { ...line.style, strokeColor: color },
       metadata: { ...line.metadata, color }
     }
   })
@@ -272,6 +285,7 @@ const pointsAxesLabelGridZoomAndLogScale = makeRandomPoints(pointPropsBasic);
 pointsAxesLabelGridZoomAndLogScale.forEach(p => p.x -= 0.5);
 const pointsPointsAxesAndZoom = makeRandomPoints(pointPropsBasic);
 const curvesTooltips = makeRandomCurves(propsBasic);
+const curvesArea = makeRandomCurves({ ...propsBasic, nL: 5 }, true);
 const pointsTooltips = makeRandomPoints(pointPropsTooltips);
 const curvesResponsive = makeRandomCurves(propsBasic);
 const curvesCustom = makeRandomCurves(propsBasic);
@@ -279,6 +293,8 @@ const curvesCategoricalXAxis = makeRandomCurvesForCategoricalAxis(categoricalXAx
 const curvesCategoricalYAxis = makeRandomCurvesForCategoricalAxis(categoricalYAxis, "y");
 const pointsCategoricalXAxis = makeRandomPointsForCategoricalAxis(categoricalXAxis, "x");
 const pointsCategoricalYAxis = makeRandomPointsForCategoricalAxis(categoricalYAxis, "y");
+const curvesOverlappingBandsY = makeRandomCurvesForCategoricalAxis(categoricalYAxis, "y", true);
+curvesOverlappingBandsY.forEach(l => l.points = l.points.map(p => ({ ...p, y: Math.max(p.y, 0) })));
 
 const scales: Scales = { x: {start: 0, end: 1}, y: {start: -3e6, end: 3e6} };
 
@@ -381,6 +397,13 @@ onMounted(async () => {
     .appendTo(chartAxesAndGrid.value!);
 
   new Chart()
+    .addTraces(curvesArea)
+    .addAxes()
+    .addArea()
+    .addZoom()
+    .appendTo(chartArea.value!);
+
+  new Chart()
     .addTraces(curvesAxesLabelsAndGrid)
     .addAxes(axesLabels)
     .addGridLines()
@@ -420,6 +443,21 @@ onMounted(async () => {
     .addGridLines()
     .makeResponsive()
     .appendTo(chartResponsive.value!);
+
+  new Chart()
+    .addAxes({ x: "Time", y: "Category" })
+    .addTraces(curvesOverlappingBandsY)
+    .addArea()
+    .addZoom()
+    .addTooltips(tooltipHtmlCallback)
+    .appendTo(
+      chartOverlappingBandsY.value!,
+      { x: scales.x, y: { start: 0, end: scales.y.end / 3 } }, // Limit y scale to force values to exceed band height
+      {},
+      { y: categoricalYAxis },
+      { left: 150, bottom: 70, right: 10 },
+      { margin: { top: -100 } },
+    );
 
   class CustomLayer extends OptionalLayer {
     type = LayerType.Custom;
