@@ -78,7 +78,6 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     // plotExtentSC gives the width and height in pixels of either the overall plot or of a band within that.
     // NB This is derived from the original LayerArgs, so will be outdated if the plot has been resized since draw.
     const plotExtentSC = Math.abs(numericalScale.range()[1] - numericalScale.range()[0]) || 1;
-
     // Edge case: if divisor is 0, don't do any scaling.
     return plotExtentDC === 0 ? 1 : plotExtentSC / plotExtentDC;
   }
@@ -101,30 +100,26 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     // so that we can later calculate a distance in SC from the hover point to any other point given its DC.
     // `scale.invert` functions convert SC to DC, i.e. the inverse of applying just `scale`.
     const mainScalesPointerCoordsDC = { x: numericalScales.x.invert(clientSC.x), y: numericalScales.y.invert(clientSC.y) };
-    const pointerCoordsDCPerScale = { // todo: can i put a Object.fromEntries at the top level too, like Object.fromEntries(Object.entries(categoricalScales)) ?
-      x: Object.fromEntries(
-        Object.entries(categoricalScales.x?.bands ?? {})
-          .map(([cat, scale]) => [cat, scale.invert(clientSC.x)])
-      ),
-      y: Object.fromEntries(
-        Object.entries(categoricalScales.y?.bands ?? {})
-          .map(([cat, scale]) => [cat, scale.invert(clientSC.y)])
-      ),
-    };
+    const pointerCoordsDCPerScale = Object.fromEntries(Object.entries(categoricalScales ?? {}).map(([axis, catScaleConfig]) => {
+      return [
+        axis as AxisType,
+        Object.fromEntries(Object.entries(catScaleConfig?.bands ?? {}).map(([cat, scale]) => {
+          return [cat, scale.invert(clientSC[axis as AxisType])]
+        }),
+      )];
+    }));
 
     // Pre-calculate a distance-normalizing ('scaling') factor for each numerical scale.
     // This could be done on the fly, but pre-calculating is more performant.
     const mainScalesScalingFactors = { x: this.getScalingFactor(numericalScales.x), y: this.getScalingFactor(numericalScales.y) };
-    const scalingFactorsPerScale = {
-      x: Object.fromEntries(
-        Object.entries(categoricalScales.x?.bands ?? {})
-          .map(([cat, scale]) => [cat, this.getScalingFactor(scale)])
-      ),
-      y: Object.fromEntries(
-        Object.entries(categoricalScales.y?.bands ?? {})
-          .map(([cat, scale]) => [cat, this.getScalingFactor(scale)])
-      ),
-    };
+    const scalingFactorsPerScale = Object.fromEntries(Object.entries(categoricalScales ?? {}).map(([axis, catScaleConfig]) => {
+      return [
+        axis as AxisType,
+        Object.fromEntries(Object.entries(catScaleConfig?.bands ?? {}).map(([cat, scale]) => {
+          return [cat, this.getScalingFactor(scale)]
+        }),
+      )];
+    }));
 
     // notice that the min point we want is DC because data points are always
     // going to use data coordinates but the minimum distance that we compare
