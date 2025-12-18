@@ -49,7 +49,7 @@ export type LayerArgs = {
   clipPathBounds: Bounds,
   globals: {
     animationDuration: number,
-    tickConfig: XY<TickConfig>;
+    tickConfig: XY<TickConfig>,
   },
   scaleConfig: {
     numericalScales: XY<ScaleNumeric>,
