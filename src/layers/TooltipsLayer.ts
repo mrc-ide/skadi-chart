@@ -22,32 +22,25 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
   // the nearest x value regardless of y distance.
   constructor(
     public tooltipHtmlCallback: TooltipHtmlCallback<Metadata>,
-    public distanceAxis?: "x" | "y",
+    public distanceAxis?: AxisType,
   ) {
     super();
   };
 
-  // this function returns the straight line distance squared between two points
+  // This function returns the straight line distance squared between two points
   // and doesn't care about coordinates since it is just distance so you can give
   // it DC, SC or CC
-  private getDistanceSq = (coord1: Point, coord2: Point, axis?: "x" | "y") => {
+  private getDistanceSq = (coord1: Point, coord2: Point) => {
     const diffX = coord1.x - coord2.x;
     const diffY = coord1.y - coord2.y;
-    switch (axis) {
-      case "x":
-        return diffX * diffX;
-      case "y":
-        return diffY * diffY;
-      default:
-        return diffX * diffX + diffY * diffY;
-    }
+    return diffX * diffX + diffY * diffY;
   };
 
-  private getDistanceSqSC = (coord1DC: Point, coord2DC: Point, scalingFactors: XY<number>, axis?: "x" | "y") => {
+  private getDistanceSqSC = (coord1DC: Point, coord2DC: Point, scalingFactors: XY<number>) => {
     const coord1SC = { x: coord1DC.x * scalingFactors.x, y: coord1DC.y * scalingFactors.y };
     const coord2SC = { x: coord2DC.x * scalingFactors.x, y: coord2DC.y * scalingFactors.y };
 
-    return this.getDistanceSq(coord1SC, coord2SC, axis);
+    return this.getDistanceSq(coord1SC, coord2SC);
   };
 
   private convertSCPointToCC = (pointSC: Point, layerArgs: LayerArgs) => {
@@ -79,6 +72,7 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     // d3.pointer converts coords from CC to SC
     const pointer = d3.pointer(eventCC);
     const clientSC = { x: pointer[0], y: pointer[1] };
+    const distAx = this.distanceAxis
 
     // When categorical bands overlap, multiple numerical scales may occupy the same space.
     // Thus we can't know in advance which scale to use to interpret where the user is hovering.
@@ -89,7 +83,7 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
       return scale.invert(clientSC[axis])
     });
 
-    // Pre-calculate a distance-normalizing ('scaling') factor for each numerical scale.
+    // Pre-calculate a distance-normalizing factor ('scaling factor') for each numerical scale.
     // This could be done on the fly, but pre-calculating is more performant.
     const [mainScalesScalingFactors, catScalesScalingFactors] = mapScales(layerArgs, (numericalScale: ScaleNumeric) => {
       // Get a scaling factor for normalizing DC to account for:
@@ -122,15 +116,20 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
         x: bands.x ? catScalesScalingFactors.x[bands.x] : mainScalesScalingFactors.x,
         y: bands.y ? catScalesScalingFactors.y[bands.y] : mainScalesScalingFactors.y,
       }
-      const distanceSC = this.getDistanceSqSC(coordsDC, pDC, scalingFactors);
-      if (this.distanceAxis) {
+      if (distAx) {
         // If using distanceAxis, compare distances along that axis first.
         // If points have equal distance on that axis (as in a stacked bar chart, or a histogram with multiple traces),
         // use full distance to break ties.
-        const distanceOnAxisSC = this.getDistanceSqSC(coordsDC, pDC, scalingFactors, this.distanceAxis);
-        const minDistanceOnAxisSC = this.getDistanceSqSC(coordsDC, minPDC, scalingFactors, this.distanceAxis);
+        const [distanceOnAxisSC, minDistanceOnAxisSC] = [pDC, minPDC].map((point) => {
+          // This is equivalent to `getDistanceSqSC` but on only one axis.
+          const coordsSC = coordsDC[distAx] * scalingFactors[distAx];
+          const pointSC = point[distAx] * scalingFactors[distAx];
+
+          return (coordsSC - pointSC) ** 2;
+        });
         if (distanceOnAxisSC > minDistanceOnAxisSC) return minPDC;
       }
+      const distanceSC = this.getDistanceSqSC(coordsDC, pDC, scalingFactors);
       if (distanceSC >= minDistanceNormalized) return minPDC;
       minDistanceNormalized = distanceSC;
       return pDC;
