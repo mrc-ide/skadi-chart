@@ -458,7 +458,7 @@ onMounted(async () => {
     .makeResponsive()
     .appendTo(chartResponsive.value!);
 
-  new Chart({ tickConfig: { x: { size: 8, padding: 2 } } })
+  new Chart({ tickConfig: { x: { size: 8, padding: 2 }, y: { count: 0 } } })
     .addAxes({ x: "Time", y: "Category" })
     .addTraces(curvesOverlappingBandsY)
     .addArea()

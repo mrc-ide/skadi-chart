@@ -212,7 +212,7 @@ test("categorical x axis", async ({ page }) => {
   await new SkadiChartTest(page, "chartCategoricalXAxis")
     .expectNTraces(10)
     .expectNPoints(1000)
-    .expectAxes({ x: 1, y: 1 })
+    .expectAxes({ x: 3, y: 1 })
     .expectTooltip()
     .expectLabels({ x: "Category", y: "Value" })
     .expectZoom()
