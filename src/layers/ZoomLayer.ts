@@ -44,7 +44,7 @@ export class ZoomLayer extends OptionalLayer {
     if (this.zooming) return;
     this.zooming = true;
 
-    const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
+    const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.numericalScales;
 
     layerArgs.optionalLayers.forEach(layer => layer.beforeZoom(zoomProperties));
 
@@ -79,11 +79,11 @@ export class ZoomLayer extends OptionalLayer {
 
     const [[x0, y0], [x1, y1]] = this.processSelection(event, layerArgs);
 
-    const scaleX = layerArgs.scaleConfig.linearScales.x;
+    const scaleX = layerArgs.scaleConfig.numericalScales.x;
     const extentXStart = scaleX.invert(x0);
     const extentXEnd = scaleX.invert(x1);
 
-    const scaleY = layerArgs.scaleConfig.linearScales.y;
+    const scaleY = layerArgs.scaleConfig.numericalScales.y;
     const extentYStart = scaleY.invert(y1);
     const extentYEnd = scaleY.invert(y0);
 
@@ -190,7 +190,7 @@ export class ZoomLayer extends OptionalLayer {
 
     // Respond to double click event by fully zooming out
     const { x, y } = layerArgs.scaleConfig.scaleExtents;
-    const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
+    const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.numericalScales;
     const dblClickZoomProperties: ZoomProperties = {
       x: [x.start, x.end],
       y: [y.start, y.end],

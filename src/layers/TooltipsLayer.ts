@@ -64,7 +64,7 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     // d3.pointer converts coords from CC to SC
     const pointer = d3.pointer(eventCC);
     const clientSC = { x: pointer[0], y: pointer[1] };
-    const numericalScales = { ...layerArgs.scaleConfig.linearScales };
+    const numericalScales = { ...layerArgs.scaleConfig.numericalScales };
     const bands = { x: undefined, y: undefined } as Partial<XY<string>>;
 
     // To get DC coordinates from SC coordinates in the case of band scales,
