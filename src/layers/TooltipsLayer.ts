@@ -1,8 +1,9 @@
 import * as d3 from "@/d3";
 import { LayerType, OptionalLayer } from "./Layer";
 import { TracesLayer } from "./TracesLayer";
-import { AxisType, CategoricalScaleConfig, D3Selection, LayerArgs, Point, PointWithMetadata, ScaleNumeric, XY } from "@/types";
+import { AxisType, D3Selection, LayerArgs, Point, PointWithMetadata, ScaleNumeric, XY } from "@/types";
 import { ScatterLayer } from "./ScatterLayer";
+import { mapScales } from "@/helpers";
 
 export type TooltipHtmlCallback<Metadata> =
   (pointWithMetadata: PointWithMetadata<Metadata>) => string
@@ -69,35 +70,6 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
       };
   };
 
-  // Get a scaling factor for normalizing DC to account for:
-  // 1) the shape of the plot or band (which might be quite different from 1:1)
-  // 2) different DC scales on x and y axes (including differences due to zooming)
-  private getScalingFactor = (numericalScale: ScaleNumeric) => {
-    // 'extent' refers to width or height, depending on axis.
-    const plotExtentDC = Math.abs(numericalScale.domain()[1] - numericalScale.domain()[0]) || 1;
-    // plotExtentSC gives the width and height in pixels of either the overall plot or of a band within that.
-    // NB This is derived from the original LayerArgs, so will be outdated if the plot has been resized since draw.
-    const plotExtentSC = Math.abs(numericalScale.range()[1] - numericalScale.range()[0]) || 1;
-    // Edge case: if divisor is 0, don't do any scaling.
-    return plotExtentDC === 0 ? 1 : plotExtentSC / plotExtentDC;
-  }
-
-  // Convenience function for mapping a callback to all scales in a per-axis categorical scale config
-  private mapCategoricalScales = <T>(
-    categoricalScales: Partial<XY<CategoricalScaleConfig>>,
-    callback: (scale: ScaleNumeric, axis: AxisType) => T,
-  ): Record<string, Record<string, T>> => {
-    return Object.fromEntries(Object.entries(categoricalScales ?? {}).map(([axis, catScaleConfig]) => {
-      const ax = axis as AxisType;
-      return [
-        ax,
-        Object.fromEntries(Object.entries(catScaleConfig?.bands ?? {}).map(([cat, scale]) => {
-          return [cat, callback(scale, ax)]
-        }),
-      )];
-    }));
-  }
-
   private handleMouseMove = (
     eventCC: d3.ClientPointEvent,
     layerArgs: LayerArgs,
@@ -112,23 +84,26 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
 
     // When categorical bands overlap, multiple numerical scales may occupy the same space.
     // Thus we can't know in advance which scale to use to interpret where the user is hovering.
-    // We therefore convert from SC coordinates to DC coordinates for all possible scales,
+    // We therefore convert from SC coordinates to DC coordinates for each numerical scale,
     // so that we can later calculate a distance in SC from the hover point to any other point given its DC.
     // `scale.invert` functions convert SC to DC, i.e. the inverse of applying just `scale`.
-    const getClientSC = (scale: ScaleNumeric, axis: AxisType) => scale.invert(clientSC[axis])
-    const mainScalesPointerCoordsDC = {
-      x: getClientSC(numericalScales.x, 'x'),
-      y: getClientSC(numericalScales.y, 'y'),
-    };
-    const pointerCoordsDCPerScale = this.mapCategoricalScales<number>(catScales, getClientSC);
+    const getClientDC = (scale: ScaleNumeric, axis: AxisType) => scale.invert(clientSC[axis])
+    const [mainScalesPointerCoordsDC, catScalesPointerCoordsDC] = mapScales(layerArgs, getClientDC);
 
     // Pre-calculate a distance-normalizing ('scaling') factor for each numerical scale.
     // This could be done on the fly, but pre-calculating is more performant.
-    const mainScalesScalingFactors = {
-      x: this.getScalingFactor(numericalScales.x),
-      y: this.getScalingFactor(numericalScales.y)
-    };
-    const scalingFactorsPerScale = this.mapCategoricalScales<number>(catScales, this.getScalingFactor);
+    const [mainScalesScalingFactors, catScalesScalingFactors] = mapScales(layerArgs, (numericalScale: ScaleNumeric) => {
+      // Get a scaling factor for normalizing DC to account for:
+      // 1) the shape of the plot or band (which might be quite different from 1:1)
+      // 2) different DC scales on x and y axes (including differences due to zooming)
+      // 'extent' refers to width or height, depending on axis.
+      const plotExtentDC = Math.abs(numericalScale.domain()[1] - numericalScale.domain()[0]) || 1;
+      // plotExtentSC gives the width and height in pixels of either the overall plot or of a band within that.
+      // NB This is derived from the original LayerArgs, so will be outdated if the plot has been resized since draw.
+      const plotExtentSC = Math.abs(numericalScale.range()[1] - numericalScale.range()[0]) || 1;
+      // Edge case: if divisor is 0, don't do any scaling.
+      return plotExtentDC === 0 ? 1 : plotExtentSC / plotExtentDC;
+    });
 
     // notice that the min point we want is DC because data points are always
     // going to use data coordinates but the minimum distance that we compare
@@ -141,12 +116,12 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     const minPointDC = flatPointsDC.reduce((minPDC, pDC) => {
       const bands = pDC.bands || {};
       const coordsDC = {
-        x: bands.x ? pointerCoordsDCPerScale.x[bands.x] : mainScalesPointerCoordsDC.x,
-        y: bands.y ? pointerCoordsDCPerScale.y[bands.y] : mainScalesPointerCoordsDC.y,
+        x: bands.x ? catScalesPointerCoordsDC.x[bands.x] : mainScalesPointerCoordsDC.x,
+        y: bands.y ? catScalesPointerCoordsDC.y[bands.y] : mainScalesPointerCoordsDC.y,
       };
       const scalingFactors = {
-        x: bands.x ? scalingFactorsPerScale.x[bands.x] : mainScalesScalingFactors.x,
-        y: bands.y ? scalingFactorsPerScale.y[bands.y] : mainScalesScalingFactors.y,
+        x: bands.x ? catScalesScalingFactors.x[bands.x] : mainScalesScalingFactors.x,
+        y: bands.y ? catScalesScalingFactors.y[bands.y] : mainScalesScalingFactors.y,
       }
       const distanceSC = this.getDistanceSqSC(coordsDC, pDC, scalingFactors);
       if (this.distanceAxis) {

@@ -1,4 +1,4 @@
-import { LayerArgs, ScaleNumeric, XY, Point, ZoomExtents, Scales } from "./types";
+import { LayerArgs, ScaleNumeric, XY, Point, Scales, AxisType } from "./types";
 
 const round = (num: number) => Math.floor(num * 10) / 10;
 
@@ -77,3 +77,26 @@ export const getXYMinMax = (points: Point[]) => {
 
 export const getSvgRectPath = (xStart: number, xEnd: number, yStart: number, yEnd: number) =>
   `M${xStart},${yStart}` + `L${xStart},${yEnd}` + `L${xEnd},${yEnd}` + `L${xEnd},${yStart}Z`
+
+// Convenience function for mapping a callback for all numerical scales in a per-axis scale config
+export const mapScales = <T>(
+  layerArgs: LayerArgs,
+  callback: (scale: ScaleNumeric, axis: AxisType) => T,
+): [Record<string, T>, Record<string, Record<string, T>>] => {
+  const categoricalScales = layerArgs.scaleConfig.categoricalScales;
+  const mainNumericalScales = layerArgs.scaleConfig.linearScales;
+  const mappedCategoricalScales = Object.fromEntries(Object.entries(categoricalScales).map(([axis, catScaleConfig]) => {
+    const ax = axis as AxisType;
+    return [
+      ax,
+      Object.fromEntries(Object.entries(catScaleConfig?.bands ?? {}).map(([cat, scale]) => [cat, callback(scale, ax)]),
+    )];
+  }));
+
+  const mappedMainScales = Object.fromEntries(Object.entries(mainNumericalScales).map(([axis, scale]) => {
+    const ax = axis as AxisType;
+    return [ax, callback(scale, ax)];
+  }));
+
+  return [mappedMainScales, mappedCategoricalScales]
+}
