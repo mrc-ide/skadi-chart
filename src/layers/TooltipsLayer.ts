@@ -1,7 +1,7 @@
 import * as d3 from "@/d3";
 import { LayerType, OptionalLayer } from "./Layer";
 import { TracesLayer } from "./TracesLayer";
-import { AxisType, D3Selection, LayerArgs, Point, PointWithMetadata, ScaleNumeric, XY } from "@/types";
+import { AxisType, CategoricalScaleConfig, D3Selection, LayerArgs, Point, PointWithMetadata, ScaleNumeric, XY } from "@/types";
 import { ScatterLayer } from "./ScatterLayer";
 
 export type TooltipHtmlCallback<Metadata> =
@@ -82,6 +82,22 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     return plotExtentDC === 0 ? 1 : plotExtentSC / plotExtentDC;
   }
 
+  // Convenience function for mapping a callback to all scales in a per-axis categorical scale config
+  private mapCategoricalScales = <T>(
+    categoricalScales: Partial<XY<CategoricalScaleConfig>>,
+    callback: (scale: ScaleNumeric, axis: AxisType) => T,
+  ): Record<string, Record<string, T>> => {
+    return Object.fromEntries(Object.entries(categoricalScales ?? {}).map(([axis, catScaleConfig]) => {
+      const ax = axis as AxisType;
+      return [
+        ax,
+        Object.fromEntries(Object.entries(catScaleConfig?.bands ?? {}).map(([cat, scale]) => {
+          return [cat, callback(scale, ax)]
+        }),
+      )];
+    }));
+  }
+
   private handleMouseMove = (
     eventCC: d3.ClientPointEvent,
     layerArgs: LayerArgs,
@@ -92,34 +108,27 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     const pointer = d3.pointer(eventCC);
     const clientSC = { x: pointer[0], y: pointer[1] };
     const numericalScales = { ...layerArgs.scaleConfig.linearScales };
-    const categoricalScales = { ...layerArgs.scaleConfig.categoricalScales };
+    const catScales = { ...layerArgs.scaleConfig.categoricalScales };
 
     // When categorical bands overlap, multiple numerical scales may occupy the same space.
     // Thus we can't know in advance which scale to use to interpret where the user is hovering.
-    // We therfore convert from SC coordinates to DC coordinates for all possible scales,
+    // We therefore convert from SC coordinates to DC coordinates for all possible scales,
     // so that we can later calculate a distance in SC from the hover point to any other point given its DC.
     // `scale.invert` functions convert SC to DC, i.e. the inverse of applying just `scale`.
-    const mainScalesPointerCoordsDC = { x: numericalScales.x.invert(clientSC.x), y: numericalScales.y.invert(clientSC.y) };
-    const pointerCoordsDCPerScale = Object.fromEntries(Object.entries(categoricalScales ?? {}).map(([axis, catScaleConfig]) => {
-      return [
-        axis as AxisType,
-        Object.fromEntries(Object.entries(catScaleConfig?.bands ?? {}).map(([cat, scale]) => {
-          return [cat, scale.invert(clientSC[axis as AxisType])]
-        }),
-      )];
-    }));
+    const getClientSC = (scale: ScaleNumeric, axis: AxisType) => scale.invert(clientSC[axis])
+    const mainScalesPointerCoordsDC = {
+      x: getClientSC(numericalScales.x, 'x'),
+      y: getClientSC(numericalScales.y, 'y'),
+    };
+    const pointerCoordsDCPerScale = this.mapCategoricalScales<number>(catScales, getClientSC);
 
     // Pre-calculate a distance-normalizing ('scaling') factor for each numerical scale.
     // This could be done on the fly, but pre-calculating is more performant.
-    const mainScalesScalingFactors = { x: this.getScalingFactor(numericalScales.x), y: this.getScalingFactor(numericalScales.y) };
-    const scalingFactorsPerScale = Object.fromEntries(Object.entries(categoricalScales ?? {}).map(([axis, catScaleConfig]) => {
-      return [
-        axis as AxisType,
-        Object.fromEntries(Object.entries(catScaleConfig?.bands ?? {}).map(([cat, scale]) => {
-          return [cat, this.getScalingFactor(scale)]
-        }),
-      )];
-    }));
+    const mainScalesScalingFactors = {
+      x: this.getScalingFactor(numericalScales.x),
+      y: this.getScalingFactor(numericalScales.y)
+    };
+    const scalingFactorsPerScale = this.mapCategoricalScales<number>(catScales, this.getScalingFactor);
 
     // notice that the min point we want is DC because data points are always
     // going to use data coordinates but the minimum distance that we compare
@@ -155,8 +164,8 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
 
     const bands = minPointDC.bands || {};
     const minPointNumericalScales = {
-      x: bands?.x ? categoricalScales.x!.bands[bands.x] : numericalScales.x,
-      y: bands?.y ? categoricalScales.y!.bands[bands.y] : numericalScales.y,
+      x: bands?.x ? catScales.x!.bands[bands.x] : numericalScales.x,
+      y: bands?.y ? catScales.y!.bands[bands.y] : numericalScales.y,
     };
 
     // SC distance will be the same as pixel distance
