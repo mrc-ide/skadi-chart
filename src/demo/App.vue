@@ -345,7 +345,10 @@ const categoricalYAxisLogScaleY = ref<boolean>(false);
 const drawChartCategoricalYAxis = () => {
   new Chart({
     logScale: { x: categoricalYAxisLogScaleX.value, y: categoricalYAxisLogScaleY.value },
-    tickConfig: { y: { specifier: ".0f" } }
+    tickConfig: {
+      x: { specifier: categoricalYAxisLogScaleX.value ? "e" : undefined },
+      y: { specifier: ".0f" },
+    },
   })
     .addAxes({ x: "Time", y: "Category" }, { y: 0.2, x: 0.4 })
     .addGridLines({ x: true })
@@ -370,9 +373,14 @@ const categoricalXAxisLogScaleX = ref<boolean>(false);
 const categoricalXAxisLogScaleY = ref<boolean>(false);
 
 const drawChartCategoricalXAxis = () => {
+  const numberFormatter = categoricalXAxisLogScaleX.value ? (num: number): string => {
+    let [mantissa, exponent] = num.toExponential().split("e");
+    return `${mantissa === "1" ? `` : `${mantissa} * `}10^${exponent.replace("+", "")}`;
+  } : undefined;
+
   new Chart({
     logScale: { x: categoricalXAxisLogScaleX.value, y: categoricalXAxisLogScaleY.value },
-    tickConfig: { x: { count: 5 } }
+    tickConfig: { x: { count: 3, numberFormatter } },
   })
     .addAxes({ x: "Category", y: "Value" })
     .addTraces(curvesCategoricalXAxis)

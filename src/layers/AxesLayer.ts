@@ -130,7 +130,7 @@ export class AxesLayer extends OptionalLayer {
     defaultTickPadding: number,
   ): AxisElements => {
     const { getHtmlId } = layerArgs;
-    const { count: tickCount, specifier: tickSpecifier, padding: tickPadding, size: tickSize } = layerArgs.globals.tickConfig[axis];
+    const { count: tickCount, specifier: tickSpecifier, padding: tickPadding, size: tickSize, numberFormatter } = layerArgs.globals.tickConfig[axis];
     const { translation, axisConstructor } = this.axisConfig(axis, layerArgs);
     let axisLine: D3Selection<SVGLineElement> | null = null;
 
@@ -138,6 +138,9 @@ export class AxesLayer extends OptionalLayer {
       .ticks(tickCount ?? 0, tickSpecifier)
       .tickSize(tickSize ?? 0)
       .tickPadding(tickPadding ?? defaultTickPadding);
+    if (numberFormatter) {
+      numericalAxis.tickFormat((val: d3.NumberValue, i) => numberFormatter(val as number, i));
+    }
     const axisLayer = layerArgs.coreLayers[LayerType.Svg].append("g")
       .attr("id", `${getHtmlId(LayerType.Axes)}-${axis}`)
       .style("font-size", "0.75rem")
