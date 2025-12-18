@@ -351,7 +351,7 @@ export class Chart<Metadata = any> {
       clipPathBounds: clipPathBounds,
       globals: this.globals,
       scaleConfig: {
-        linearScales: { x: numericalScaleX, y: numericalScaleY },
+        numericalScales: { x: numericalScaleX, y: numericalScaleY },
         scaleExtents: this.autoscaledMaxExtents,
         categoricalScales: {
           x: this.createCategoricalScale(categoricalScales.x, rangeX, numericalScaleX, "x"),

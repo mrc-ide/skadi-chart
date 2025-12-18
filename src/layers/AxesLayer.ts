@@ -22,7 +22,7 @@ export class AxesLayer extends OptionalLayer {
   private drawAxis = (axis: AxisType, layerArgs: LayerArgs): AxisElements => {
     const { width, height, margin } = layerArgs.bounds;
     const { getHtmlId } = layerArgs;
-    const numericalScale = layerArgs.scaleConfig.linearScales[axis];
+    const numericalScale = layerArgs.scaleConfig.numericalScales[axis];
 
     if (this.labels[axis]) {
       const label = layerArgs.coreLayers[LayerType.Svg].append("text")
@@ -49,7 +49,7 @@ export class AxesLayer extends OptionalLayer {
 
 
   draw = (layerArgs: LayerArgs) => {
-    const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
+    const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.numericalScales;
     const { animationDuration } = layerArgs.globals;
 
     const { layer: axisLayerX, axis: axisX, line: axisLineX } = this.drawAxis("x", layerArgs);

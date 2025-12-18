@@ -146,7 +146,7 @@ export class TracesLayer<Metadata> extends OptionalLayer {
     });
 
     this.beforeZoom = (zoomExtentsDC: ZoomExtents) => {
-      const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
+      const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.numericalScales;
 
       // we have to convert the extents to SC from DC to find out what pixel
       // scaling we need
