@@ -83,8 +83,7 @@ export const mapScales = <T>(
   layerArgs: LayerArgs,
   callback: (scale: ScaleNumeric, axis: AxisType) => T,
 ): [Record<string, T>, Record<string, Record<string, T>>] => {
-  const categoricalScales = layerArgs.scaleConfig.categoricalScales;
-  const mainNumericalScales = layerArgs.scaleConfig.linearScales;
+  const { categoricalScales, numericalScales: mainNumericalScales } = { ...layerArgs.scaleConfig };
   const mappedCategoricalScales = Object.fromEntries(Object.entries(categoricalScales).map(([axis, catScaleConfig]) => {
     const ax = axis as AxisType;
     return [
