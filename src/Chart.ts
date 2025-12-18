@@ -19,15 +19,15 @@ class CustomHooksLayer extends OptionalLayer {
 }
 
 export type ChartOptions = {
-  logScale: XY<boolean>
+  logScale: XY<boolean>,
+  categoricalScalePaddingInner: XY<number>,
 }
 
 type PartialChartOptions = {
   logScale?: Partial<XY<boolean>>,
-  animationDuration?: number
+  animationDuration?: number,
+  categoricalScalePaddingInner?: Partial<XY<number>>,
 }
-
-type CategoricalScales = Partial<XY<string[]>>;
 
 export class Chart<Metadata = any> {
   id: string;
@@ -41,7 +41,7 @@ export class Chart<Metadata = any> {
         count: 0,
         specifier: ".2~s", // an SI-prefix with 2 significant figures and no trailing zeros, 42e6 -> 42M
       }
-    }
+    },
   };
   defaultMargin = { top: 20, bottom: 35, left: 50, right: 20 };
   exportToPng: ((name?: string) => void) | null = null;
@@ -56,6 +56,10 @@ export class Chart<Metadata = any> {
       logScale: {
         x: options?.logScale?.x ?? false,
         y: options?.logScale?.y ?? false
+      },
+      categoricalScalePaddingInner: {
+        x: options?.categoricalScalePaddingInner?.x ?? 0,
+        y: options?.categoricalScalePaddingInner?.y ?? 0,
       }
     };
     if (options?.animationDuration) {
@@ -286,7 +290,7 @@ export class Chart<Metadata = any> {
     bounds: Bounds,
     maxExtents: PartialScales,
     initialExtents: PartialScales,
-    categoricalScales: Partial<XY<string[]>> = {},
+    categoricalDomains: Partial<XY<string[]>> = {},
     clipPathBoundsOptions: ClipPathBounds = {},
   ) => {
     const getHtmlId = (layer: LayerType[keyof LayerType]) => `${layer}-${this.id}`;
@@ -326,13 +330,27 @@ export class Chart<Metadata = any> {
       initialDomain.y = [y.start, y.end];
     }
 
-    const rangeX = [margin.left, width - margin.right];
-    const rangeY = [height - margin.bottom, margin.top];
+    const ranges = {
+      x: [margin.left, width - margin.right],
+      y: [height - margin.bottom, margin.top]
+    } as XY<number[]>;
 
-    const d3ScaleX = this.options.logScale.x ? d3.scaleLog : d3.scaleLinear;
-    const numericalScaleX = d3ScaleX().domain(initialDomain.x).range(rangeX);
-    const d3ScaleY = this.options.logScale.y ? d3.scaleLog : d3.scaleLinear;
-    const numericalScaleY = d3ScaleY().domain(initialDomain.y).range(rangeY);
+    const numericalScales = (["x", "y"] as AxisType[]).reduce((acc, axis) => {
+      const d3Scale = this.options.logScale[axis] ? d3.scaleLog : d3.scaleLinear;
+      acc[axis] = d3Scale().domain(initialDomain[axis]).range(ranges[axis]);
+      return acc;
+    }, {} as XY<ScaleNumeric>);
+
+    const categoricalScales = (["x", "y"] as AxisType[]).reduce((acc, axis) => {
+      acc[axis] = this.createCategoricalScale(
+        categoricalDomains[axis],
+        ranges[axis],
+        numericalScales[axis],
+        axis,
+        this.options.categoricalScalePaddingInner[axis],
+      );
+      return acc;
+    }, {} as Partial<XY<CategoricalScaleConfig>>);
 
     let ticksX = 10;
     if (width < 500) ticksX = 6;
@@ -351,12 +369,9 @@ export class Chart<Metadata = any> {
       clipPathBounds: clipPathBounds,
       globals: this.globals,
       scaleConfig: {
-        numericalScales: { x: numericalScaleX, y: numericalScaleY },
+        numericalScales,
         scaleExtents: this.autoscaledMaxExtents,
-        categoricalScales: {
-          x: this.createCategoricalScale(categoricalScales.x, rangeX, numericalScaleX, "x"),
-          y: this.createCategoricalScale(categoricalScales.y, rangeY, numericalScaleY, "y"),
-        },
+        categoricalScales,
       },
       coreLayers: {
         [LayerType.Svg]: svg,
@@ -379,12 +394,12 @@ export class Chart<Metadata = any> {
     baseElement: HTMLDivElement,
     maxExtents: PartialScales = {},
     initialExtents: PartialScales = {},
-    categoricalScales: CategoricalScales = {},
+    categoricalDomains: Partial<XY<string[]>> = {},
     clipPathBoundsOptions: ClipPathBounds = {},
   ) => {
     const drawWithBounds = (width: number, height: number) => {
       const bounds = { width, height, margin: this.defaultMargin };
-      this.draw(baseElement, bounds, maxExtents, initialExtents, categoricalScales, clipPathBoundsOptions);
+      this.draw(baseElement, bounds, maxExtents, initialExtents, categoricalDomains, clipPathBoundsOptions);
     };
 
     const { width, height } = baseElement.getBoundingClientRect();
@@ -423,17 +438,18 @@ export class Chart<Metadata = any> {
 
   // A categorical scale contains two or more 'bands', which each have a small numerical scale.
   private createCategoricalScale = (
-    categories: string[] | undefined,
+    domain: string[] | undefined,
     range: number[],
     numericalScale: ScaleNumeric,
     axis: AxisType,
+    paddingInner: number,
   ): CategoricalScaleConfig | undefined => {
-    if (!categories?.length) {
+    if (!domain?.length) {
       return;
     }
-    const bandScale = d3.scaleBand().domain(categories).range(range);
+    const bandScale = d3.scaleBand().domain(domain).range(range).paddingInner(paddingInner);
     const bandwidth = bandScale.bandwidth();
-    const bands = categories.reduce((acc, category) => {
+    const bands = domain.reduce((acc, category) => {
       const bandStartSC = bandScale(category)!;
       const bandRange = axis === "x"
         ? [bandStartSC, bandStartSC + bandwidth]
