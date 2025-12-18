@@ -10,7 +10,7 @@ export class GridLayer extends OptionalLayer {
 
   draw = (layerArgs: LayerArgs) => {
     const { width, height, margin } = layerArgs.bounds;
-    const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.linearScales;
+    const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.numericalScales;
     const svgLayer = layerArgs.coreLayers[LayerType.Svg];
     const { animationDuration, tickConfig } = layerArgs.globals;
     const { getHtmlId } = layerArgs;

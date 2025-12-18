@@ -52,7 +52,7 @@ export type LayerArgs = {
     tickConfig: XY<TickConfig>;
   },
   scaleConfig: {
-    linearScales: XY<ScaleNumeric>,
+    numericalScales: XY<ScaleNumeric>,
     scaleExtents: Scales,
     categoricalScales: Partial<XY<CategoricalScaleConfig>>,
   },
