@@ -3,7 +3,7 @@ import { LayerType, OptionalLayer } from "./Layer";
 import { TracesLayer } from "./TracesLayer";
 import { AxisType, D3Selection, LayerArgs, Point, PointWithMetadata, ScaleNumeric, XY } from "@/types";
 import { ScatterLayer } from "./ScatterLayer";
-import { mapScales } from "@/helpers";
+import { mapScales, numScales } from "@/helpers";
 
 export type TooltipHtmlCallback<Metadata> =
   (pointWithMetadata: PointWithMetadata<Metadata>) => string
@@ -79,8 +79,6 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     // d3.pointer converts coords from CC to SC
     const pointer = d3.pointer(eventCC);
     const clientSC = { x: pointer[0], y: pointer[1] };
-    const numericalScales = { ...layerArgs.scaleConfig.linearScales };
-    const catScales = { ...layerArgs.scaleConfig.categoricalScales };
 
     // When categorical bands overlap, multiple numerical scales may occupy the same space.
     // Thus we can't know in advance which scale to use to interpret where the user is hovering.
@@ -138,14 +136,10 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
       return pDC;
     }, { x: 0, y: 0 });
 
-    const bands = minPointDC.bands || {};
-    const minPointNumericalScales = {
-      x: bands?.x ? catScales.x!.bands[bands.x] : numericalScales.x,
-      y: bands?.y ? catScales.y!.bands[bands.y] : numericalScales.y,
-    };
+    const numericalScales = numScales(minPointDC.bands, layerArgs);
 
     // SC distance will be the same as pixel distance
-    const minPointSC = { x: minPointNumericalScales.x(minPointDC.x), y: minPointNumericalScales.y(minPointDC.y) };
+    const minPointSC = { x: numericalScales.x(minPointDC.x), y: numericalScales.y(minPointDC.y) };
     // Having found closest SC point, get its accurate distance to client point
     // to decide if tooltip should be shown
     const minDistanceSC = this.getDistanceSq(clientSC, minPointSC);
