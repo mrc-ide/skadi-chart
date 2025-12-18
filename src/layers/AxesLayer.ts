@@ -109,7 +109,8 @@ export class AxesLayer extends OptionalLayer {
     bandNumericalScales.forEach(([category, bandNumericalScale]) => {
       const bandStart = categoricalScale(category)!;
       const bandDomain = bandNumericalScale.domain();
-      if (bandDomain[0] < 0 && bandDomain[1] > 0) {
+      const tickConfig: TickConfig = layerArgs.globals.tickConfig[axis];
+      if (bandDomain[0] < 0 && bandDomain[1] > 0 || tickConfig.count) {
         // Add a tick and label at [axis]=0 for each band
         this.drawNumericalAxis(axis, bandNumericalScale, layerArgs, 6);
       }
