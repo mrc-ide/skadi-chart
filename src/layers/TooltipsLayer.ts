@@ -86,9 +86,10 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     // Thus we can't know in advance which scale to use to interpret where the user is hovering.
     // We therefore convert from SC coordinates to DC coordinates for each numerical scale,
     // so that we can later calculate a distance in SC from the hover point to any other point given its DC.
-    // `scale.invert` functions convert SC to DC, i.e. the inverse of applying just `scale`.
-    const getClientDC = (scale: ScaleNumeric, axis: AxisType) => scale.invert(clientSC[axis])
-    const [mainScalesPointerCoordsDC, catScalesPointerCoordsDC] = mapScales(layerArgs, getClientDC);
+    const [mainScalesPointerCoordsDC, catScalesPointerCoordsDC] = mapScales(layerArgs, (scale: ScaleNumeric, axis: AxisType) => {
+      // `scale.invert` functions convert SC to DC, i.e. the inverse of applying just `scale`.
+      return scale.invert(clientSC[axis])
+    });
 
     // Pre-calculate a distance-normalizing ('scaling') factor for each numerical scale.
     // This could be done on the fly, but pre-calculating is more performant.
