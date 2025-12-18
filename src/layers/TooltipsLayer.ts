@@ -1,7 +1,7 @@
 import * as d3 from "@/d3";
 import { LayerType, OptionalLayer } from "./Layer";
 import { TracesLayer } from "./TracesLayer";
-import { AxisType, D3Selection, LayerArgs, Point, PointWithMetadata, XY } from "@/types";
+import { AxisType, D3Selection, LayerArgs, Point, PointWithMetadata, ScaleNumeric, XY } from "@/types";
 import { ScatterLayer } from "./ScatterLayer";
 
 export type TooltipHtmlCallback<Metadata> =
@@ -69,6 +69,20 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
       };
   };
 
+  // Get a scaling factor for normalizing DC to account for:
+  // 1) the shape of the plot or band (which might be quite different from 1:1)
+  // 2) different DC scales on x and y axes (including differences due to zooming)
+  private getScalingFactor = (numericalScale: ScaleNumeric) => {
+    // 'extent' refers to width or height, depending on axis.
+    const plotExtentDC = Math.abs(numericalScale.domain()[1] - numericalScale.domain()[0]) || 1;
+    // plotExtentSC gives the width and height in pixels of either the overall plot or of a band within that.
+    // NB This is derived from the original LayerArgs, so will be outdated if the plot has been resized since draw.
+    const plotExtentSC = Math.abs(numericalScale.range()[1] - numericalScale.range()[0]) || 1;
+
+    // Edge case: if divisor is 0, don't do any scaling.
+    return plotExtentDC === 0 ? 1 : plotExtentSC / plotExtentDC;
+  }
+
   private handleMouseMove = (
     eventCC: d3.ClientPointEvent,
     layerArgs: LayerArgs,
@@ -79,44 +93,37 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     const pointer = d3.pointer(eventCC);
     const clientSC = { x: pointer[0], y: pointer[1] };
     const numericalScales = { ...layerArgs.scaleConfig.linearScales };
-    const bands = { x: undefined, y: undefined } as Partial<XY<string>>;
+    const categoricalScales = { ...layerArgs.scaleConfig.categoricalScales };
 
-    // To get DC coordinates from SC coordinates in the case of band scales,
-    // we must first work out which band we are in.
-    Object.entries(layerArgs.scaleConfig.categoricalScales).forEach(([axis, catScaleConfig]) => {
-      if (catScaleConfig?.bands) {
-        const [finalCategory, finalBand] = Object.entries(catScaleConfig.bands).at(-1) || [];
-        const ax = axis as AxisType;
-        const [band, numScale] = Object.entries(catScaleConfig.bands).find(([category, numericalScale]) => {
-          const range = numericalScale.range();
-          return clientSC[ax] >= Math.min(...range) && clientSC[ax] <= Math.max(...range);
-        }) || [];
-        if (band && numScale) {
-          numericalScales[ax] = numScale;
-          bands[ax] = band;
-        } else if (!!finalBand && clientSC[ax] < finalBand.range()[0]) {
-          numericalScales[ax] = finalBand || numericalScales[ax];
-          bands[ax] = finalCategory;
-        }
-      }
-    });
+    // When categorical bands overlap, multiple numerical scales may occupy the same space.
+    // Thus we can't know in advance which scale to use to interpret where the user is hovering.
+    // We therfore convert from SC coordinates to DC coordinates for all possible scales,
+    // so that we can later calculate a distance in SC from the hover point to any other point given its DC.
+    // `scale.invert` functions convert SC to DC, i.e. the inverse of applying just `scale`.
+    const mainScalesPointerCoordsDC = { x: numericalScales.x.invert(clientSC.x), y: numericalScales.y.invert(clientSC.y) };
+    const pointerCoordsDCPerScale = { // todo: can i put a Object.fromEntries at the top level too, like Object.fromEntries(Object.entries(categoricalScales)) ?
+      x: Object.fromEntries(
+        Object.entries(categoricalScales.x?.bands ?? {})
+          .map(([cat, scale]) => [cat, scale.invert(clientSC.x)])
+      ),
+      y: Object.fromEntries(
+        Object.entries(categoricalScales.y?.bands ?? {})
+          .map(([cat, scale]) => [cat, scale.invert(clientSC.y)])
+      ),
+    };
 
-    // scale.invert functions convert SC to DC, applying just scale converts from
-    // DC to SC
-    const coordsDC = { x: numericalScales.x.invert(clientSC.x), y: numericalScales.y.invert(clientSC.y) };
-
-    const [plotWidthDC, plotHeightDC] = [numericalScales.x, numericalScales.y].map(s => Math.abs(s.domain()[0] - s.domain()[1]) || 1);
-    // plotWidthSC and plotHeightSC give the width and height in pixels of either the overall plot, or of a band within that if applicable.
-    // NB these are derived from the original LayerArgs, so will be outdated if the plot has been resized since draw.
-    const [plotWidthSC, plotHeightSC] = [numericalScales.x, numericalScales.y].map(s => Math.abs(s.range()[0] - s.range()[1]) || 1);
-
-    // Use scaling factors to normalize DC to account for:
-    // 1) the shape of the plot (which might be quite different from 1:1, especially if using categorical axes)
-    // 2) different DC scales on x and y axes (including differences due to zooming)
-    // Edge case: if divisor is 0, don't do any scaling.
-    let scalingFactors = {
-      x: plotWidthDC === 0 ? 1 : plotWidthSC / plotWidthDC,
-      y: plotHeightDC == 0 ? 1 : plotHeightSC / plotHeightDC,
+    // Pre-calculate a distance-normalizing ('scaling') factor for each numerical scale.
+    // This could be done on the fly, but pre-calculating is more performant.
+    const mainScalesScalingFactors = { x: this.getScalingFactor(numericalScales.x), y: this.getScalingFactor(numericalScales.y) };
+    const scalingFactorsPerScale = {
+      x: Object.fromEntries(
+        Object.entries(categoricalScales.x?.bands ?? {})
+          .map(([cat, scale]) => [cat, this.getScalingFactor(scale)])
+      ),
+      y: Object.fromEntries(
+        Object.entries(categoricalScales.y?.bands ?? {})
+          .map(([cat, scale]) => [cat, this.getScalingFactor(scale)])
+      ),
     };
 
     // notice that the min point we want is DC because data points are always
@@ -128,9 +135,14 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     // width of the svg)
     let minDistanceNormalized = Infinity;
     const minPointDC = flatPointsDC.reduce((minPDC, pDC) => {
-      // Only consider points in the band we are in
-      if (bands.y !== pDC.bands?.y || bands.x !== pDC.bands?.x) {
-        return minPDC;
+      const bands = pDC.bands || {};
+      const coordsDC = {
+        x: bands.x ? pointerCoordsDCPerScale.x[bands.x] : mainScalesPointerCoordsDC.x,
+        y: bands.y ? pointerCoordsDCPerScale.y[bands.y] : mainScalesPointerCoordsDC.y,
+      };
+      const scalingFactors = {
+        x: bands.x ? scalingFactorsPerScale.x[bands.x] : mainScalesScalingFactors.x,
+        y: bands.y ? scalingFactorsPerScale.y[bands.y] : mainScalesScalingFactors.y,
       }
       const distanceSC = this.getDistanceSqSC(coordsDC, pDC, scalingFactors);
       if (this.distanceAxis) {
@@ -146,8 +158,14 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
       return pDC;
     }, { x: 0, y: 0 });
 
+    const bands = minPointDC.bands || {};
+    const minPointNumericalScales = {
+      x: bands?.x ? categoricalScales.x!.bands[bands.x] : numericalScales.x,
+      y: bands?.y ? categoricalScales.y!.bands[bands.y] : numericalScales.y,
+    };
+
     // SC distance will be the same as pixel distance
-    const minPointSC = { x: numericalScales.x(minPointDC.x), y: numericalScales.y(minPointDC.y) };
+    const minPointSC = { x: minPointNumericalScales.x(minPointDC.x), y: minPointNumericalScales.y(minPointDC.y) };
     // Having found closest SC point, get its accurate distance to client point
     // to decide if tooltip should be shown
     const minDistanceSC = this.getDistanceSq(clientSC, minPointSC);
