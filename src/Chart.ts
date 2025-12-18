@@ -349,8 +349,9 @@ export class Chart<Metadata = any> {
         let count = 10;
         if (width < 450) count = 6;
         if (width < 250) count = 3;
-        if (categoricalScales[ax] && categoricalScales[ax].length) {
-          count = 1;
+        if (categoricalScales[ax]?.length) {
+          const domainCrossesZero = initialDomain[ax][0] < 0 && initialDomain[ax][1] > 0;
+          count = domainCrossesZero ? 1 : 0;
         }
         this.globals.tickConfig[ax].count = count;
       }
