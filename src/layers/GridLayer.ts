@@ -49,14 +49,14 @@ export class GridLayer extends OptionalLayer {
       grids.x = svgLayer.append("g")
         .call(addGridX)
         .attr("opacity", gridOpacity)
-        .attr("id", `${getHtmlId(this.type)}-x`);
+        .attr("id", `x-${getHtmlId(this.type)}`);
     }
 
     if (this.directions.y) {
       grids.y = svgLayer.append("g")
         .call(addGridY)
         .attr("opacity", gridOpacity)
-        .attr("id", `${getHtmlId(this.type)}-y`);
+        .attr("id", `y-${getHtmlId(this.type)}`);
     };
 
     this.zoom = async () => {

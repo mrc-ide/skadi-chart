@@ -26,7 +26,7 @@ export class AxesLayer extends OptionalLayer {
 
     if (this.labels[axis]) {
       const label = layerArgs.coreLayers[LayerType.Svg].append("text")
-        .attr("id", `${getHtmlId(LayerType.Axes)}-label${axis}`)
+        .attr("id", `label${axis}-${getHtmlId(LayerType.Axes)}`)
         .style("font-size", "1.2rem")
         .attr("text-anchor", "middle")
         .text(this.labels[axis])
@@ -101,7 +101,7 @@ export class AxesLayer extends OptionalLayer {
     const categoricalAxis = axisConstructor(categoricalScale).ticks(tickCount).tickSize(0)
       .tickPadding(distanceFromSvgEdgeToAxis * 0.3);
     svgLayer.append("g")
-      .attr("id", `${getHtmlId(LayerType.Axes)}-${axis}`)
+      .attr("id", `${axis}-${getHtmlId(LayerType.Axes)}`)
       .style("font-size", "0.75rem")
       .attr("transform", `translate(${translation.x},${translation.y})`)
       .call(categoricalAxis);
@@ -136,7 +136,7 @@ export class AxesLayer extends OptionalLayer {
 
     const numericalAxis = axisConstructor(scale).ticks(tickCount, tickSpecifier).tickSize(0).tickPadding(tickPadding);
     const axisLayer = layerArgs.coreLayers[LayerType.Svg].append("g")
-      .attr("id", `${getHtmlId(LayerType.Axes)}-${axis}`)
+      .attr("id", `${axis}-${getHtmlId(LayerType.Axes)}`)
       .style("font-size", "0.75rem")
       .attr("transform", `translate(${translation.x},${translation.y})`)
       .call(numericalAxis);

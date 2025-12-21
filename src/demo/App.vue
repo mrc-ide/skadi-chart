@@ -459,7 +459,7 @@ onMounted(async () => {
         const svg = layerArgs.coreLayers[LayerType.Svg];
         const { getHtmlId } = layerArgs;
         svg.append("svg:circle")
-          .attr("id", `${getHtmlId(this.type)}-circle`)
+          .attr("id", `circle-${getHtmlId(this.type)}`)
           .attr("cx", "50%")
           .attr("cy", "50%")
           .attr("r", "5%")
