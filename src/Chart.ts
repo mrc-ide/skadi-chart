@@ -3,7 +3,7 @@ import { AxesLayer } from "./layers/AxesLayer";
 import { TracesLayer, TracesOptions } from "./layers/TracesLayer";
 import { ZoomLayer, ZoomOptions } from "./layers/ZoomLayer";
 import { TooltipHtmlCallback, TooltipsLayer } from "./layers/TooltipsLayer";
-import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, ZoomExtents, PartialScales, Point, Scales, ScatterPoints, XY, XYLabel, ScaleNumeric, AxisType, CategoricalScaleConfig, ClipPathBounds } from "./types";
+import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, ZoomExtents, PartialScales, Point, Scales, ScatterPoints, XY, XYLabel, ScaleNumeric, AxisType, CategoricalScaleConfig, ClipPathBounds, TickConfig } from "./types";
 import { LayerType, LifecycleHooks, OptionalLayer } from "./layers/Layer";
 import { GridLayer } from "./layers/GridLayer";
 import html2canvas from "html2canvas";
@@ -24,7 +24,11 @@ export type ChartOptions = {
 
 type PartialChartOptions = {
   logScale?: Partial<XY<boolean>>,
-  animationDuration?: number
+  animationDuration?: number,
+  tickConfig?: {
+    numerical?: Partial<XY<Partial<TickConfig<number>>>>,
+    categorical?: Partial<XY<Partial<TickConfig<string>>>>,
+  },
 }
 
 type CategoricalScales = Partial<XY<string[]>>;
@@ -36,12 +40,12 @@ export class Chart<Metadata = any> {
   globals = {
     animationDuration: 350,
     tickConfig: {
-      x: { count: 0 },
-      y: {
-        count: 0,
-        specifier: ".2~s", // an SI-prefix with 2 significant figures and no trailing zeros, 42e6 -> 42M
-      }
-    }
+      numerical: {
+        x: { specifier: ".2~s" }, // an SI-prefix with 2 significant figures and no trailing zeros, 42e6 -> 42M
+        y: { specifier: ".2~s" },
+      },
+      categorical: { x: {}, y: {} },
+    } as LayerArgs["globals"]["tickConfig"],
   };
   defaultMargin = { top: 20, bottom: 35, left: 50, right: 20 };
   exportToPng: ((name?: string) => void) | null = null;
@@ -54,12 +58,24 @@ export class Chart<Metadata = any> {
   constructor(options?: PartialChartOptions) {
     this.options = {
       logScale: {
-        x: options?.logScale?.x ?? false,
-        y: options?.logScale?.y ?? false
+        x: !!options?.logScale?.x,
+        y: !!options?.logScale?.y
       }
     };
     if (options?.animationDuration) {
       this.globals.animationDuration = options.animationDuration;
+    }
+    if (options?.tickConfig) {
+      this.globals.tickConfig = {
+        numerical: {
+          x: { ...this.globals.tickConfig.numerical.x, ...options.tickConfig.numerical?.x },
+          y: { ...this.globals.tickConfig.numerical.y, ...options.tickConfig.numerical?.y },
+        },
+        categorical: {
+          x: { ...this.globals.tickConfig.categorical.x, ...options.tickConfig.categorical?.x },
+          y: { ...this.globals.tickConfig.categorical.y, ...options.tickConfig.categorical?.y },
+        },
+      };
     }
     this.id = Math.random().toString(26).substring(2, 10);
 
@@ -339,15 +355,20 @@ export class Chart<Metadata = any> {
     const d3ScaleY = this.options.logScale.y ? d3.scaleLog : d3.scaleLinear;
     const numericalScaleY = d3ScaleY().domain(initialDomain.y).range(rangeY);
 
-    let ticksX = 10;
-    if (width < 500) ticksX = 6;
-    if (width < 300) ticksX = 3;
-    let ticksY = 10;
-    if (height < 400) ticksY = 6;
-    if (height < 200) ticksY = 3;
-
-    this.globals.tickConfig.x.count = ticksX;
-    this.globals.tickConfig.y.count = ticksY;
+    // Set some sensible defaults for numerical tick count if not provided in user options
+    Object.entries(this.globals.tickConfig.numerical).forEach(([axis, tickConfig]) => {
+      const ax = axis as AxisType;
+      if (tickConfig.count === undefined) {
+        let count = 10;
+        if (width < 450) count = 6;
+        if (width < 250) count = 3;
+        if (categoricalScales[ax]?.length) {
+          const domainCrossesZero = initialDomain[ax][0] < 0 && initialDomain[ax][1] > 0;
+          count = domainCrossesZero ? 1 : 0;
+        }
+        this.globals.tickConfig.numerical[ax].count = count;
+      }
+    });
 
     const layerArgs: LayerArgs = {
       id: this.id,
