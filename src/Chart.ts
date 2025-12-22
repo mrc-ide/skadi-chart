@@ -25,7 +25,10 @@ export type ChartOptions = {
 type PartialChartOptions = {
   logScale?: Partial<XY<boolean>>,
   animationDuration?: number,
-  tickConfig?: Partial<XY<Partial<TickConfig>>>,
+  tickConfig?: {
+    numerical?: Partial<XY<Partial<TickConfig<number>>>>,
+    categorical?: Partial<XY<Partial<TickConfig<string>>>>,
+  },
 }
 
 type CategoricalScales = Partial<XY<string[]>>;
@@ -37,9 +40,12 @@ export class Chart<Metadata = any> {
   globals = {
     animationDuration: 350,
     tickConfig: {
-      x: { specifier: ".2~s" }, // an SI-prefix with 2 significant figures and no trailing zeros, 42e6 -> 42M
-      y: { specifier: ".2~s" },
-    } as XY<TickConfig>,
+      numerical: {
+        x: { specifier: ".2~s" }, // an SI-prefix with 2 significant figures and no trailing zeros, 42e6 -> 42M
+        y: { specifier: ".2~s" },
+      },
+      categorical: { x: {}, y: {} },
+    } as LayerArgs["globals"]["tickConfig"],
   };
   defaultMargin = { top: 20, bottom: 35, left: 50, right: 20 };
   exportToPng: ((name?: string) => void) | null = null;
@@ -52,18 +58,24 @@ export class Chart<Metadata = any> {
   constructor(options?: PartialChartOptions) {
     this.options = {
       logScale: {
-        x: options?.logScale?.x ?? false,
-        y: options?.logScale?.y ?? false
+        x: !!options?.logScale?.x,
+        y: !!options?.logScale?.y
       }
     };
     if (options?.animationDuration) {
       this.globals.animationDuration = options.animationDuration;
     }
-    if (options?.tickConfig?.x) {
-      this.globals.tickConfig.x = { ...this.globals.tickConfig.x, ...options.tickConfig.x };
-    }
-    if (options?.tickConfig?.y) {
-      this.globals.tickConfig.y = { ...this.globals.tickConfig.y, ...options.tickConfig.y };
+    if (options?.tickConfig) {
+      this.globals.tickConfig = {
+        numerical: {
+          x: { ...this.globals.tickConfig.numerical.x, ...options.tickConfig.numerical?.x },
+          y: { ...this.globals.tickConfig.numerical.y, ...options.tickConfig.numerical?.y },
+        },
+        categorical: {
+          x: { ...this.globals.tickConfig.categorical.x, ...options.tickConfig.categorical?.x },
+          y: { ...this.globals.tickConfig.categorical.y, ...options.tickConfig.categorical?.y },
+        },
+      };
     }
     this.id = Math.random().toString(26).substring(2, 10);
 
@@ -343,7 +355,8 @@ export class Chart<Metadata = any> {
     const d3ScaleY = this.options.logScale.y ? d3.scaleLog : d3.scaleLinear;
     const numericalScaleY = d3ScaleY().domain(initialDomain.y).range(rangeY);
 
-    Object.entries(this.globals.tickConfig).forEach(([axis, tickConfig]) => {
+    // Set some sensible defaults for numerical tick count if not provided in user options
+    Object.entries(this.globals.tickConfig.numerical).forEach(([axis, tickConfig]) => {
       const ax = axis as AxisType;
       if (tickConfig.count === undefined) {
         let count = 10;
@@ -353,7 +366,7 @@ export class Chart<Metadata = any> {
           const domainCrossesZero = initialDomain[ax][0] < 0 && initialDomain[ax][1] > 0;
           count = domainCrossesZero ? 1 : 0;
         }
-        this.globals.tickConfig[ax].count = count;
+        this.globals.tickConfig.numerical[ax].count = count;
       }
     });
 
