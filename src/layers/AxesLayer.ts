@@ -9,7 +9,8 @@ type AxisElements = ({
   layer: null;
   axis: null;
 }) & {
-  line: D3Selection<SVGLineElement> | null
+  line: D3Selection<SVGLineElement> | null,
+  tickLabelRotateCallback?: (() => void) | null,
 }
 
 export class AxesLayer extends OptionalLayer {
@@ -52,46 +53,48 @@ export class AxesLayer extends OptionalLayer {
     const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.numericalScales;
     const { animationDuration } = layerArgs.globals;
 
-    const { layer: axisLayerX, axis: axisX, line: axisLineX } = this.drawAxis("x", layerArgs);
-    const { layer: axisLayerY, axis: axisY, line: axisLineY } = this.drawAxis("y", layerArgs);
+    const xAxis = this.drawAxis("x", layerArgs);
+    const yAxis = this.drawAxis("y", layerArgs);
 
     // The zoom layer (if added) will update the scaleX and scaleY
     // so axisY and axisX, which are constructed from these will
     // also update. This function just specifies a smooth transition
     // between the old and new values of the scales
     this.zoom = async () => {
-      const promiseX = axisLayerX?.transition()
-        .duration(animationDuration)
-        .call(axisX)
-        .end();
+      const promises = [xAxis, yAxis].flatMap(({ layer, line, axis, tickLabelRotateCallback }) => [
+        layer?.transition()
+          .duration(animationDuration)
+          .call(axis)
+          .end(),
+        line?.transition()
+          .duration(animationDuration)
+          .attr("x1", scaleX(0))
+          .attr("x2", scaleX(0))
+          .end(),
+        new Promise<void>((resolve) => {
+          tickLabelRotateCallback?.()
+          resolve();
+        }),
+      ]);
 
-      const promiseY = axisLayerY?.transition()
-        .duration(animationDuration)
-        .call(axisY)
-        .end();
-
-      const promiseAxisLineX = axisLineX?.transition()
-        .duration(animationDuration)
-        .attr("x1", scaleX(0))
-        .attr("x2", scaleX(0))
-        .end();
-
-      const promiseAxisLineY = axisLineY?.transition()
-        .duration(animationDuration)
-        .attr("y1", scaleY(0))
-        .attr("y2", scaleY(0))
-        .end();
-
-      await Promise.all([promiseX, promiseY, promiseAxisLineX, promiseAxisLineY]);
+      await Promise.all(promises);
     };
   };
+
+  // Rotate tick label text, but do not rotate the padding
+  private rotateTickLabels = (axisLayer: D3Selection<SVGGElement>, axis: AxisType, rotate: number, padding: number) => {
+    if (rotate === 0) return;
+    axisLayer.selectAll("text")
+      .attr("transform", `rotate(${rotate})`)
+      .attr("transform-origin", axis === "x" ? `0 ${padding}` : `${-padding} 0`);
+  }
 
   private drawCategoricalAxis = (axis: AxisType, layerArgs: LayerArgs): AxisElements => {
     const categoricalScale = layerArgs.scaleConfig.categoricalScales[axis]!.main;
     const { margin } = layerArgs.bounds;
     const svgLayer = layerArgs.coreLayers[LayerType.Svg];
     const { getHtmlId } = layerArgs;
-    const { padding: tickPadding, size: tickSize, formatter: tickFormatter } = layerArgs.globals.tickConfig.categorical[axis];
+    const { padding: tickPadding, size: tickSize, formatter: tickFormatter, rotate } = layerArgs.globals.tickConfig.categorical[axis];
 
     const { translation, axisConstructor } = this.axisConfig(axis, layerArgs);
 
@@ -99,18 +102,19 @@ export class AxesLayer extends OptionalLayer {
 
     const axisMargin = axis === "x" ? margin.bottom : margin.left;
     const defaultTickPadding = axisMargin * (1 - this.labelPositions?.[axis]) / 3;
-    const categoricalAxis = axisConstructor(categoricalScale)
-      .tickSize(tickSize ?? 0)
-      .tickPadding(tickPadding ?? defaultTickPadding);
+    const padding = tickPadding ?? defaultTickPadding;
+    const categoricalAxis = axisConstructor(categoricalScale).tickSize(tickSize ?? 0).tickPadding(padding);
     if (tickFormatter) {
       categoricalAxis.tickFormat(tickFormatter);
     }
 
-    svgLayer.append("g")
+    const axisLayer = svgLayer.append("g")
       .attr("id", `${getHtmlId(LayerType.Axes)}-${axis}`)
       .style("font-size", "0.75rem")
       .attr("transform", `translate(${translation.x},${translation.y})`)
       .call(categoricalAxis);
+
+    this.rotateTickLabels(axisLayer, axis, rotate ?? 0, padding);
 
     const bandNumericalScales = Object.entries(layerArgs.scaleConfig.categoricalScales[axis]!.bands);
     bandNumericalScales.forEach(([category, bandNumericalScale]) => {
@@ -124,7 +128,7 @@ export class AxesLayer extends OptionalLayer {
       this.drawLinePerpendicularToAxis(axis, bandStart + bandwidth, layerArgs);
     });
 
-    return { layer: null, axis: null, line: null }; // No need to return axis elements as this axis won't be zoomed
+    return { layer: null, axis: null, line: null, tickLabelRotateCallback: null }; // No need to return axis elements as this axis won't be zoomed
   };
 
   private drawNumericalAxis = (
@@ -139,15 +143,17 @@ export class AxesLayer extends OptionalLayer {
       specifier: tickSpecifier,
       padding: tickPadding,
       size: tickSize,
-      formatter: tickFormatter
+      formatter: tickFormatter,
+      rotate,
     } = layerArgs.globals.tickConfig.numerical[axis];
     const { translation, axisConstructor } = this.axisConfig(axis, layerArgs);
     let axisLine: D3Selection<SVGLineElement> | null = null;
 
+    const padding = tickPadding ?? defaultTickPadding;
     const numericalAxis = axisConstructor(scale)
       .ticks(tickCount ?? 0, tickSpecifier)
       .tickSize(tickSize ?? 0)
-      .tickPadding(tickPadding ?? defaultTickPadding);
+      .tickPadding(padding);
     if (tickFormatter) {
       numericalAxis.tickFormat((val: d3.NumberValue, i) => tickFormatter(val as number, i));
     }
@@ -156,6 +162,10 @@ export class AxesLayer extends OptionalLayer {
       .style("font-size", "0.75rem")
       .attr("transform", `translate(${translation.x},${translation.y})`)
       .call(numericalAxis);
+
+    const tickLabelRotateCallback = () => this.rotateTickLabels(axisLayer, axis, rotate ?? 0, padding);
+    tickLabelRotateCallback();
+
     axisLayer.select(".domain").style("stroke-opacity", 0);
 
     if (!layerArgs.chartOptions.logScale[axis]) {
@@ -163,7 +173,7 @@ export class AxesLayer extends OptionalLayer {
       axisLine = this.drawLinePerpendicularToAxis(axis, scale(0), layerArgs, "darkgrey");
     }
 
-    return { layer: axisLayer, axis: numericalAxis, line: axisLine };
+    return { layer: axisLayer, axis: numericalAxis, line: axisLine, tickLabelRotateCallback };
   }
 
   private drawLinePerpendicularToAxis = (

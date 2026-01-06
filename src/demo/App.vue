@@ -347,15 +347,15 @@ const drawChartCategoricalYAxis = () => {
     logScale: { x: categoricalYAxisLogScaleX.value, y: categoricalYAxisLogScaleY.value },
     tickConfig: {
       numerical: {
-        x: { specifier: categoricalYAxisLogScaleX.value ? "e" : undefined },
-        y: { specifier: ".0f" },
+        x: { specifier: categoricalYAxisLogScaleX.value ? "e" : undefined, rotate: 40 },
+        y: { specifier: ".0f", rotate: -40 },
       },
       categorical: {
-        y: { padding: 30 }
+        y: { padding: 30, rotate: -40 }
       }
     },
   })
-    .addAxes({ x: "Time", y: "Category" }, { y: 0.2, x: 0.4 })
+    .addAxes({ x: "Time", y: "Category" }, { x: 0.2, y: 0.3 })
     .addGridLines({ x: true })
     .addTraces(curvesCategoricalYAxis)
     .addScatterPoints(pointsCategoricalYAxis)
