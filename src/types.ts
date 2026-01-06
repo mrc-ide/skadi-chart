@@ -34,7 +34,14 @@ export type CategoricalScaleConfig = {
   main: d3.ScaleBand<string>, // The main categorical scale
   bands: Record<string, ScaleNumeric> // Numerical scales within each category for banded data
 }
-export type TickConfig = { count: number, specifier?: string }
+export type TickConfig<Domain> = {
+  padding?: number,
+  size?: number,
+  formatter?: (domainValue: Domain, index: number) => string,
+} & (Domain extends number ? {
+  count?: number,
+  specifier?: string,
+} : {});
 
 /*
   LayerArgs are passed into each Layer in the draw
@@ -49,7 +56,10 @@ export type LayerArgs = {
   clipPathBounds: Bounds,
   globals: {
     animationDuration: number,
-    tickConfig: XY<TickConfig>;
+    tickConfig: {
+      numerical: XY<TickConfig<number>>,
+      categorical: XY<TickConfig<string>>,
+    },
   },
   scaleConfig: {
     numericalScales: XY<ScaleNumeric>,

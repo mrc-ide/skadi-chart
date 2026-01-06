@@ -123,11 +123,15 @@ new Chart()
 
 ## Base chart class
 
-All charts start with the `Chart` class that takes in `ChartOptions` (e.g. `animationDuration`
-in ms or `logScale`, see [here](./src/Chart.ts) for source code):
+All charts start with the `Chart` class that takes in `ChartOptions`, e.g. `animationDuration`
+in ms, `logScale`, or tick configuration options. See [here](./src/Chart.ts) for source code.
+
+Examples:
 
 ```ts
-const chart = new Chart({ animationDuration: 500 });
+const chart = new Chart()
+const chartWithLongerAnimation = new Chart({ animationDuration: 500 });
+const chartWithFewXAxisTicks = new Chart({ tickConfig: { numerical: { x: { size: 1 } } } });
 ```
 
 ## Layers

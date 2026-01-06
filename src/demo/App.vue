@@ -343,7 +343,18 @@ const categoricalYAxisLogScaleX = ref<boolean>(false);
 const categoricalYAxisLogScaleY = ref<boolean>(false);
 
 const drawChartCategoricalYAxis = () => {
-  new Chart({ logScale: { x: categoricalYAxisLogScaleX.value, y: categoricalYAxisLogScaleY.value }})
+  new Chart({
+    logScale: { x: categoricalYAxisLogScaleX.value, y: categoricalYAxisLogScaleY.value },
+    tickConfig: {
+      numerical: {
+        x: { specifier: categoricalYAxisLogScaleX.value ? "e" : undefined },
+        y: { specifier: ".0f" },
+      },
+      categorical: {
+        y: { padding: 30 }
+      }
+    },
+  })
     .addAxes({ x: "Time", y: "Category" }, { y: 0.2, x: 0.4 })
     .addGridLines({ x: true })
     .addTraces(curvesCategoricalYAxis)
@@ -367,7 +378,18 @@ const categoricalXAxisLogScaleX = ref<boolean>(false);
 const categoricalXAxisLogScaleY = ref<boolean>(false);
 
 const drawChartCategoricalXAxis = () => {
-  new Chart({ logScale: { x: categoricalXAxisLogScaleX.value, y: categoricalXAxisLogScaleY.value }})
+  const numericalTickFormatter = categoricalXAxisLogScaleX.value ? (num: number): string => {
+    let [mantissa, exponent] = num.toExponential().split("e");
+    return `${mantissa === "1" ? `` : `${mantissa} * `}10^${exponent.replace("+", "")}`;
+  } : undefined;
+
+  new Chart({
+    logScale: { x: categoricalXAxisLogScaleX.value, y: categoricalXAxisLogScaleY.value },
+    tickConfig: {
+      numerical: { x: { count: 3, formatter: numericalTickFormatter } },
+      categorical: { x: { padding: 36, formatter: (s) => s.toLocaleUpperCase() } },
+    },
+  })
     .addAxes({ x: "Category", y: "Value" })
     .addTraces(curvesCategoricalXAxis)
     .addScatterPoints(pointsCategoricalXAxis)
@@ -444,7 +466,7 @@ onMounted(async () => {
     .makeResponsive()
     .appendTo(chartResponsive.value!);
 
-  new Chart()
+  new Chart({ tickConfig: { numerical: { x: { size: 8, padding: 2 } } } })
     .addAxes({ x: "Time", y: "Category" })
     .addTraces(curvesOverlappingBandsY)
     .addArea()
