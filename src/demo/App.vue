@@ -471,7 +471,7 @@ onMounted(async () => {
     .addTraces(curvesOverlappingBandsY)
     .addArea()
     .addZoom()
-    .addTooltips(tooltipHtmlCallback, "x")
+    .addTooltips(tooltipHtmlCallback, Infinity, "x")
     .appendTo(
       chartOverlappingBandsY.value!,
       { x: scales.x, y: { start: 0, end: scales.y.end / 3 } }, // Limit y scale to force values to exceed band height
