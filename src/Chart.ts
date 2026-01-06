@@ -173,8 +173,8 @@ export class Chart<Metadata = any> {
     return this;
   };
 
-  addTooltips = (tooltipHtmlCallback: TooltipHtmlCallback<Metadata>) => {
-    this.optionalLayers.push(new TooltipsLayer(tooltipHtmlCallback));
+  addTooltips = (tooltipHtmlCallback: TooltipHtmlCallback<Metadata>, distanceAxis?: "x" | "y") => {
+    this.optionalLayers.push(new TooltipsLayer(tooltipHtmlCallback, distanceAxis));
     return this;
   };
 
