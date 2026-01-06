@@ -22,7 +22,7 @@ class SkadiChartTest {
     this.selector = async (layerType: LayerType, extra?: string) => {
       const svgId = await chartDiv.locator("svg").getAttribute("id");
       const [, randomId] = svgId.split("-");
-      const id = extra ? `${layerType}-${randomId}-${extra}` : `${layerType}-${randomId}`;
+      const id = extra ? `${extra}-${layerType}-${randomId}` : `${layerType}-${randomId}`;
       // this returns any element that partially matches the id
       // and is useful for cases like traces where we have to
       // match `trace-<randomId>-0`, `trace-<randomId>-1`, ...
