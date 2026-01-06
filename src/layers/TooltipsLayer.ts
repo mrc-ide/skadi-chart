@@ -94,8 +94,7 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
       // plotExtentSC gives the width and height in pixels of either the overall plot or of a band within that.
       // NB This is derived from the original LayerArgs, so will be outdated if the plot has been resized since draw.
       const plotExtentSC = Math.abs(numericalScale.range()[1] - numericalScale.range()[0]) || 1;
-      // Edge case: if divisor is 0, don't do any scaling.
-      return plotExtentDC === 0 ? 1 : plotExtentSC / plotExtentDC;
+      return plotExtentSC / plotExtentDC;
     });
 
     // notice that the min point we want is DC because data points are always
