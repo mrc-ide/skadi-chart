@@ -123,11 +123,15 @@ new Chart()
 
 ## Base chart class
 
-All charts start with the `Chart` class that takes in `ChartOptions` (e.g. `animationDuration`
-in ms or `logScale`, see [here](./src/Chart.ts) for source code):
+All charts start with the `Chart` class that takes in `ChartOptions`, e.g. `animationDuration`
+in ms, `logScale`, or tick configuration options. See [here](./src/Chart.ts) for source code.
+
+Examples:
 
 ```ts
-const chart = new Chart({ animationDuration: 500 });
+const chart = new Chart()
+const chartWithLongerAnimation = new Chart({ animationDuration: 500 });
+const chartWithFewXAxisTicks = new Chart({ tickConfig: { numerical: { x: { size: 1 } } } });
 ```
 
 ## Layers
@@ -157,9 +161,13 @@ overview of the methods [Chart](./src/Chart.ts) class provides for adding layers
 
 * `addAxes` adds an [AxesLayer](./src/layers/AxesLayer.ts). This will draw axes with tick
 marks. The axes can be autoscaled based on your data or you can provide a fixed scale in
-the `appendTo` function below.
+the `appendTo` function below. Both the arguments are optional. Note that the values passed in
+the `labelPositions` argument are proportions: for example, `{ x: 0.5 }` would mean to position
+the axis label halfway (50%) between the bottom edge of the graph and the bottom edge of the svg.
   ```ts
-  chart.addAxes();
+  labels = { x: "Time" }
+  labelPositions = { x: 0.5 }
+  chart.addAxes(labels, labelPositions);
   ```
 * `addTraces` adds a [TracesLayer](./src/layers/TracesLayer.ts). This will add traces to
 the graph. This data will also be used for autoscaling the axes if you haven't provided a
@@ -192,9 +200,12 @@ Each layer itself defines how it zooms so this will let the user zoom on your gr
 * `addTooltips` adds a [TooltipLayer](./src/layers/TooltipsLayer.ts) which adds tooltips
 to the chart. For traces and points this means the tooltip will appear pointing to the
 closest point in the graph to the cursor (once it is within a threshold). You must provide
-a callback returning HTML to render the tooltip.
+a callback returning HTML to render the tooltip. You may optionally configure the radius (px)
+within which a point triggers the tooltip to be displayed. You may also optionally specify an axis;
+if you do, then the 'closest point' will be determined by the distance from the cursor on that axis.
+For example, you may want to show the tooltip for the nearest x value regardless of y distance.
   ```ts
-  chart.addTooltips(tooltipHtmlCallback);
+  chart.addTooltips(tooltipHtmlCallback, 25, "x");
   ```
 * `makeResponsive` is not really a layer but will make your graph responsive (redraw on change
 to container bounds and changes to window size).

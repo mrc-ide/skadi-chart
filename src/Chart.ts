@@ -3,7 +3,7 @@ import { AxesLayer } from "./layers/AxesLayer";
 import { TracesLayer, TracesOptions } from "./layers/TracesLayer";
 import { ZoomLayer, ZoomOptions } from "./layers/ZoomLayer";
 import { TooltipHtmlCallback, TooltipsLayer } from "./layers/TooltipsLayer";
-import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, ZoomExtents, PartialScales, Point, Scales, ScatterPoints, XY, XYLabel, ScaleNumeric, AxisType, CategoricalScaleConfig, ClipPathBounds } from "./types";
+import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, ZoomExtents, PartialScales, Point, Scales, ScatterPoints, XY, XYLabel, ScaleNumeric, AxisType, CategoricalScaleConfig, ClipPathBounds, TickConfig } from "./types";
 import { LayerType, LifecycleHooks, OptionalLayer } from "./layers/Layer";
 import { GridLayer } from "./layers/GridLayer";
 import html2canvas from "html2canvas";
@@ -27,6 +27,10 @@ type PartialChartOptions = {
   logScale?: Partial<XY<boolean>>,
   animationDuration?: number,
   categoricalScalePaddingInner?: Partial<XY<number>>,
+  tickConfig?: {
+    numerical?: Partial<XY<Partial<TickConfig<number>>>>,
+    categorical?: Partial<XY<Partial<TickConfig<string>>>>,
+  },
 }
 
 export class Chart<Metadata = any> {
@@ -36,12 +40,12 @@ export class Chart<Metadata = any> {
   globals = {
     animationDuration: 350,
     tickConfig: {
-      x: { count: 0 },
-      y: {
-        count: 0,
-        specifier: ".2~s", // an SI-prefix with 2 significant figures and no trailing zeros, 42e6 -> 42M
-      }
-    },
+      numerical: {
+        x: { specifier: ".2~s" }, // an SI-prefix with 2 significant figures and no trailing zeros, 42e6 -> 42M
+        y: { specifier: ".2~s" },
+      },
+      categorical: { x: {}, y: {} },
+    } as LayerArgs["globals"]["tickConfig"],
   };
   defaultMargin = { top: 20, bottom: 35, left: 50, right: 20 };
   exportToPng: ((name?: string) => void) | null = null;
@@ -54,8 +58,8 @@ export class Chart<Metadata = any> {
   constructor(options?: PartialChartOptions) {
     this.options = {
       logScale: {
-        x: options?.logScale?.x ?? false,
-        y: options?.logScale?.y ?? false
+        x: !!options?.logScale?.x,
+        y: !!options?.logScale?.y,
       },
       categoricalScalePaddingInner: {
         x: options?.categoricalScalePaddingInner?.x ?? 0,
@@ -65,15 +69,32 @@ export class Chart<Metadata = any> {
     if (options?.animationDuration) {
       this.globals.animationDuration = options.animationDuration;
     }
+    if (options?.tickConfig) {
+      this.globals.tickConfig = {
+        numerical: {
+          x: { ...this.globals.tickConfig.numerical.x, ...options.tickConfig.numerical?.x },
+          y: { ...this.globals.tickConfig.numerical.y, ...options.tickConfig.numerical?.y },
+        },
+        categorical: {
+          x: { ...this.globals.tickConfig.categorical.x, ...options.tickConfig.categorical?.x },
+          y: { ...this.globals.tickConfig.categorical.y, ...options.tickConfig.categorical?.y },
+        },
+      };
+    }
     this.id = Math.random().toString(26).substring(2, 10);
 
     return this;
   };
 
-  addAxes = (labels: XYLabel = {}) => {
+  addAxes = (labels: XYLabel = {}, labelPositions?: Partial<XY<number>>) => {
     if (labels.x) this.defaultMargin.bottom = 80;
     if (labels.y) this.defaultMargin.left = 90;
-    this.optionalLayers.push(new AxesLayer(labels || {}));
+    this.optionalLayers.push(new AxesLayer(
+      labels || {},
+      {
+        x: labelPositions?.x ?? 1/3,
+        y: labelPositions?.y ?? 1/3,
+      }));
     return this;
   };
 
@@ -156,8 +177,8 @@ export class Chart<Metadata = any> {
     return this;
   };
 
-  addTooltips = (tooltipHtmlCallback: TooltipHtmlCallback<Metadata>) => {
-    this.optionalLayers.push(new TooltipsLayer(tooltipHtmlCallback));
+  addTooltips = (tooltipHtmlCallback: TooltipHtmlCallback<Metadata>, radiusPx?: number, distanceAxis?: "x" | "y", ) => {
+    this.optionalLayers.push(new TooltipsLayer(tooltipHtmlCallback, radiusPx, distanceAxis));
     return this;
   };
 
@@ -352,15 +373,16 @@ export class Chart<Metadata = any> {
       return acc;
     }, {} as Partial<XY<CategoricalScaleConfig>>);
 
-    let ticksX = 10;
-    if (width < 500) ticksX = 6;
-    if (width < 300) ticksX = 3;
-    let ticksY = 10;
-    if (height < 400) ticksY = 6;
-    if (height < 200) ticksY = 3;
-
-    this.globals.tickConfig.x.count = ticksX;
-    this.globals.tickConfig.y.count = ticksY;
+    // Set some sensible defaults for numerical tick count if not provided in user options
+    Object.entries(this.globals.tickConfig.numerical).forEach(([axis, tickConfig]) => {
+      const ax = axis as AxisType;
+      if (tickConfig.count === undefined) {
+        let count = 10;
+        if (width < 450) count = 6;
+        if (width < 250) count = 3;
+        this.globals.tickConfig.numerical[ax].count = count;
+      }
+    });
 
     const layerArgs: LayerArgs = {
       id: this.id,
@@ -395,10 +417,11 @@ export class Chart<Metadata = any> {
     maxExtents: PartialScales = {},
     initialExtents: PartialScales = {},
     categoricalDomains: Partial<XY<string[]>> = {},
+    margins: Partial<Bounds["margin"]> = {},
     clipPathBoundsOptions: ClipPathBounds = {},
   ) => {
     const drawWithBounds = (width: number, height: number) => {
-      const bounds = { width, height, margin: this.defaultMargin };
+      const bounds = { width, height, margin: { ...this.defaultMargin, ...margins } };
       this.draw(baseElement, bounds, maxExtents, initialExtents, categoricalDomains, clipPathBoundsOptions);
     };
 

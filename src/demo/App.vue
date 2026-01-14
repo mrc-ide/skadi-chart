@@ -26,7 +26,7 @@
   <h1>Chart with tooltips</h1>
   <div class="chart" ref="chartTooltips" id="chartTooltips"></div>
 
-  <h1>Categorical y axis with traces and log scales</h1>
+  <h1>Categorical y axis with traces and log scales and configured margins</h1>
   <div class="chart" ref="chartCategoricalYAxis" id="chartCategoricalYAxis"></div>
   <button @click="() => categoricalYAxisLogScaleX = !categoricalYAxisLogScaleX">Toggle log scale X</button>
   <button @click="() => categoricalYAxisLogScaleY = !categoricalYAxisLogScaleY">Toggle log scale Y</button>
@@ -39,7 +39,7 @@
   <h1>Area</h1>
   <div class="chart" ref="chartArea" id="chartArea"></div>
 
-  <h1>Ridgeline plot (configurable clip-path)</h1>
+  <h1>Ridgeline plot with configurable clip-path and axis-constrained tooltips</h1>
   <div class="chart" ref="chartOverlappingBandsY" id="chartOverlappingBandsY"></div>
 
   <h1>Responsive chart (and dashed lines)</h1>
@@ -270,7 +270,7 @@ const tooltipHtmlCallback = (point: PointWithMetadata<Metadata>) => {
     + `</div>`
 };
 
-const categoricalYAxis = ["A", "B", "C", "D", "E"];
+const categoricalYAxis = ["Category A", "Category B", "Category C", "Category D", "Category E"];
 const categoricalXAxis = ["Left", "Right"];
 const chartCategoricalYAxis = ref<HTMLDivElement | null>(null);
 const chartCategoricalXAxis = ref<HTMLDivElement | null>(null);
@@ -343,14 +343,31 @@ const categoricalYAxisLogScaleX = ref<boolean>(false);
 const categoricalYAxisLogScaleY = ref<boolean>(false);
 
 const drawChartCategoricalYAxis = () => {
-  new Chart({ logScale: { x: categoricalYAxisLogScaleX.value, y: categoricalYAxisLogScaleY.value }})
-    .addAxes({ x: "Time", y: "Category" })
+  new Chart({
+    logScale: { x: categoricalYAxisLogScaleX.value, y: categoricalYAxisLogScaleY.value },
+    tickConfig: {
+      numerical: {
+        x: { specifier: categoricalYAxisLogScaleX.value ? "e" : undefined },
+        y: { specifier: ".0f", count: 1 },
+      },
+      categorical: {
+        y: { padding: 30 }
+      }
+    },
+  })
+    .addAxes({ x: "Time", y: "Category" }, { y: 0.2, x: 0.4 })
     .addGridLines({ x: true })
     .addTraces(curvesCategoricalYAxis)
     .addScatterPoints(pointsCategoricalYAxis)
     .addZoom()
     .addTooltips(tooltipHtmlCallback)
-    .appendTo(chartCategoricalYAxis.value!, scales, {}, { y: categoricalYAxis });
+    .appendTo(
+      chartCategoricalYAxis.value!,
+      scales,
+      {},
+      { y: categoricalYAxis },
+      { left: 150, bottom: 70, right: 10 },
+    );
 };
 
 watch([categoricalYAxisLogScaleX, categoricalYAxisLogScaleY], () => {
@@ -361,10 +378,20 @@ const categoricalXAxisLogScaleX = ref<boolean>(false);
 const categoricalXAxisLogScaleY = ref<boolean>(false);
 
 const drawChartCategoricalXAxis = () => {
+  const numericalTickFormatter = categoricalXAxisLogScaleX.value ? (num: number): string => {
+    let [mantissa, exponent] = num.toExponential().split("e");
+    return `${mantissa === "1" ? `` : `${mantissa} * `}10^${exponent.replace("+", "")}`;
+  } : undefined;
+
   new Chart({
     logScale: { x: categoricalXAxisLogScaleX.value, y: categoricalXAxisLogScaleY.value },
-    categoricalScalePaddingInner: { x: 0.02 },
-  }).addAxes({ x: "Category", y: "Value" })
+    categoricalScalePaddingInner: { x: 0.05 },
+    tickConfig: {
+      numerical: { x: { formatter: numericalTickFormatter } },
+      categorical: { x: { padding: 36, formatter: (s) => s.toLocaleUpperCase() } },
+    },
+  })
+    .addAxes({ x: "Category", y: "Value" })
     .addTraces(curvesCategoricalXAxis)
     .addScatterPoints(pointsCategoricalXAxis)
     .addZoom()
@@ -440,17 +467,18 @@ onMounted(async () => {
     .makeResponsive()
     .appendTo(chartResponsive.value!);
 
-  new Chart()
+  new Chart({ tickConfig: { numerical: { x: { size: 8, padding: 2 } } } })
     .addAxes({ x: "Time", y: "Category" })
     .addTraces(curvesOverlappingBandsY)
     .addArea()
     .addZoom()
-    .addTooltips(tooltipHtmlCallback)
+    .addTooltips(tooltipHtmlCallback, Infinity, "x")
     .appendTo(
       chartOverlappingBandsY.value!,
       { x: scales.x, y: { start: 0, end: scales.y.end / 3 } }, // Limit y scale to force values to exceed band height
       {},
       { y: categoricalYAxis },
+      { left: 150, bottom: 70, right: 10 },
       { margin: { top: -100 } },
     );
 

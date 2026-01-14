@@ -1,6 +1,6 @@
 import * as d3 from "@/d3";
 import { LayerType, OptionalLayer } from "./Layer";
-import { AxisType, D3Selection, LayerArgs, ScaleNumeric, TickConfig, XYLabel } from "@/types";
+import { AxisType, D3Selection, LayerArgs, ScaleNumeric, XY, XYLabel } from "@/types";
 
 type AxisElements = ({
   layer: D3Selection<SVGGElement>,
@@ -15,7 +15,7 @@ type AxisElements = ({
 export class AxesLayer extends OptionalLayer {
   type = LayerType.Axes;
 
-  constructor(public labels: XYLabel) {
+  constructor(public labels: XYLabel, public labelPositions: XY<number>) {
     super();
   };
 
@@ -33,18 +33,18 @@ export class AxesLayer extends OptionalLayer {
       if (axis === "y") {
         const usableHeight = height - margin.top - margin.bottom;
         label.attr("x", - usableHeight / 2 - margin.top)
-          .attr("y", margin.left / 3)
+          .attr("y", margin.left * this.labelPositions.y)
           .attr("transform", "rotate(-90)")
       } else {
         const usableWidth = width - margin.left - margin.right;
         label.attr("x", usableWidth / 2 + margin.left)
-          .attr("y", height - margin.bottom / 3)
+          .attr("y", height - margin.bottom * this.labelPositions.x)
       }
     }
 
     return layerArgs.scaleConfig.categoricalScales[axis]
       ? this.drawCategoricalAxis(axis, layerArgs)
-      : this.drawNumericalAxis(axis, numericalScale, { ...layerArgs.globals.tickConfig[axis], padding: 12 }, layerArgs);
+      : this.drawNumericalAxis(axis, numericalScale, layerArgs, 12);
   };
 
 
@@ -91,15 +91,21 @@ export class AxesLayer extends OptionalLayer {
     const { margin } = layerArgs.bounds;
     const svgLayer = layerArgs.coreLayers[LayerType.Svg];
     const { getHtmlId } = layerArgs;
-    const { count: tickCount } = layerArgs.globals.tickConfig[axis];
+    const { padding: tickPadding, size: tickSize, formatter: tickFormatter } = layerArgs.globals.tickConfig.categorical[axis];
 
     const { translation, axisConstructor } = this.axisConfig(axis, layerArgs);
 
     const bandwidth = categoricalScale.bandwidth();
 
-    const distanceFromSvgEdgeToAxis = axis === "x" ? margin.bottom : margin.left;
-    const categoricalAxis = axisConstructor(categoricalScale).ticks(tickCount).tickSize(0)
-      .tickPadding(distanceFromSvgEdgeToAxis * 0.3);
+    const axisMargin = axis === "x" ? margin.bottom : margin.left;
+    const defaultTickPadding = axisMargin * (1 - this.labelPositions?.[axis]) / 3;
+    const categoricalAxis = axisConstructor(categoricalScale)
+      .tickSize(tickSize ?? 0)
+      .tickPadding(tickPadding ?? defaultTickPadding);
+    if (tickFormatter) {
+      categoricalAxis.tickFormat(tickFormatter);
+    }
+
     svgLayer.append("g")
       .attr("id", `${getHtmlId(LayerType.Axes)}-${axis}`)
       .style("font-size", "0.75rem")
@@ -109,10 +115,8 @@ export class AxesLayer extends OptionalLayer {
     const bandNumericalScales = Object.entries(layerArgs.scaleConfig.categoricalScales[axis]!.bands);
     bandNumericalScales.forEach(([category, bandNumericalScale]) => {
       const bandStart = categoricalScale(category)!;
-      const bandDomain = bandNumericalScale.domain();
-      if (bandDomain[0] < 0 && bandDomain[1] > 0) {
-        // Add a tick and label at [axis]=0 for each band
-        this.drawNumericalAxis(axis, bandNumericalScale, { count: 1, padding: 6 }, layerArgs);
+      if (layerArgs.globals.tickConfig.numerical[axis].count) {
+        this.drawNumericalAxis(axis, bandNumericalScale, layerArgs, 6);
       }
       if (categoricalScale.paddingInner()) {
         this.drawLinePerpendicularToAxis(axis, bandStart, layerArgs);
@@ -126,15 +130,27 @@ export class AxesLayer extends OptionalLayer {
   private drawNumericalAxis = (
     axis: AxisType,
     scale: ScaleNumeric,
-    tickConfig: TickConfig & { padding: number },
-    layerArgs: LayerArgs
+    layerArgs: LayerArgs,
+    defaultTickPadding: number,
   ): AxisElements => {
     const { getHtmlId } = layerArgs;
-    const { count: tickCount, specifier: tickSpecifier, padding: tickPadding } = tickConfig;
+    const {
+      count: tickCount,
+      specifier: tickSpecifier,
+      padding: tickPadding,
+      size: tickSize,
+      formatter: tickFormatter
+    } = layerArgs.globals.tickConfig.numerical[axis];
     const { translation, axisConstructor } = this.axisConfig(axis, layerArgs);
     let axisLine: D3Selection<SVGLineElement> | null = null;
 
-    const numericalAxis = axisConstructor(scale).ticks(tickCount, tickSpecifier).tickSize(0).tickPadding(tickPadding);
+    const numericalAxis = axisConstructor(scale)
+      .ticks(tickCount ?? 0, tickSpecifier)
+      .tickSize(tickSize ?? 0)
+      .tickPadding(tickPadding ?? defaultTickPadding);
+    if (tickFormatter) {
+      numericalAxis.tickFormat((val: d3.NumberValue, i) => tickFormatter(val as number, i));
+    }
     const axisLayer = layerArgs.coreLayers[LayerType.Svg].append("g")
       .attr("id", `${getHtmlId(LayerType.Axes)}-${axis}`)
       .style("font-size", "0.75rem")
