@@ -348,7 +348,7 @@ const drawChartCategoricalYAxis = () => {
     tickConfig: {
       numerical: {
         x: { specifier: categoricalYAxisLogScaleX.value ? "e" : undefined },
-        y: { specifier: ".0f" },
+        y: { specifier: ".0f", count: 1 },
       },
       categorical: {
         y: { padding: 30 }
@@ -385,8 +385,9 @@ const drawChartCategoricalXAxis = () => {
 
   new Chart({
     logScale: { x: categoricalXAxisLogScaleX.value, y: categoricalXAxisLogScaleY.value },
+    categoricalScalePaddingInner: { x: 0.05 },
     tickConfig: {
-      numerical: { x: { count: 3, formatter: numericalTickFormatter } },
+      numerical: { x: { formatter: numericalTickFormatter } },
       categorical: { x: { padding: 36, formatter: (s) => s.toLocaleUpperCase() } },
     },
   })
@@ -466,7 +467,7 @@ onMounted(async () => {
     .makeResponsive()
     .appendTo(chartResponsive.value!);
 
-  new Chart({ tickConfig: { numerical: { x: { size: 8, padding: 2 } } } })
+  new Chart({ tickConfig: { numerical: { x: { size: 8, padding: 2 }, y: { count: 0 } } } })
     .addAxes({ x: "Time", y: "Category" })
     .addTraces(curvesOverlappingBandsY)
     .addArea()
