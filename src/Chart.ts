@@ -20,7 +20,7 @@ class CustomHooksLayer extends OptionalLayer {
 
 export type ChartOptions = {
   logScale: XY<boolean>,
-  categoricalScalePaddingInner: XY<number>,
+  categoricalScalePaddingInner: XY<number>, // Specifies the padding between bands. Must be between 0 and 1. https://d3js.org/d3-scale/band#band_paddingInner
 }
 
 type PartialChartOptions = {
