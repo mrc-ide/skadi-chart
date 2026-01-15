@@ -1,4 +1,4 @@
-import { LayerArgs, ScaleNumeric, XY, Point, Scales, AxisType } from "./types";
+import { LayerArgs, ScaleNumeric, XY, Point, Scales, AxisType, D3Selection } from "./types";
 
 const round = (num: number) => Math.floor(num * 10) / 10;
 
@@ -98,4 +98,17 @@ export const mapScales = <T>(
   }));
 
   return [mappedMainScales, mappedCategoricalScales]
+}
+
+export const drawLine = (
+  baseLayer: D3Selection<SVGGElement>,
+  coordsSC: XY<{start: number, end: number}>,
+  color: string,
+) => {
+  return baseLayer.append("g").append("line")
+    .attr("x1", coordsSC.x.start)
+    .attr("x2", coordsSC.x.end)
+    .attr("y1", coordsSC.y.start)
+    .attr("y2", coordsSC.y.end)
+    .style("stroke", color).style("stroke-width", 0.5);
 }

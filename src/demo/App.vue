@@ -36,6 +36,9 @@
   <button @click="() => categoricalXAxisLogScaleX = !categoricalXAxisLogScaleX">Toggle log scale X</button>
   <button @click="() => categoricalXAxisLogScaleY = !categoricalXAxisLogScaleY">Toggle log scale Y</button>
 
+  <h1>Both categorical axes</h1>
+  <div class="chart" ref="chartBothCategoricalAxes" id="chartBothCategoricalAxes"></div>
+
   <h1>Area</h1>
   <div class="chart" ref="chartArea" id="chartArea"></div>
 
@@ -73,7 +76,7 @@
 </style>
 
 <script setup lang="ts">
-import { PointWithMetadata, ScatterPoints } from "@/types";
+import { PointWithMetadata, ScatterPoints, XY } from "@/types";
 import { Chart, LayerArgs, LayerType, Lines, OptionalLayer, Scales } from "../skadi-chart";
 import { onMounted, ref, watch } from "vue";
 
@@ -92,6 +95,7 @@ const chartStress = ref<HTMLDivElement | null>(null);
 const chartStressPoints = ref<HTMLDivElement | null>(null);
 const chartCustom = ref<HTMLDivElement | null>(null);
 const chartMathJax = ref<HTMLDivElement | null>(null);
+const chartBothCategoricalAxes = ref<HTMLDivElement | null>(null);
 
 const pointPropsBasic = {
   n: 1000,
@@ -189,6 +193,21 @@ const makeRandomPointsForCategoricalAxis = (domain: string[], axis: "x" | "y"): 
     return {
       ...point,
       bands: { [axis]: band },
+      style: { ...point.style, color },
+      metadata: { ...point.metadata, color }
+    }
+  });
+};
+
+const makeRandomPointsForBothCategoricalAxes = (domainX: string[], domainY: string[]): ScatterPoints<Metadata> => {
+  return makeRandomPoints(pointPropsBasic).map((point, index) => {
+    const bandX = domainX[index % domainX.length];
+    const bandY = domainY[index % domainY.length];
+    const color = colors[index % colors.length];
+    const adjustedX = index % 3 === 0 ? point.x * -1 : point.x; // 'Randomly' make some x values negative
+    return {
+      ...{ ...point, x: adjustedX },
+      bands: { x: bandX, y: bandY },
       style: { ...point.style, color },
       metadata: { ...point.metadata, color }
     }
@@ -461,6 +480,21 @@ onMounted(async () => {
 
   drawChartCategoricalYAxis();
   drawChartCategoricalXAxis();
+
+  new Chart({
+    tickConfig: {
+      numerical: {
+        y: {
+          count: 1,
+          specifier: ".0f",
+        }
+      }
+    },
+    categoricalScalePaddingInner: { x: 0.02, y: 0.1 },
+  })
+    .addAxes({ x: "Category", y: "Category" })
+    .addScatterPoints(makeRandomPointsForBothCategoricalAxes(categoricalXAxis, categoricalYAxis))
+    .appendTo(chartBothCategoricalAxes.value!, { ...scales, x: { start: -1, end: scales.x.end } }, {}, { x: categoricalXAxis, y: categoricalYAxis });
 
   curvesResponsive.forEach((l, i) => {
     l.style.strokeDasharray = `${i * 2} 5`

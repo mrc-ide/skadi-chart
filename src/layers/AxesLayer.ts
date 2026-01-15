@@ -1,6 +1,7 @@
 import * as d3 from "@/d3";
 import { LayerType, OptionalLayer } from "./Layer";
 import { AxisType, D3Selection, LayerArgs, ScaleNumeric, XY, XYLabel } from "@/types";
+import { drawLine } from "@/helpers";
 
 declare const MathJax: any;
 
@@ -195,12 +196,15 @@ export class AxesLayer extends OptionalLayer {
 
     if (!layerArgs.chartOptions.logScale[axis]) {
       // Draw a line at [axis]=0
-      axisLine = this.drawLinePerpendicularToAxis(axis, scale(0), layerArgs, "darkgrey");
+      axisLine = this.drawLinePerpendicularToAxis(axis, scale(0), layerArgs, "darkgrey") as D3Selection<SVGLineElement>;
     }
 
     return { layer: axisLayer, axis: numericalAxis, line: axisLine };
   }
 
+  // Draws a line perpendicular to the specified axis at the given position in scale coordinates.
+  // If the other axis is categorical, draws a line for each category band, to prevent lines
+  // cutting through inter-band padding.
   private drawLinePerpendicularToAxis = (
     axis: AxisType,
     positionSC: number,
@@ -210,13 +214,29 @@ export class AxesLayer extends OptionalLayer {
     const baseLayer = layerArgs.coreLayers[LayerType.BaseLayer];
     const { height, width, margin } = layerArgs.bounds;
     const otherAxis = axis === "x" ? "y" : "x";
+    const otherAxisCategoricalScale = layerArgs.scaleConfig.categoricalScales[otherAxis]?.main;
 
-    return baseLayer.append("g").append("line")
-      .attr(`${axis}1`, positionSC)
-      .attr(`${axis}2`, positionSC)
-      .attr(`${otherAxis}1`, axis === "x" ? margin.top : margin.left)
-      .attr(`${otherAxis}2`, axis === "x" ? height - margin.bottom : width - margin.right)
-      .style("stroke", color).style("stroke-width", 0.5);
+    if (!otherAxisCategoricalScale) {
+      let lineCoordsSC = { [axis]: { start: positionSC, end: positionSC } };
+      if (axis === "x") {
+        lineCoordsSC.y = { start: margin.top, end: height - margin.bottom };
+      } else {
+        lineCoordsSC.x = { start: margin.left, end: width - margin.right };
+      }
+      return drawLine(baseLayer, lineCoordsSC as XY<{start: number, end: number}>, color);
+    }
+    const bandWidth = otherAxisCategoricalScale.bandwidth();
+    otherAxisCategoricalScale.domain().forEach(category => {
+      const bandStart = otherAxisCategoricalScale(category);
+      if (bandStart === undefined) return;
+
+      const lineCoordsSC = {
+        [axis]: { start: positionSC, end: positionSC },
+        [otherAxis]: { start: bandStart, end: bandStart + bandWidth },
+      };
+
+      drawLine(baseLayer, lineCoordsSC as XY<{start: number, end: number}>, color);
+    });
   }
 
   private axisConfig = (axis: AxisType, layerArgs: LayerArgs) => {
