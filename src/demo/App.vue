@@ -363,7 +363,7 @@ const drawChartCategoricalYAxis = () => {
     .addTooltips(tooltipHtmlCallback)
     .appendTo(
       chartCategoricalYAxis.value!,
-      scales,
+      categoricalYAxisLogScaleX.value ? { ...scales, x: { ...scales.x, start: 0.001 } } : scales,
       {},
       { y: categoricalYAxis },
       { left: 150, bottom: 70, right: 10 },
@@ -383,6 +383,12 @@ const drawChartCategoricalXAxis = () => {
     return `${mantissa === "1" ? `` : `${mantissa} * `}10^${exponent.replace("+", "")}`;
   } : undefined;
 
+  const logSafeScales = {
+    ...scales,
+    x: categoricalXAxisLogScaleX.value ? { ...scales.x, start: 0.001 } : scales.x,
+    y: categoricalXAxisLogScaleY.value ? { ...scales.y, start: 0.001 } : scales.y,
+  };
+
   new Chart({
     logScale: { x: categoricalXAxisLogScaleX.value, y: categoricalXAxisLogScaleY.value },
     categoricalScalePaddingInner: { x: 0.05 },
@@ -396,7 +402,7 @@ const drawChartCategoricalXAxis = () => {
     .addScatterPoints(pointsCategoricalXAxis)
     .addZoom()
     .addTooltips(tooltipHtmlCallback)
-    .appendTo(chartCategoricalXAxis.value!, scales, {}, { x: categoricalXAxis });
+    .appendTo(chartCategoricalXAxis.value!, logSafeScales, {}, { x: categoricalXAxis });
 };
 
 watch([categoricalXAxisLogScaleX, categoricalXAxisLogScaleY], () => {
