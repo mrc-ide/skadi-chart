@@ -38,6 +38,7 @@ export type TickConfig<Domain> = {
   padding?: number,
   size?: number,
   formatter?: (domainValue: Domain, index: number) => string,
+  enableMathJax?: boolean
 } & (Domain extends number ? {
   count?: number,
   specifier?: string,

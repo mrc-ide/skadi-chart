@@ -139,7 +139,8 @@ export class AxesLayer extends OptionalLayer {
       specifier: tickSpecifier,
       padding: tickPadding,
       size: tickSize,
-      formatter: tickFormatter
+      formatter: tickFormatter,
+      enableMathJax
     } = layerArgs.globals.tickConfig.numerical[axis];
     const { translation, axisConstructor } = this.axisConfig(axis, layerArgs);
     let axisLine: D3Selection<SVGLineElement> | null = null;
@@ -149,7 +150,11 @@ export class AxesLayer extends OptionalLayer {
       .tickSize(tickSize ?? 0)
       .tickPadding(tickPadding ?? defaultTickPadding);
     if (tickFormatter) {
-      numericalAxis.tickFormat((val: d3.NumberValue, i) => tickFormatter(val as number, i));
+      if (!enableMathJax) {
+        numericalAxis.tickFormat((val: d3.NumberValue, i) => tickFormatter(val as number, i));
+      } else {
+        numericalAxis.tickFormat(() => "");
+      }
     }
     const axisLayer = layerArgs.coreLayers[LayerType.Svg].append("g")
       .attr("id", `${getHtmlId(LayerType.Axes)}-${axis}`)
@@ -157,6 +162,34 @@ export class AxesLayer extends OptionalLayer {
       .attr("transform", `translate(${translation.x},${translation.y})`)
       .call(numericalAxis);
     axisLayer.select(".domain").style("stroke-opacity", 0);
+
+    if (tickFormatter && enableMathJax) {
+        console.warn(
+          "enableMathJax is currently not compatible with zoom layer" +
+          " and is only available for the x axis"
+        );
+        axisLayer
+          .selectAll("g")
+          .data((numericalAxis.scale() as ScaleNumeric).ticks())
+          .append("foreignObject")
+          .attr("width", 50) 
+          .attr("height", 50)
+          .attr("x", 0)
+          .attr("y", tickPadding ?? defaultTickPadding)
+          .append("xhtml:span")
+          .attr("class", "tick-mathjax")
+          .text((d, i) => tickFormatter(d, i));
+        MathJax.typesetPromise().then(() => {
+          const spanNodes = layerArgs.coreLayers[LayerType.Svg]
+            .selectAll("span.tick-mathjax")
+            .nodes() as HTMLSpanElement[];
+          spanNodes.forEach(sn => {
+            const { width } = sn.getBoundingClientRect();
+            const foreignObject = sn.parentElement! as unknown as SVGForeignObjectElement;
+            foreignObject.x.baseVal.value = - width / 2;
+          });
+        });
+    }
 
     if (!layerArgs.chartOptions.logScale[axis]) {
       // Draw a line at [axis]=0

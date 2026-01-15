@@ -48,6 +48,9 @@
   <h1>Custom layers + custom lifecycle hooks</h1>
   <div class="chart" ref="chartCustom" id="chartCustom"></div>
 
+  <h1>With MathJax (experimental)</h1>
+  <div class="chart" ref="chartMathJax" id="chartMathJax"></div>
+
   <h1>Stress test: 1000 traces</h1>
   <button @click="drawStressChart">Draw</button>
   <div class="chart" ref="chartStress" id="chartStress"></div>
@@ -88,6 +91,7 @@ const chartArea = ref<HTMLDivElement | null>(null);
 const chartStress = ref<HTMLDivElement | null>(null);
 const chartStressPoints = ref<HTMLDivElement | null>(null);
 const chartCustom = ref<HTMLDivElement | null>(null);
+const chartMathJax = ref<HTMLDivElement | null>(null);
 
 const pointPropsBasic = {
   n: 1000,
@@ -289,6 +293,7 @@ const curvesArea = makeRandomCurves({ ...propsBasic, nL: 5 }, true);
 const pointsTooltips = makeRandomPoints(pointPropsTooltips);
 const curvesResponsive = makeRandomCurves(propsBasic);
 const curvesCustom = makeRandomCurves(propsBasic);
+const curvesMathJax = makeRandomCurves(propsBasic);
 const curvesCategoricalXAxis = makeRandomCurvesForCategoricalAxis(categoricalXAxis, "x");
 const curvesCategoricalYAxis = makeRandomCurvesForCategoricalAxis(categoricalYAxis, "y");
 const pointsCategoricalXAxis = makeRandomPointsForCategoricalAxis(categoricalXAxis, "x");
@@ -512,5 +517,14 @@ onMounted(async () => {
       }
     })
     .appendTo(chartCustom.value!);
+
+
+  const mathJaxFormatter = (num: number) => `$${num}^{1.5}$`
+  new Chart({
+    tickConfig: { numerical: { x: { formatter: mathJaxFormatter, enableMathJax: true } } }
+  })
+    .addTraces(curvesMathJax)
+    .addAxes(axesLabels)
+    .appendTo(chartMathJax.value!);
 });
 </script>
