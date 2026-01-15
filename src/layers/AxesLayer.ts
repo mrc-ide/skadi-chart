@@ -2,6 +2,8 @@ import * as d3 from "@/d3";
 import { LayerType, OptionalLayer } from "./Layer";
 import { AxisType, D3Selection, LayerArgs, ScaleNumeric, XY, XYLabel } from "@/types";
 
+declare const MathJax: any;
+
 type AxisElements = ({
   layer: D3Selection<SVGGElement>,
   axis: d3.Axis<d3.NumberValue>,
