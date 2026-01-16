@@ -203,8 +203,6 @@ export class AxesLayer extends OptionalLayer {
   }
 
   // Draws a line perpendicular to the specified axis at the given position in scale coordinates.
-  // If the other axis is categorical, draws a line for each category band, to prevent lines
-  // cutting through inter-band padding.
   private drawLinePerpendicularToAxis = (
     axis: AxisType,
     positionSC: number,
@@ -225,14 +223,22 @@ export class AxesLayer extends OptionalLayer {
       }
       return drawLine(baseLayer, lineCoordsSC as XY<{start: number, end: number}>, color);
     }
-    const bandWidth = otherAxisCategoricalScale.bandwidth();
+
+    // If the other axis is categorical, draw a line for each category band of the other axis,
+    // to prevent lines cutting through inter-band padding (i.e. we draw 'one' interrupted 'line'
+    // out of multiple shorter lines with gaps for padding as required by the other axis).
+    const otherAxisBandWidth = otherAxisCategoricalScale.bandwidth();
+    const otherAxisPositionSC = otherAxis === "x" ? height - margin.bottom : margin.left;
     otherAxisCategoricalScale.domain().forEach(category => {
-      const bandStart = otherAxisCategoricalScale(category);
-      if (bandStart === undefined) return;
+      const otherAxisBandStart = otherAxisCategoricalScale(category);
+      if (otherAxisBandStart === undefined) return;
+
+      // Don't draw the line if it would be drawn on top of the other-axis line itself
+      if (positionSC === otherAxisPositionSC) return;
 
       const lineCoordsSC = {
         [axis]: { start: positionSC, end: positionSC },
-        [otherAxis]: { start: bandStart, end: bandStart + bandWidth },
+        [otherAxis]: { start: otherAxisBandStart, end: otherAxisBandStart + otherAxisBandWidth },
       };
 
       drawLine(baseLayer, lineCoordsSC as XY<{start: number, end: number}>, color);
