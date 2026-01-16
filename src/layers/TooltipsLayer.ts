@@ -174,6 +174,7 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
 
     const tooltip = d3.create("div")
       .attr("id", `${layerArgs.getHtmlId(this.type)}`)
+      .attr("class", "skadi-charts-tooltip") // Allow user to apply style to the tooltip container
       .style("position", "fixed")
       .style("pointer-events", "none") as any as D3Selection<HTMLDivElement>;
     
