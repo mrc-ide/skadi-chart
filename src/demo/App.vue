@@ -483,18 +483,20 @@ onMounted(async () => {
 
   new Chart({
     tickConfig: {
-      numerical: {
-        y: {
-          count: 1,
-          specifier: ".0f",
-        }
-      }
+      numerical: { y: { count: 1, specifier: ".0f" } },
+      categorical: { y: { padding: 36 } },
     },
-    categoricalScalePaddingInner: { x: 0.02, y: 0.1 },
+    categoricalScalePaddingInner: { x: 0.04, y: 0.1 },
   })
-    .addAxes({ x: "Category", y: "Category" })
+    .addAxes({ x: "Category", y: "Category" }, { y: 0.2 })
     .addScatterPoints(makeRandomPointsForBothCategoricalAxes(categoricalXAxis, categoricalYAxis))
-    .appendTo(chartBothCategoricalAxes.value!, { ...scales, x: { start: -1, end: scales.x.end } }, {}, { x: categoricalXAxis, y: categoricalYAxis });
+    .appendTo(
+      chartBothCategoricalAxes.value!,
+      { ...scales, x: { start: -1, end: scales.x.end } },
+      {},
+      { x: categoricalXAxis, y: categoricalYAxis },
+      { left: 150 },
+    );
 
   curvesResponsive.forEach((l, i) => {
     l.style.strokeDasharray = `${i * 2} 5`
