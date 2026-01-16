@@ -73,6 +73,11 @@
   width: 60vw;
   height: 55vh;
 }
+
+.skadi-charts-tooltip {
+  /* Move smoothly from one position to another */
+  transition: left 0.1s ease-in-out, top 0.1s ease-in-out;
+}
 </style>
 
 <script setup lang="ts">
