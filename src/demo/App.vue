@@ -519,7 +519,7 @@ onMounted(async () => {
     .appendTo(chartCustom.value!);
 
 
-  const mathJaxFormatter = (num: number) => `$${num}^{1.5}$`
+  const mathJaxFormatter = (num: number) => `$${num}^{1}$`
   new Chart({
     tickConfig: { numerical: { x: { formatter: mathJaxFormatter, enableMathJax: true } } }
   })
