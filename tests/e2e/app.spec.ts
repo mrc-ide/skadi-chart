@@ -27,7 +27,7 @@ class SkadiChartTest {
       // and is useful for cases like traces where we have to
       // match `trace-<randomId>-0`, `trace-<randomId>-1`, ...
       // with just `trace-<randomId>`
-      return await page.locator(`*[id*="${id}"]`).all();
+      return await page.locator(`*[id^="${id}"]`).all();
     };
 
     return this;
