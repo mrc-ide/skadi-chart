@@ -112,3 +112,15 @@ export const drawLine = (
     .attr("y2", coordsSC.y.end)
     .style("stroke", color).style("stroke-width", 0.5);
 }
+
+export type DebounceConfig = {
+  timeout: NodeJS.Timeout | undefined,
+  time: number
+}
+
+export const debounce = (cfg: DebounceConfig, callback: () => any) => {
+  clearTimeout(cfg.timeout);
+  cfg.timeout = setTimeout(() => {
+    callback();
+  }, cfg.time);
+};
