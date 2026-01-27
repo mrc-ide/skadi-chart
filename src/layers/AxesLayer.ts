@@ -1,6 +1,9 @@
 import * as d3 from "@/d3";
 import { LayerType, OptionalLayer } from "./Layer";
-import { AxisType, D3Selection, LayerArgs, ScaleNumeric, TickConfig, XYLabel } from "@/types";
+import { AxisType, D3Selection, LayerArgs, ScaleNumeric, XY, XYLabel } from "@/types";
+import { drawLine } from "@/helpers";
+
+declare const MathJax: any;
 
 type AxisElements = ({
   layer: D3Selection<SVGGElement>,
@@ -15,7 +18,7 @@ type AxisElements = ({
 export class AxesLayer extends OptionalLayer {
   type = LayerType.Axes;
 
-  constructor(public labels: XYLabel) {
+  constructor(public labels: XYLabel, public labelPositions: XY<number>) {
     super();
   };
 
@@ -33,18 +36,18 @@ export class AxesLayer extends OptionalLayer {
       if (axis === "y") {
         const usableHeight = height - margin.top - margin.bottom;
         label.attr("x", - usableHeight / 2 - margin.top)
-          .attr("y", margin.left / 3)
+          .attr("y", margin.left * this.labelPositions.y)
           .attr("transform", "rotate(-90)")
       } else {
         const usableWidth = width - margin.left - margin.right;
         label.attr("x", usableWidth / 2 + margin.left)
-          .attr("y", height - margin.bottom / 3)
+          .attr("y", height - margin.bottom * this.labelPositions.x)
       }
     }
 
     return layerArgs.scaleConfig.categoricalScales[axis]
       ? this.drawCategoricalAxis(axis, layerArgs)
-      : this.drawNumericalAxis(axis, numericalScale, { ...layerArgs.globals.tickConfig[axis], padding: 12 }, layerArgs);
+      : this.drawNumericalAxis(axis, numericalScale, layerArgs, 12);
   };
 
 
@@ -91,15 +94,21 @@ export class AxesLayer extends OptionalLayer {
     const { margin } = layerArgs.bounds;
     const svgLayer = layerArgs.coreLayers[LayerType.Svg];
     const { getHtmlId } = layerArgs;
-    const { count: tickCount } = layerArgs.globals.tickConfig[axis];
+    const { padding: tickPadding, size: tickSize, formatter: tickFormatter } = layerArgs.globals.tickConfig.categorical[axis];
 
     const { translation, axisConstructor } = this.axisConfig(axis, layerArgs);
 
     const bandwidth = categoricalScale.bandwidth();
 
-    const distanceFromSvgEdgeToAxis = axis === "x" ? margin.bottom : margin.left;
-    const categoricalAxis = axisConstructor(categoricalScale).ticks(tickCount).tickSize(0)
-      .tickPadding(distanceFromSvgEdgeToAxis * 0.3);
+    const axisMargin = axis === "x" ? margin.bottom : margin.left;
+    const defaultTickPadding = axisMargin * (1 - this.labelPositions?.[axis]) / 3;
+    const categoricalAxis = axisConstructor(categoricalScale)
+      .tickSize(tickSize ?? 0)
+      .tickPadding(tickPadding ?? defaultTickPadding);
+    if (tickFormatter) {
+      categoricalAxis.tickFormat(tickFormatter);
+    }
+
     svgLayer.append("g")
       .attr("id", `${axis}-${getHtmlId(LayerType.Axes)}`)
       .style("font-size", "0.75rem")
@@ -109,10 +118,8 @@ export class AxesLayer extends OptionalLayer {
     const bandNumericalScales = Object.entries(layerArgs.scaleConfig.categoricalScales[axis]!.bands);
     bandNumericalScales.forEach(([category, bandNumericalScale]) => {
       const bandStart = categoricalScale(category)!;
-      const bandDomain = bandNumericalScale.domain();
-      if (bandDomain[0] < 0 && bandDomain[1] > 0) {
-        // Add a tick and label at [axis]=0 for each band
-        this.drawNumericalAxis(axis, bandNumericalScale, { count: 1, padding: 6 }, layerArgs);
+      if (layerArgs.globals.tickConfig.numerical[axis].count) {
+        this.drawNumericalAxis(axis, bandNumericalScale, layerArgs, 6);
       }
       if (categoricalScale.paddingInner()) {
         this.drawLinePerpendicularToAxis(axis, bandStart, layerArgs);
@@ -126,15 +133,32 @@ export class AxesLayer extends OptionalLayer {
   private drawNumericalAxis = (
     axis: AxisType,
     scale: ScaleNumeric,
-    tickConfig: TickConfig & { padding: number },
-    layerArgs: LayerArgs
+    layerArgs: LayerArgs,
+    defaultTickPadding: number,
   ): AxisElements => {
     const { getHtmlId } = layerArgs;
-    const { count: tickCount, specifier: tickSpecifier, padding: tickPadding } = tickConfig;
+    const {
+      count: tickCount,
+      specifier: tickSpecifier,
+      padding: tickPadding,
+      size: tickSize,
+      formatter: tickFormatter,
+      enableMathJax
+    } = layerArgs.globals.tickConfig.numerical[axis];
     const { translation, axisConstructor } = this.axisConfig(axis, layerArgs);
     let axisLine: D3Selection<SVGLineElement> | null = null;
 
-    const numericalAxis = axisConstructor(scale).ticks(tickCount, tickSpecifier).tickSize(0).tickPadding(tickPadding);
+    const numericalAxis = axisConstructor(scale)
+      .ticks(tickCount ?? 0, tickSpecifier)
+      .tickSize(tickSize ?? 0)
+      .tickPadding(tickPadding ?? defaultTickPadding);
+    if (tickFormatter) {
+      if (!enableMathJax) {
+        numericalAxis.tickFormat((val: d3.NumberValue, i) => tickFormatter(val as number, i));
+      } else {
+        numericalAxis.tickFormat(() => "");
+      }
+    }
     const axisLayer = layerArgs.coreLayers[LayerType.Svg].append("g")
       .attr("id", `${axis}-${getHtmlId(LayerType.Axes)}`)
       .style("font-size", "0.75rem")
@@ -142,14 +166,43 @@ export class AxesLayer extends OptionalLayer {
       .call(numericalAxis);
     axisLayer.select(".domain").style("stroke-opacity", 0);
 
+    if (tickFormatter && enableMathJax) {
+        console.warn(
+          "enableMathJax is currently not compatible with zoom layer" +
+          " and is only available for the x axis"
+        );
+        axisLayer
+          .selectAll("g")
+          .data((numericalAxis.scale() as ScaleNumeric).ticks())
+          .append("foreignObject")
+          .attr("width", 50) 
+          .attr("height", 50)
+          .attr("x", 0)
+          .attr("y", tickPadding ?? defaultTickPadding)
+          .append("xhtml:span")
+          .attr("class", "tick-mathjax")
+          .text((d, i) => tickFormatter(d, i));
+        MathJax.typesetPromise().then(() => {
+          const spanNodes = layerArgs.coreLayers[LayerType.Svg]
+            .selectAll("span.tick-mathjax")
+            .nodes() as HTMLSpanElement[];
+          spanNodes.forEach(sn => {
+            const { width } = sn.getBoundingClientRect();
+            const foreignObject = sn.parentElement! as unknown as SVGForeignObjectElement;
+            foreignObject.x.baseVal.value = - width / 2;
+          });
+        });
+    }
+
     if (!layerArgs.chartOptions.logScale[axis]) {
       // Draw a line at [axis]=0
-      axisLine = this.drawLinePerpendicularToAxis(axis, scale(0), layerArgs, "darkgrey");
+      axisLine = this.drawLinePerpendicularToAxis(axis, scale(0), layerArgs, "darkgrey") as D3Selection<SVGLineElement>;
     }
 
     return { layer: axisLayer, axis: numericalAxis, line: axisLine };
   }
 
+  // Draws a line perpendicular to the specified axis at the given position in scale coordinates.
   private drawLinePerpendicularToAxis = (
     axis: AxisType,
     positionSC: number,
@@ -159,13 +212,37 @@ export class AxesLayer extends OptionalLayer {
     const baseLayer = layerArgs.coreLayers[LayerType.BaseLayer];
     const { height, width, margin } = layerArgs.bounds;
     const otherAxis = axis === "x" ? "y" : "x";
+    const otherAxisCategoricalScale = layerArgs.scaleConfig.categoricalScales[otherAxis]?.main;
 
-    return baseLayer.append("g").append("line")
-      .attr(`${axis}1`, positionSC)
-      .attr(`${axis}2`, positionSC)
-      .attr(`${otherAxis}1`, axis === "x" ? margin.top : margin.left)
-      .attr(`${otherAxis}2`, axis === "x" ? height - margin.bottom : width - margin.right)
-      .style("stroke", color).style("stroke-width", 0.5);
+    if (!otherAxisCategoricalScale) {
+      let lineCoordsSC = { [axis]: { start: positionSC, end: positionSC } };
+      if (axis === "x") {
+        lineCoordsSC.y = { start: margin.top, end: height - margin.bottom };
+      } else {
+        lineCoordsSC.x = { start: margin.left, end: width - margin.right };
+      }
+      return drawLine(baseLayer, lineCoordsSC as XY<{start: number, end: number}>, color);
+    }
+
+    // If the other axis is categorical, draw a line for each category band of the other axis,
+    // to prevent lines cutting through inter-band padding (i.e. we draw 'one' interrupted 'line'
+    // out of multiple shorter lines with gaps for padding as required by the other axis).
+    const otherAxisBandWidth = otherAxisCategoricalScale.bandwidth();
+    const otherAxisPositionSC = otherAxis === "x" ? height - margin.bottom : margin.left;
+    otherAxisCategoricalScale.domain().forEach(category => {
+      const otherAxisBandStart = otherAxisCategoricalScale(category);
+      if (otherAxisBandStart === undefined) return;
+
+      // Don't draw the line if it would be drawn on top of the other-axis line itself
+      if (positionSC === otherAxisPositionSC) return;
+
+      const lineCoordsSC = {
+        [axis]: { start: positionSC, end: positionSC },
+        [otherAxis]: { start: otherAxisBandStart, end: otherAxisBandStart + otherAxisBandWidth },
+      };
+
+      drawLine(baseLayer, lineCoordsSC as XY<{start: number, end: number}>, color);
+    });
   }
 
   private axisConfig = (axis: AxisType, layerArgs: LayerArgs) => {

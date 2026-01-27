@@ -26,7 +26,7 @@
   <h1>Chart with tooltips</h1>
   <div class="chart" ref="chartTooltips" id="chartTooltips"></div>
 
-  <h1>Categorical y axis with traces and log scales</h1>
+  <h1>Categorical y axis with traces and log scales and configured margins</h1>
   <div class="chart" ref="chartCategoricalYAxis" id="chartCategoricalYAxis"></div>
   <button @click="() => categoricalYAxisLogScaleX = !categoricalYAxisLogScaleX">Toggle log scale X</button>
   <button @click="() => categoricalYAxisLogScaleY = !categoricalYAxisLogScaleY">Toggle log scale Y</button>
@@ -36,10 +36,13 @@
   <button @click="() => categoricalXAxisLogScaleX = !categoricalXAxisLogScaleX">Toggle log scale X</button>
   <button @click="() => categoricalXAxisLogScaleY = !categoricalXAxisLogScaleY">Toggle log scale Y</button>
 
+  <h1>Both categorical axes</h1>
+  <div class="chart" ref="chartBothCategoricalAxes" id="chartBothCategoricalAxes"></div>
+
   <h1>Area</h1>
   <div class="chart" ref="chartArea" id="chartArea"></div>
 
-  <h1>Ridgeline plot (configurable clip-path)</h1>
+  <h1>Ridgeline plot with configurable clip-path and axis-constrained tooltips</h1>
   <div class="chart" ref="chartOverlappingBandsY" id="chartOverlappingBandsY"></div>
 
   <h1>Responsive chart (and dashed lines)</h1>
@@ -47,6 +50,9 @@
 
   <h1>Custom layers + custom lifecycle hooks</h1>
   <div class="chart" ref="chartCustom" id="chartCustom"></div>
+
+  <h1>With MathJax (experimental)</h1>
+  <div class="chart" ref="chartMathJax" id="chartMathJax"></div>
 
   <h1>Stress test: 1000 traces</h1>
   <button @click="drawStressChart">Draw</button>
@@ -67,10 +73,15 @@
   width: 60vw;
   height: 55vh;
 }
+
+.skadi-charts-tooltip {
+  /* Move smoothly from one position to another */
+  transition: left 0.1s ease-in-out, top 0.1s ease-in-out;
+}
 </style>
 
 <script setup lang="ts">
-import { PointWithMetadata, ScatterPoints } from "@/types";
+import { PointWithMetadata, ScatterPoints, XY } from "@/types";
 import { Chart, LayerArgs, LayerType, Lines, OptionalLayer, Scales } from "../skadi-chart";
 import { onMounted, ref, watch } from "vue";
 
@@ -88,6 +99,8 @@ const chartArea = ref<HTMLDivElement | null>(null);
 const chartStress = ref<HTMLDivElement | null>(null);
 const chartStressPoints = ref<HTMLDivElement | null>(null);
 const chartCustom = ref<HTMLDivElement | null>(null);
+const chartMathJax = ref<HTMLDivElement | null>(null);
+const chartBothCategoricalAxes = ref<HTMLDivElement | null>(null);
 
 const pointPropsBasic = {
   n: 1000,
@@ -191,6 +204,21 @@ const makeRandomPointsForCategoricalAxis = (domain: string[], axis: "x" | "y"): 
   });
 };
 
+const makeRandomPointsForBothCategoricalAxes = (domainX: string[], domainY: string[]): ScatterPoints<Metadata> => {
+  return makeRandomPoints(pointPropsBasic).map((point, index) => {
+    const bandX = domainX[index % domainX.length];
+    const bandY = domainY[index % domainY.length];
+    const color = colors[index % colors.length];
+    const adjustedX = index % 3 === 0 ? point.x * -1 : point.x; // 'Randomly' make some x values negative
+    return {
+      ...{ ...point, x: adjustedX },
+      bands: { x: bandX, y: bandY },
+      style: { ...point.style, color },
+      metadata: { ...point.metadata, color }
+    }
+  });
+};
+
 const makeRandomCurves = (props: typeof propsBasic, withArea?: boolean) => {
   const xPoints = Array.from({length: props.nX + 1}, (_, i) => i / props.nX);
   const lines: Lines<Metadata> = [];
@@ -270,7 +298,7 @@ const tooltipHtmlCallback = (point: PointWithMetadata<Metadata>) => {
     + `</div>`
 };
 
-const categoricalYAxis = ["A", "B", "C", "D", "E"];
+const categoricalYAxis = ["Category A", "Category B", "Category C", "Category D", "Category E"];
 const categoricalXAxis = ["Left", "Right"];
 const chartCategoricalYAxis = ref<HTMLDivElement | null>(null);
 const chartCategoricalXAxis = ref<HTMLDivElement | null>(null);
@@ -289,6 +317,7 @@ const curvesArea = makeRandomCurves({ ...propsBasic, nL: 5 }, true);
 const pointsTooltips = makeRandomPoints(pointPropsTooltips);
 const curvesResponsive = makeRandomCurves(propsBasic);
 const curvesCustom = makeRandomCurves(propsBasic);
+const curvesMathJax = makeRandomCurves(propsBasic);
 const curvesCategoricalXAxis = makeRandomCurvesForCategoricalAxis(categoricalXAxis, "x");
 const curvesCategoricalYAxis = makeRandomCurvesForCategoricalAxis(categoricalYAxis, "y");
 const pointsCategoricalXAxis = makeRandomPointsForCategoricalAxis(categoricalXAxis, "x");
@@ -343,14 +372,31 @@ const categoricalYAxisLogScaleX = ref<boolean>(false);
 const categoricalYAxisLogScaleY = ref<boolean>(false);
 
 const drawChartCategoricalYAxis = () => {
-  new Chart({ logScale: { x: categoricalYAxisLogScaleX.value, y: categoricalYAxisLogScaleY.value }})
-    .addAxes({ x: "Time", y: "Category" })
+  new Chart({
+    logScale: { x: categoricalYAxisLogScaleX.value, y: categoricalYAxisLogScaleY.value },
+    tickConfig: {
+      numerical: {
+        x: { specifier: categoricalYAxisLogScaleX.value ? "e" : undefined },
+        y: { specifier: ".0f", count: 1 },
+      },
+      categorical: {
+        y: { padding: 30 }
+      }
+    },
+  })
+    .addAxes({ x: "Time", y: "Category" }, { y: 0.2, x: 0.4 })
     .addGridLines({ x: true })
     .addTraces(curvesCategoricalYAxis)
     .addScatterPoints(pointsCategoricalYAxis)
     .addZoom()
     .addTooltips(tooltipHtmlCallback)
-    .appendTo(chartCategoricalYAxis.value!, scales, {}, { y: categoricalYAxis });
+    .appendTo(
+      chartCategoricalYAxis.value!,
+      categoricalYAxisLogScaleX.value ? { ...scales, x: { ...scales.x, start: 0.001 } } : scales,
+      {},
+      { y: categoricalYAxis },
+      { left: 150, bottom: 70, right: 10 },
+    );
 };
 
 watch([categoricalYAxisLogScaleX, categoricalYAxisLogScaleY], () => {
@@ -361,13 +407,31 @@ const categoricalXAxisLogScaleX = ref<boolean>(false);
 const categoricalXAxisLogScaleY = ref<boolean>(false);
 
 const drawChartCategoricalXAxis = () => {
-  new Chart({ logScale: { x: categoricalXAxisLogScaleX.value, y: categoricalXAxisLogScaleY.value }})
+  const numericalTickFormatter = categoricalXAxisLogScaleX.value ? (num: number): string => {
+    let [mantissa, exponent] = num.toExponential().split("e");
+    return `${mantissa === "1" ? `` : `${mantissa} * `}10^${exponent.replace("+", "")}`;
+  } : undefined;
+
+  const logSafeScales = {
+    ...scales,
+    x: categoricalXAxisLogScaleX.value ? { ...scales.x, start: 0.001 } : scales.x,
+    y: categoricalXAxisLogScaleY.value ? { ...scales.y, start: 0.001 } : scales.y,
+  };
+
+  new Chart({
+    logScale: { x: categoricalXAxisLogScaleX.value, y: categoricalXAxisLogScaleY.value },
+    categoricalScalePaddingInner: { x: 0.05 },
+    tickConfig: {
+      numerical: { x: { formatter: numericalTickFormatter } },
+      categorical: { x: { padding: 36, formatter: (s) => s.toLocaleUpperCase() } },
+    },
+  })
     .addAxes({ x: "Category", y: "Value" })
     .addTraces(curvesCategoricalXAxis)
     .addScatterPoints(pointsCategoricalXAxis)
     .addZoom()
     .addTooltips(tooltipHtmlCallback)
-    .appendTo(chartCategoricalXAxis.value!, scales, {}, { x: categoricalXAxis });
+    .appendTo(chartCategoricalXAxis.value!, logSafeScales, {}, { x: categoricalXAxis });
 };
 
 watch([categoricalXAxisLogScaleX, categoricalXAxisLogScaleY], () => {
@@ -428,6 +492,23 @@ onMounted(async () => {
   drawChartCategoricalYAxis();
   drawChartCategoricalXAxis();
 
+  new Chart({
+    tickConfig: {
+      numerical: { y: { count: 1, specifier: ".0f" } },
+      categorical: { y: { padding: 36 } },
+    },
+    categoricalScalePaddingInner: { x: 0.04, y: 0.1 },
+  })
+    .addAxes({ x: "Category", y: "Category" }, { y: 0.2 })
+    .addScatterPoints(makeRandomPointsForBothCategoricalAxes(categoricalXAxis, categoricalYAxis))
+    .appendTo(
+      chartBothCategoricalAxes.value!,
+      { ...scales, x: { start: -1, end: scales.x.end } },
+      {},
+      { x: categoricalXAxis, y: categoricalYAxis },
+      { left: 150 },
+    );
+
   curvesResponsive.forEach((l, i) => {
     l.style.strokeDasharray = `${i * 2} 5`
   });
@@ -438,17 +519,18 @@ onMounted(async () => {
     .makeResponsive()
     .appendTo(chartResponsive.value!);
 
-  new Chart()
+  new Chart({ tickConfig: { numerical: { x: { size: 8, padding: 2 }, y: { count: 0 } } } })
     .addAxes({ x: "Time", y: "Category" })
     .addTraces(curvesOverlappingBandsY)
     .addArea()
     .addZoom()
-    .addTooltips(tooltipHtmlCallback)
+    .addTooltips(tooltipHtmlCallback, Infinity, "x")
     .appendTo(
       chartOverlappingBandsY.value!,
       { x: scales.x, y: { start: 0, end: scales.y.end / 3 } }, // Limit y scale to force values to exceed band height
       {},
       { y: categoricalYAxis },
+      { left: 150, bottom: 70, right: 10 },
       { margin: { top: -100 } },
     );
 
@@ -482,5 +564,14 @@ onMounted(async () => {
       }
     })
     .appendTo(chartCustom.value!);
+
+
+  const mathJaxFormatter = (num: number) => `$${num}^{1}$`
+  new Chart({
+    tickConfig: { numerical: { x: { formatter: mathJaxFormatter, enableMathJax: true } } }
+  })
+    .addTraces(curvesMathJax)
+    .addAxes(axesLabels)
+    .appendTo(chartMathJax.value!);
 });
 </script>

@@ -200,7 +200,7 @@ test("categorical y axis", async ({ page }) => {
   await new SkadiChartTest(page, "chartCategoricalYAxis")
     .expectNTraces(10)
     .expectNPoints(1000)
-    .expectAxes({ x: 1, y: 6 })
+    .expectAxes({ x: 1, y: 6 }) // 6 = 5 numerical axes within each band, plus 1 main categorical axis
     .expectTooltip()
     .expectLabels({ x: "Time", y: "Category" })
     .expectGridlines({ x: true, y: false })
@@ -212,7 +212,7 @@ test("categorical x axis", async ({ page }) => {
   await new SkadiChartTest(page, "chartCategoricalXAxis")
     .expectNTraces(10)
     .expectNPoints(1000)
-    .expectAxes({ x: 1, y: 1 })
+    .expectAxes({ x: 3, y: 1 })
     .expectTooltip()
     .expectLabels({ x: "Category", y: "Value" })
     .expectZoom()
@@ -222,7 +222,7 @@ test("categorical x axis", async ({ page }) => {
 test("categorical y axis with overlapping bands", async ({ page }) => {
   await new SkadiChartTest(page, "chartOverlappingBandsY")
     .expectNTraces(10)
-    .expectAxes({ x: 1, y: 1 })
+    .expectAxes({ x: 1, y: 1 }) // Only 1 y axis since tick config count was set to 0.
     .expectTooltip()
     .expectLabels({ x: "Time", y: "Category" })
     .expectZoom()

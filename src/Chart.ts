@@ -3,7 +3,7 @@ import { AxesLayer } from "./layers/AxesLayer";
 import { TracesLayer, TracesOptions } from "./layers/TracesLayer";
 import { ZoomLayer, ZoomOptions } from "./layers/ZoomLayer";
 import { TooltipHtmlCallback, TooltipsLayer } from "./layers/TooltipsLayer";
-import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, ZoomExtents, PartialScales, Point, Scales, ScatterPoints, XY, XYLabel, ScaleNumeric, AxisType, CategoricalScaleConfig, ClipPathBounds } from "./types";
+import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, ZoomExtents, PartialScales, Point, Scales, ScatterPoints, XY, XYLabel, ScaleNumeric, AxisType, CategoricalScaleConfig, ClipPathBounds, TickConfig } from "./types";
 import { LayerType, LifecycleHooks, OptionalLayer } from "./layers/Layer";
 import { GridLayer } from "./layers/GridLayer";
 import html2canvas from "html2canvas";
@@ -19,15 +19,19 @@ class CustomHooksLayer extends OptionalLayer {
 }
 
 export type ChartOptions = {
-  logScale: XY<boolean>
+  logScale: XY<boolean>,
+  categoricalScalePaddingInner: XY<number>, // Specifies the padding between bands. Must be between 0 and 1. https://d3js.org/d3-scale/band#band_paddingInner
 }
 
 type PartialChartOptions = {
   logScale?: Partial<XY<boolean>>,
-  animationDuration?: number
+  animationDuration?: number,
+  categoricalScalePaddingInner?: Partial<XY<number>>,
+  tickConfig?: {
+    numerical?: Partial<XY<Partial<TickConfig<number>>>>,
+    categorical?: Partial<XY<Partial<TickConfig<string>>>>,
+  },
 }
-
-type CategoricalScales = Partial<XY<string[]>>;
 
 export class Chart<Metadata = any> {
   id: string;
@@ -36,12 +40,12 @@ export class Chart<Metadata = any> {
   globals = {
     animationDuration: 350,
     tickConfig: {
-      x: { count: 0 },
-      y: {
-        count: 0,
-        specifier: ".2~s", // an SI-prefix with 2 significant figures and no trailing zeros, 42e6 -> 42M
-      }
-    }
+      numerical: {
+        x: { specifier: ".2~s" }, // an SI-prefix with 2 significant figures and no trailing zeros, 42e6 -> 42M
+        y: { specifier: ".2~s" },
+      },
+      categorical: { x: {}, y: {} },
+    } as LayerArgs["globals"]["tickConfig"],
   };
   defaultMargin = { top: 20, bottom: 35, left: 50, right: 20 };
   exportToPng: ((name?: string) => void) | null = null;
@@ -54,22 +58,43 @@ export class Chart<Metadata = any> {
   constructor(options?: PartialChartOptions) {
     this.options = {
       logScale: {
-        x: options?.logScale?.x ?? false,
-        y: options?.logScale?.y ?? false
+        x: !!options?.logScale?.x,
+        y: !!options?.logScale?.y,
+      },
+      categoricalScalePaddingInner: {
+        x: options?.categoricalScalePaddingInner?.x ?? 0,
+        y: options?.categoricalScalePaddingInner?.y ?? 0,
       }
     };
     if (options?.animationDuration) {
       this.globals.animationDuration = options.animationDuration;
+    }
+    if (options?.tickConfig) {
+      this.globals.tickConfig = {
+        numerical: {
+          x: { ...this.globals.tickConfig.numerical.x, ...options.tickConfig.numerical?.x },
+          y: { ...this.globals.tickConfig.numerical.y, ...options.tickConfig.numerical?.y },
+        },
+        categorical: {
+          x: { ...this.globals.tickConfig.categorical.x, ...options.tickConfig.categorical?.x },
+          y: { ...this.globals.tickConfig.categorical.y, ...options.tickConfig.categorical?.y },
+        },
+      };
     }
     this.id = Math.random().toString(26).substring(2, 10);
 
     return this;
   };
 
-  addAxes = (labels: XYLabel = {}) => {
+  addAxes = (labels: XYLabel = {}, labelPositions?: Partial<XY<number>>) => {
     if (labels.x) this.defaultMargin.bottom = 80;
     if (labels.y) this.defaultMargin.left = 90;
-    this.optionalLayers.push(new AxesLayer(labels || {}));
+    this.optionalLayers.push(new AxesLayer(
+      labels || {},
+      {
+        x: labelPositions?.x ?? 1/3,
+        y: labelPositions?.y ?? 1/3,
+      }));
     return this;
   };
 
@@ -152,8 +177,8 @@ export class Chart<Metadata = any> {
     return this;
   };
 
-  addTooltips = (tooltipHtmlCallback: TooltipHtmlCallback<Metadata>) => {
-    this.optionalLayers.push(new TooltipsLayer(tooltipHtmlCallback));
+  addTooltips = (tooltipHtmlCallback: TooltipHtmlCallback<Metadata>, radiusPx?: number, distanceAxis?: "x" | "y", ) => {
+    this.optionalLayers.push(new TooltipsLayer(tooltipHtmlCallback, radiusPx, distanceAxis));
     return this;
   };
 
@@ -286,7 +311,7 @@ export class Chart<Metadata = any> {
     bounds: Bounds,
     maxExtents: PartialScales,
     initialExtents: PartialScales,
-    categoricalScales: Partial<XY<string[]>> = {},
+    categoricalDomains: Partial<XY<string[]>> = {},
     clipPathBoundsOptions: ClipPathBounds = {},
   ) => {
     const getHtmlId = (layer: LayerType[keyof LayerType]) => `${layer}-${this.id}`;
@@ -312,37 +337,46 @@ export class Chart<Metadata = any> {
       x: [initialExtents.x?.start ?? x.start, initialExtents.x?.end ?? x.end],
       y: [initialExtents.y?.start ?? y.start, initialExtents.y?.end ?? y.end]
     };
-    const disallowZerosForLogScaleDomainsMsg = `You have tried to use a log scale axis but the initial extents includes 0.`
-      + `Using automatic scales instead.`
-      + ` Please set the initial extents to a range that does not include 0, or pass {} to default to the auto-scale.`
-    if (this.options.logScale.x && initialDomain.x.some(bound => bound <= 0)) {
-      console.warn(disallowZerosForLogScaleDomainsMsg);
-      const { x } = this.processScales({});
-      initialDomain.x = [x.start, x.end];
-    }
-    if (this.options.logScale.y && initialDomain.y.some(bound => bound <= 0)) {
-      console.warn(disallowZerosForLogScaleDomainsMsg);
-      const { y } = this.processScales({});
-      initialDomain.y = [y.start, y.end];
+
+    if ((this.options.logScale.x && initialDomain.x.some(bound => bound <= 0))
+      || (this.options.logScale.y && initialDomain.y.some(bound => bound <= 0))
+    ) {
+      throw new Error(`You have tried to use a log scale axis but the initial extents includes 0.`
+      + ` Please set the initial extents to a range that does not include 0, or pass {} to default to the auto-scale.`);
     }
 
-    const rangeX = [margin.left, width - margin.right];
-    const rangeY = [height - margin.bottom, margin.top];
+    const ranges = {
+      x: [margin.left, width - margin.right],
+      y: [height - margin.bottom, margin.top]
+    } as XY<number[]>;
 
-    const d3ScaleX = this.options.logScale.x ? d3.scaleLog : d3.scaleLinear;
-    const numericalScaleX = d3ScaleX().domain(initialDomain.x).range(rangeX);
-    const d3ScaleY = this.options.logScale.y ? d3.scaleLog : d3.scaleLinear;
-    const numericalScaleY = d3ScaleY().domain(initialDomain.y).range(rangeY);
+    const numericalScales = (["x", "y"] as AxisType[]).reduce((acc, axis) => {
+      const d3Scale = this.options.logScale[axis] ? d3.scaleLog : d3.scaleLinear;
+      acc[axis] = d3Scale().domain(initialDomain[axis]).range(ranges[axis]);
+      return acc;
+    }, {} as XY<ScaleNumeric>);
 
-    let ticksX = 10;
-    if (width < 500) ticksX = 6;
-    if (width < 300) ticksX = 3;
-    let ticksY = 10;
-    if (height < 400) ticksY = 6;
-    if (height < 200) ticksY = 3;
+    const categoricalScales = (["x", "y"] as AxisType[]).reduce((acc, axis) => {
+      acc[axis] = this.createCategoricalScale(
+        categoricalDomains[axis],
+        ranges[axis],
+        numericalScales[axis],
+        axis,
+        this.options.categoricalScalePaddingInner[axis],
+      );
+      return acc;
+    }, {} as Partial<XY<CategoricalScaleConfig>>);
 
-    this.globals.tickConfig.x.count = ticksX;
-    this.globals.tickConfig.y.count = ticksY;
+    // Set some sensible defaults for numerical tick count if not provided in user options
+    Object.entries(this.globals.tickConfig.numerical).forEach(([axis, tickConfig]) => {
+      const ax = axis as AxisType;
+      if (tickConfig.count === undefined) {
+        let count = 10;
+        if (width < 450) count = 6;
+        if (width < 250) count = 3;
+        this.globals.tickConfig.numerical[ax].count = count;
+      }
+    });
 
     const layerArgs: LayerArgs = {
       id: this.id,
@@ -351,12 +385,9 @@ export class Chart<Metadata = any> {
       clipPathBounds: clipPathBounds,
       globals: this.globals,
       scaleConfig: {
-        numericalScales: { x: numericalScaleX, y: numericalScaleY },
+        numericalScales,
         scaleExtents: this.autoscaledMaxExtents,
-        categoricalScales: {
-          x: this.createCategoricalScale(categoricalScales.x, rangeX, numericalScaleX, "x"),
-          y: this.createCategoricalScale(categoricalScales.y, rangeY, numericalScaleY, "y"),
-        },
+        categoricalScales,
       },
       coreLayers: {
         [LayerType.Svg]: svg,
@@ -379,12 +410,13 @@ export class Chart<Metadata = any> {
     baseElement: HTMLDivElement,
     maxExtents: PartialScales = {},
     initialExtents: PartialScales = {},
-    categoricalScales: CategoricalScales = {},
+    categoricalDomains: Partial<XY<string[]>> = {},
+    margins: Partial<Bounds["margin"]> = {},
     clipPathBoundsOptions: ClipPathBounds = {},
   ) => {
     const drawWithBounds = (width: number, height: number) => {
-      const bounds = { width, height, margin: this.defaultMargin };
-      this.draw(baseElement, bounds, maxExtents, initialExtents, categoricalScales, clipPathBoundsOptions);
+      const bounds = { width, height, margin: { ...this.defaultMargin, ...margins } };
+      this.draw(baseElement, bounds, maxExtents, initialExtents, categoricalDomains, clipPathBoundsOptions);
     };
 
     const { width, height } = baseElement.getBoundingClientRect();
@@ -423,17 +455,18 @@ export class Chart<Metadata = any> {
 
   // A categorical scale contains two or more 'bands', which each have a small numerical scale.
   private createCategoricalScale = (
-    categories: string[] | undefined,
+    domain: string[] | undefined,
     range: number[],
     numericalScale: ScaleNumeric,
     axis: AxisType,
+    paddingInner: number,
   ): CategoricalScaleConfig | undefined => {
-    if (!categories?.length) {
+    if (!domain?.length) {
       return;
     }
-    const bandScale = d3.scaleBand().domain(categories).range(range);
+    const bandScale = d3.scaleBand().domain(domain).range(range).paddingInner(paddingInner);
     const bandwidth = bandScale.bandwidth();
-    const bands = categories.reduce((acc, category) => {
+    const bands = domain.reduce((acc, category) => {
       const bandStartSC = bandScale(category)!;
       const bandRange = axis === "x"
         ? [bandStartSC, bandStartSC + bandwidth]
