@@ -194,8 +194,9 @@ export class AxesLayer extends OptionalLayer {
         });
     }
 
-    if (!layerArgs.chartOptions.logScale[axis]) {
-      // Draw a line at [axis]=0
+    // Draw a line at [axis]=0 if this is within scale range
+    const [minDC, maxDC] = scale.domain().sort();
+    if (!layerArgs.chartOptions.logScale[axis] && minDC <= 0 && maxDC >= 0) {
       axisLine = this.drawLinePerpendicularToAxis(axis, scale(0), layerArgs, "darkgrey") as D3Selection<SVGLineElement>;
     }
 
