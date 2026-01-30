@@ -1,10 +1,13 @@
 import { D3Selection, LayerArgs, XY } from "@/types";
 import { LayerType, OptionalLayer } from "./Layer";
 
+// `enabled` indicates whether to draw grid lines along the x and/or y axes.
+export type GridOptions = { enabled: boolean };
+
 export class GridLayer extends OptionalLayer {
   type = LayerType.Grid;
 
-  constructor(public directions: { x: boolean; y: boolean }) {
+  constructor(public options: XY<GridOptions>) {
     super();
   };
 
@@ -45,14 +48,14 @@ export class GridLayer extends OptionalLayer {
         .attr("y2", (d: number) => scaleY(d))
     };
 
-    if (this.directions.x) {  
+    if (this.options.x.enabled) {
       grids.x = svgLayer.append("g")
         .call(addGridX)
         .attr("opacity", gridOpacity)
         .attr("id", `${getHtmlId(this.type)}-x`);
     }
 
-    if (this.directions.y) {
+    if (this.options.y.enabled) {
       grids.y = svgLayer.append("g")
         .call(addGridY)
         .attr("opacity", gridOpacity)

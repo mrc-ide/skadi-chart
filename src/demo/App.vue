@@ -7,6 +7,8 @@
 
   <h1>Axes and gridlines</h1>
   <div class="chart" ref="chartAxesAndGrid" id="chartAxesAndGrid"></div>
+  <button @click="() => gridChartXGrid = !gridChartXGrid">Toggle X axis gridlines</button>
+  <button @click="() => gridChartYGrid = !gridChartYGrid">Toggle Y axis gridlines</button>
 
   <h1>Axes, labels and gridlines</h1>
   <div class="chart" ref="chartAxesLabelsAndGrid" id="chartAxesLabelsAndGrid"></div>
@@ -351,6 +353,19 @@ const axesLabels = { x: "Time", y: "Value" };
 
 const exportToPng = ref<(name?: string) => void>();
 
+const gridChartXGrid = ref<boolean>(true);
+const gridChartYGrid = ref<boolean>(true);
+
+const drawAxesAndGridChart = () => {
+  new Chart()
+    .addTraces(curvesAxesAndGrid)
+    .addAxes()
+    .addGridLines({ x: { enabled: gridChartXGrid.value }, y: { enabled: gridChartYGrid.value } })
+    .appendTo(chartAxesAndGrid.value!);
+}
+
+watch([gridChartXGrid, gridChartYGrid], drawAxesAndGridChart);
+
 const numericalAxesLogScaleX = ref<boolean>(false);
 const numericalAxesLogScaleY = ref<boolean>(false);
 
@@ -364,9 +379,7 @@ const drawChartAxesLabelGridZoomAndLogScale = () => {
     .appendTo(chartAxesLabelGridZoomAndLogScale.value!, { y: {start: -3e6, end: 3e6} });
 };
 
-watch([numericalAxesLogScaleX, numericalAxesLogScaleY], () => {
-  drawChartAxesLabelGridZoomAndLogScale();
-});
+watch([numericalAxesLogScaleX, numericalAxesLogScaleY], drawChartAxesLabelGridZoomAndLogScale);
 
 const categoricalYAxisLogScaleX = ref<boolean>(false);
 const categoricalYAxisLogScaleY = ref<boolean>(false);
@@ -385,7 +398,7 @@ const drawChartCategoricalYAxis = () => {
     },
   })
     .addAxes({ x: "Time", y: "Category" }, { y: 0.2, x: 0.4 })
-    .addGridLines({ x: true })
+    .addGridLines()
     .addTraces(curvesCategoricalYAxis)
     .addScatterPoints(pointsCategoricalYAxis)
     .addZoom()
@@ -399,9 +412,7 @@ const drawChartCategoricalYAxis = () => {
     );
 };
 
-watch([categoricalYAxisLogScaleX, categoricalYAxisLogScaleY], () => {
-  drawChartCategoricalYAxis();
-});
+watch([categoricalYAxisLogScaleX, categoricalYAxisLogScaleY], drawChartCategoricalYAxis);
 
 const categoricalXAxisLogScaleX = ref<boolean>(false);
 const categoricalXAxisLogScaleY = ref<boolean>(false);
@@ -434,9 +445,7 @@ const drawChartCategoricalXAxis = () => {
     .appendTo(chartCategoricalXAxis.value!, logSafeScales, {}, { x: categoricalXAxis });
 };
 
-watch([categoricalXAxisLogScaleX, categoricalXAxisLogScaleY], () => {
-  drawChartCategoricalXAxis();
-});
+watch([categoricalXAxisLogScaleX, categoricalXAxisLogScaleY], drawChartCategoricalXAxis);
 
 onMounted(async () => {
   new Chart()
@@ -448,11 +457,7 @@ onMounted(async () => {
     .addAxes()
     .appendTo(chartOnlyAxes.value!, scales);
 
-  new Chart()
-    .addTraces(curvesAxesAndGrid)
-    .addAxes()
-    .addGridLines()
-    .appendTo(chartAxesAndGrid.value!);
+  drawAxesAndGridChart();
 
   new Chart()
     .addTraces(curvesArea)

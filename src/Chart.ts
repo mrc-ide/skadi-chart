@@ -5,7 +5,7 @@ import { ZoomLayer, ZoomOptions } from "./layers/ZoomLayer";
 import { TooltipHtmlCallback, TooltipsLayer } from "./layers/TooltipsLayer";
 import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, ZoomExtents, PartialScales, Point, Scales, ScatterPoints, XY, XYLabel, ScaleNumeric, AxisType, CategoricalScaleConfig, ClipPathBounds, TickConfig } from "./types";
 import { LayerType, LifecycleHooks, OptionalLayer } from "./layers/Layer";
-import { GridLayer } from "./layers/GridLayer";
+import { GridLayer, GridOptions } from "./layers/GridLayer";
 import html2canvas from "html2canvas";
 import { ScatterLayer } from "./layers/ScatterLayer";
 import { getXYMinMax } from "./helpers";
@@ -98,10 +98,14 @@ export class Chart<Metadata = any> {
     return this;
   };
 
-  addGridLines = (directions?: Partial<XY<boolean>>) => {
+  addGridLines = (options?: Partial<XY<Partial<GridOptions>>>) => {
     this.optionalLayers.push(new GridLayer({
-      x: directions === undefined ? true : directions.x ?? false,
-      y: directions === undefined ? true : directions.y ?? false,
+      x: {
+        enabled: options?.x?.enabled ?? true,
+      },
+      y: {
+        enabled: options?.y?.enabled ?? true,
+      },
     }));
     return this;
   };
