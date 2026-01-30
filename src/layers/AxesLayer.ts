@@ -12,7 +12,7 @@ type AxisElements = ({
   layer: null;
   axis: null;
 }) & {
-  line: D3Selection<SVGLineElement> | null
+  lineParts: D3Selection<SVGLineElement>[]
 }
 
 export class AxesLayer extends OptionalLayer {
@@ -55,8 +55,8 @@ export class AxesLayer extends OptionalLayer {
     const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.numericalScales;
     const { animationDuration } = layerArgs.globals;
 
-    const { layer: axisLayerX, axis: axisX, line: axisLineX } = this.drawAxis("x", layerArgs);
-    const { layer: axisLayerY, axis: axisY, line: axisLineY } = this.drawAxis("y", layerArgs);
+    const { layer: axisLayerX, axis: axisX, lineParts: axisLinesX } = this.drawAxis("x", layerArgs);
+    const { layer: axisLayerY, axis: axisY, lineParts: axisLinesY } = this.drawAxis("y", layerArgs);
 
     // The zoom layer (if added) will update the scaleX and scaleY
     // so axisY and axisX, which are constructed from these will
@@ -73,19 +73,28 @@ export class AxesLayer extends OptionalLayer {
         .call(axisY)
         .end();
 
-      const promiseAxisLineX = axisLineX?.transition()
+      const transitionAxisLineX = (
+        axisLineX: D3Selection<SVGLineElement>
+      ): Promise<void> => axisLineX.transition()
         .duration(animationDuration)
         .attr("x1", scaleX(0))
         .attr("x2", scaleX(0))
         .end();
 
-      const promiseAxisLineY = axisLineY?.transition()
+      const transitionAxisLineY = (
+        axisLineY: D3Selection<SVGLineElement>
+      ): Promise<void> => axisLineY.transition()
         .duration(animationDuration)
         .attr("y1", scaleY(0))
         .attr("y2", scaleY(0))
         .end();
 
-      await Promise.all([promiseX, promiseY, promiseAxisLineX, promiseAxisLineY]);
+      await Promise.all([
+        promiseX,
+        promiseY,
+        ...axisLinesX.map(transitionAxisLineX),
+        ...axisLinesY.map(transitionAxisLineY),
+      ]);
     };
   };
 
@@ -127,7 +136,7 @@ export class AxesLayer extends OptionalLayer {
       this.drawLinePerpendicularToAxis(axis, bandStart + bandwidth, layerArgs);
     });
 
-    return { layer: null, axis: null, line: null }; // No need to return axis elements as this axis won't be zoomed
+    return { layer: null, axis: null, lineParts: [] }; // No need to return axis elements as this axis won't be zoomed
   };
 
   private drawNumericalAxis = (
@@ -146,7 +155,6 @@ export class AxesLayer extends OptionalLayer {
       enableMathJax
     } = layerArgs.globals.tickConfig.numerical[axis];
     const { translation, axisConstructor } = this.axisConfig(axis, layerArgs);
-    let axisLine: D3Selection<SVGLineElement> | null = null;
 
     const numericalAxis = axisConstructor(scale)
       .ticks(tickCount ?? 0, tickSpecifier)
@@ -194,12 +202,13 @@ export class AxesLayer extends OptionalLayer {
         });
     }
 
+    let axisLines: D3Selection<SVGLineElement>[] = [];
     if (!layerArgs.chartOptions.logScale[axis]) {
       // Draw a line at [axis]=0
-      axisLine = this.drawLinePerpendicularToAxis(axis, scale(0), layerArgs, "darkgrey") as D3Selection<SVGLineElement>;
+      axisLines = this.drawLinePerpendicularToAxis(axis, scale(0), layerArgs, "darkgrey");
     }
 
-    return { layer: axisLayer, axis: numericalAxis, line: axisLine };
+    return { layer: axisLayer, axis: numericalAxis, lineParts: axisLines };
   }
 
   // Draws a line perpendicular to the specified axis at the given position in scale coordinates.
@@ -208,12 +217,13 @@ export class AxesLayer extends OptionalLayer {
     positionSC: number,
     layerArgs: LayerArgs,
     color: string = "black",
-  ) => {
+  ): D3Selection<SVGLineElement>[] => {
     const baseLayer = layerArgs.coreLayers[LayerType.BaseLayer];
     const { height, width, margin } = layerArgs.bounds;
     const otherAxis = axis === "x" ? "y" : "x";
     const otherAxisCategoricalScale = layerArgs.scaleConfig.categoricalScales[otherAxis]?.main;
 
+    // If the other axis is not a categorical axis, simply draw one line and return.
     if (!otherAxisCategoricalScale) {
       let lineCoordsSC = { [axis]: { start: positionSC, end: positionSC } };
       if (axis === "x") {
@@ -221,7 +231,7 @@ export class AxesLayer extends OptionalLayer {
       } else {
         lineCoordsSC.x = { start: margin.left, end: width - margin.right };
       }
-      return drawLine(baseLayer, lineCoordsSC as XY<{start: number, end: number}>, color);
+      return [drawLine(baseLayer, lineCoordsSC as XY<{start: number, end: number}>, color)];
     }
 
     // If the other axis is categorical, draw a line for each category band of the other axis,
@@ -229,7 +239,7 @@ export class AxesLayer extends OptionalLayer {
     // out of multiple shorter lines with gaps for padding as required by the other axis).
     const otherAxisBandWidth = otherAxisCategoricalScale.bandwidth();
     const otherAxisPositionSC = otherAxis === "x" ? height - margin.bottom : margin.left;
-    otherAxisCategoricalScale.domain().forEach(category => {
+    const lineParts = otherAxisCategoricalScale.domain().map(category => {
       const otherAxisBandStart = otherAxisCategoricalScale(category);
       if (otherAxisBandStart === undefined) return;
 
@@ -241,8 +251,9 @@ export class AxesLayer extends OptionalLayer {
         [otherAxis]: { start: otherAxisBandStart, end: otherAxisBandStart + otherAxisBandWidth },
       };
 
-      drawLine(baseLayer, lineCoordsSC as XY<{start: number, end: number}>, color);
-    });
+      return drawLine(baseLayer, lineCoordsSC as XY<{start: number, end: number}>, color);
+    })
+    return lineParts.filter(line => line !== undefined);
   }
 
   private axisConfig = (axis: AxisType, layerArgs: LayerArgs) => {
