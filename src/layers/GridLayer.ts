@@ -3,111 +3,109 @@ import { LayerType, OptionalLayer } from "./Layer";
 
 // `enabled` indicates whether to draw grid lines along the x and/or y axes.
 export type GridOptions = { enabled: boolean };
+// Config per set of grid lines. There is one set per band per axis.
+type GridlineSet = {
+  g: D3Selection<SVGGElement>, // The g-element containing the grid lines
+  scale: ScaleNumeric, // The scale used for this set of grid lines
+};
 
 export class GridLayer extends OptionalLayer {
   type = LayerType.Grid;
+  animationDuration: number = 0;
+  private readonly gridOpacity = 0.15;
+  private readonly gridStrokeWidth = 0.5;
 
   constructor(public options: XY<GridOptions>) {
     super();
   };
 
+  private fadeOutGrid = ({ g }: GridlineSet): Promise<void> => {
+    return g.selectAll("line")
+      .transition()
+      .duration(this.animationDuration / 2)
+      .style("opacity", 0)
+      .remove()
+      .end();
+  };
+
+  private fadeInGrid = (
+    { g, scale }: GridlineSet,
+    addGridCallback: (args: GridlineSet) => void,
+  ): Promise<void> => {
+    return g.call(() => addGridCallback({ g, scale }))
+      .style("opacity", 0)
+      .transition()
+      .duration(this.animationDuration / 2)
+      .style("opacity", this.gridOpacity)
+      .end();
+  };
+
   draw = (layerArgs: LayerArgs) => {
     const { width, height, margin } = layerArgs.bounds;
-    const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.numericalScales;
+    const numericalScales = layerArgs.scaleConfig.numericalScales;
+    const categoricalScales = layerArgs.scaleConfig.categoricalScales;
     const svgLayer = layerArgs.coreLayers[LayerType.Svg];
     const { tickConfig } = layerArgs.globals;
-    const animationDuration = 2000;
     const { getHtmlId } = layerArgs;
+    this.animationDuration = layerArgs.globals.animationDuration;
 
-    const gridOpacity = 0.95;
-    const gridStrokeWidth = 1.5;
-    // If the axis has multiple numerical axes (i.e. it is categorical with bands), there
-    // will be multiple grids for that axis; otherwise just one.
-    const grids: XY<D3Selection<SVGGElement>[]> = { x: [], y: [] };
-    const scales: XY<ScaleNumeric[]> = { x: [], y: [] };
+    // If an axis has multiple numerical axes (i.e. it is categorical with bands), there
+    // will be multiple grids and scales for that axis; otherwise just one per axis.
+    const gridSets: XY<GridlineSet[]> = { x: [], y: [] };
 
-    const addGridX = (g: D3Selection<SVGGElement>, scale: ScaleNumeric) => {
-      g.selectAll("line")
-        .data(scale.ticks(tickConfig.numerical.x.count))
-        .join("line")
-        .style("stroke", "black")
-        .style("stroke-width", gridStrokeWidth)
-        .attr("pointer-events", "none")
-        .attr("x1", (d: number) => scale(d))
-        .attr("x2", (d: number) => scale(d))
-        .attr("y1", margin.top)
-        .attr("y2", height - margin.bottom)
+    // A function per axis to add grid lines to a given grid g-element for a given scale
+    const addGridCallbacks: XY<(args: GridlineSet) => void> = {
+      x: ({ g, scale }: GridlineSet) => {
+        g.selectAll("line")
+          .data(scale.ticks(tickConfig.numerical.x.count))
+          .join("line")
+          .style("stroke", "black")
+          .style("stroke-width", this.gridStrokeWidth)
+          .attr("pointer-events", "none")
+          .attr("x1", (d: number) => scale(d))
+          .attr("x2", (d: number) => scale(d))
+          .attr("y1", margin.top)
+          .attr("y2", height - margin.bottom)
+      },
+      y: ({ g, scale }: GridlineSet) => {
+        g.selectAll("line")
+          .data(scale.ticks(tickConfig.numerical.y.count))
+          .join("line")
+          .style("stroke", "black")
+          .style("stroke-width", this.gridStrokeWidth)
+          .attr("pointer-events", "none")
+          .attr("x1", margin.left)
+          .attr("x2", width - margin.right)
+          .attr("y1", (d: number) => scale(d))
+          .attr("y2", (d: number) => scale(d))
+      },
     };
 
-    const addGridY = (g: D3Selection<SVGGElement>, scale: ScaleNumeric) => {
-      g.selectAll("line")
-        .data(scale.ticks(tickConfig.numerical.y.count))
-        .join("line")
-        .style("stroke", "black")
-        .style("stroke-width", gridStrokeWidth)
-        .attr("pointer-events", "none")
-        .attr("x1", margin.left)
-        .attr("x2", width - margin.right)
-        .attr("y1", (d: number) => scale(d))
-        .attr("y2", (d: number) => scale(d))
-    };
+    const setupGridlines = (axis: AxisType) => {
+      if (this.options[axis].enabled) {
+        const bandScales = categoricalScales[axis]?.bands;
+        const scales = bandScales ? Object.values(bandScales) : [numericalScales[axis]];
 
-    if (this.options.x.enabled) {
-      const bandScales = Object.values(layerArgs.scaleConfig.categoricalScales.x?.bands ?? {});
-      scales.x = bandScales.length ? bandScales : [scaleX];
-
-      grids.x = scales.x.flatMap((scale) => {
-        return svgLayer.append("g")
-          .call((g) => addGridX(g, scale))
-          .attr("opacity", gridOpacity)
-          .attr("id", `${getHtmlId(this.type)}-x`);
-      });
-    }
-
-    if (this.options.y.enabled) {
-      const bandScales = Object.values(layerArgs.scaleConfig.categoricalScales.y?.bands ?? {});
-      scales.y = bandScales.length ? bandScales : [scaleY];
-
-      grids.y = scales.y.flatMap((scale) => {
-        return svgLayer.append("g")
-          .call((g) => addGridY(g, scale))
-          .attr("opacity", gridOpacity)
-          .attr("id", `${getHtmlId(this.type)}-y`);
-      });
-    };
-
-    this.zoom = async () => {
-      const { x: zoomedScaleX, y: zoomedScaleY } = layerArgs.scaleConfig.numericalScales;
-      // nb I think currently we do not update the categorical band numerical scales on zoom, since we disable zoom on categorical axes.
-      const bandScalesX = Object.values(layerArgs.scaleConfig.categoricalScales.x?.bands ?? {});
-      scales.x = bandScalesX.length ? bandScalesX : [zoomedScaleX];
-      const bandScalesY = Object.values(layerArgs.scaleConfig.categoricalScales.y?.bands ?? {});
-      scales.y = bandScalesY.length ? bandScalesY : [zoomedScaleY];
-
-      const fadeOutGrid = (g: D3Selection<SVGGElement>): Promise<void> => {
-        return g.selectAll("line")
-          .transition()
-          .duration(animationDuration / 2)
-          .style("opacity", 0)
-          .remove()
-          .end();
-      };
-      const fadeOutPromises = (grids.x.concat(grids.y)).map(fadeOutGrid);
-      await Promise.all(fadeOutPromises ?? []);
-
-      const fadeInGrid = (axis: AxisType): Promise<void>[] => {
-        const addGrid = axis === "x" ? addGridX : addGridY;
-        return (grids[axis]).map((g, index) => {
-          const scale = scales[axis][index];
-          return g.call((g) => addGrid(g, scale))
-            .style("opacity", 0)
-            .transition()
-            .duration(animationDuration / 2)
-            .style("opacity", gridOpacity)
-            .end();
+        scales.forEach((scale) => {
+          const gridG = svgLayer.append("g")
+            .call((g) => addGridCallbacks[axis]?.({ g, scale }))
+            .attr("opacity", this.gridOpacity)
+            .attr("id", `${getHtmlId(this.type)}-${axis}`);
+          gridSets[axis].push({ g: gridG, scale });
         });
       };
-      await Promise.all((["x", "y"] as AxisType[]).flatMap(fadeInGrid));
+    }
+
+    setupGridlines("x");
+    setupGridlines("y");
+
+    this.zoom = async () => {
+      await Promise.all([...gridSets.x, ...gridSets.y].map(this.fadeOutGrid));
+
+      await Promise.all([
+        ...gridSets.x.map(gc => this.fadeInGrid(gc, addGridCallbacks.x)),
+        ...gridSets.y.map(gc => this.fadeInGrid(gc, addGridCallbacks.y)),
+      ]);
     };
   };
 }
