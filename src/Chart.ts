@@ -101,10 +101,10 @@ export class Chart<Metadata = any> {
   addGridLines = (options?: Partial<XY<Partial<GridOptions>>>) => {
     this.optionalLayers.push(new GridLayer({
       x: {
-        enabled: options?.x?.enabled ?? true,
+        enabled: options?.x?.enabled !== false,
       },
       y: {
-        enabled: options?.y?.enabled ?? true,
+        enabled: options?.y?.enabled !== false,
       },
     }));
     return this;

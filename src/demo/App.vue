@@ -83,7 +83,7 @@
 </style>
 
 <script setup lang="ts">
-import { PointWithMetadata, ScatterPoints, XY } from "@/types";
+import { PointWithMetadata, ScatterPoints } from "@/types";
 import { Chart, LayerArgs, LayerType, Lines, OptionalLayer, Scales } from "../skadi-chart";
 import { onMounted, ref, watch } from "vue";
 
@@ -440,6 +440,7 @@ const drawChartCategoricalXAxis = () => {
     .addAxes({ x: "Category", y: "Value" })
     .addTraces(curvesCategoricalXAxis)
     .addScatterPoints(pointsCategoricalXAxis)
+    .addGridLines({ y: { enabled: false } })
     .addZoom()
     .addTooltips(tooltipHtmlCallback)
     .appendTo(chartCategoricalXAxis.value!, logSafeScales, {}, { x: categoricalXAxis });
