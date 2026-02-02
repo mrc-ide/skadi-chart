@@ -61,16 +61,12 @@ class SkadiChartTest {
     });
   };
 
-  expectGridlines = (directions: XY<boolean> = { x: true, y: true }) => {
+  expectGridlines = (gridsPerAxis: XY<number> = { x: 1, y: 1 }) => {
     return this.addTest(async () => {
-      if (directions.x) {
-        const xGrid = await this.selector(LayerType.Grid, "x");
-        expect(xGrid).toHaveLength(1);
-      }
-      if (directions.y) {
-        const yGrid = await this.selector(LayerType.Grid, "y");
-        expect(yGrid).toHaveLength(1);
-      }
+      const xGrid = await this.selector(LayerType.Grid, "x");
+      expect(xGrid).toHaveLength(gridsPerAxis.x);
+      const yGrid = await this.selector(LayerType.Grid, "y");
+      expect(yGrid).toHaveLength(gridsPerAxis.y);
     });
   };
 
@@ -155,7 +151,23 @@ test("basic traces and axes and grid", async ({ page }) => {
   await new SkadiChartTest(page, "chartAxesAndGrid")
     .expectNTraces(10)
     .expectAxes()
-    .expectGridlines()
+    .expectGridlines({ x: 1, y: 1 })
+    .end()
+
+  await page.getByText("Toggle X axis gridlines").click({ force: true });
+
+  await new SkadiChartTest(page, "chartAxesAndGrid")
+    .expectNTraces(10)
+    .expectAxes()
+    .expectGridlines({ x: 0 , y: 1 })
+    .end()
+
+  await page.getByText("Toggle Y axis gridlines").click({ force: true });
+
+  await new SkadiChartTest(page, "chartAxesAndGrid")
+    .expectNTraces(10)
+    .expectAxes()
+    .expectGridlines({ x: 0 , y: 0 })
     .end()
 });
 
@@ -203,7 +215,7 @@ test("categorical y axis", async ({ page }) => {
     .expectAxes({ x: 1, y: 6 }) // 6 = 5 numerical axes within each band, plus 1 main categorical axis
     .expectTooltip()
     .expectLabels({ x: "Time", y: "Category" })
-    .expectGridlines({ x: true, y: false })
+    .expectGridlines({ x: 1, y: 0 })
     .expectZoom()
     .end();
 });
@@ -214,6 +226,7 @@ test("categorical x axis", async ({ page }) => {
     .expectNPoints(1000)
     .expectAxes({ x: 3, y: 1 })
     .expectTooltip()
+    .expectGridlines({ x: 2, y: 0 })
     .expectLabels({ x: "Category", y: "Value" })
     .expectZoom()
     .end();
@@ -222,8 +235,9 @@ test("categorical x axis", async ({ page }) => {
 test("categorical y axis with overlapping bands", async ({ page }) => {
   await new SkadiChartTest(page, "chartOverlappingBandsY")
     .expectNTraces(10)
-    .expectAxes({ x: 1, y: 1 }) // Only 1 y axis since tick config count was set to 0.
+    .expectAxes({ x: 1, y: 6 }) // 6 = 5 numerical axes within each band, plus 1 main categorical axis
     .expectTooltip()
+    .expectGridlines({ x: 0, y: 0 })
     .expectLabels({ x: "Time", y: "Category" })
     .expectZoom()
     .expectClipPath(-100)

@@ -127,9 +127,7 @@ export class AxesLayer extends OptionalLayer {
     const bandNumericalScales = Object.entries(layerArgs.scaleConfig.categoricalScales[axis]!.bands);
     bandNumericalScales.forEach(([category, bandNumericalScale]) => {
       const bandStart = categoricalScale(category)!;
-      if (layerArgs.globals.tickConfig.numerical[axis].count) {
-        this.drawNumericalAxis(axis, bandNumericalScale, layerArgs, 6);
-      }
+      this.drawNumericalAxis(axis, bandNumericalScale, layerArgs, 6);
       if (categoricalScale.paddingInner()) {
         this.drawLinePerpendicularToAxis(axis, bandStart, layerArgs);
       }

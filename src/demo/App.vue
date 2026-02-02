@@ -398,7 +398,7 @@ const drawChartCategoricalYAxis = () => {
     },
   })
     .addAxes({ x: "Time", y: "Category" }, { y: 0.2, x: 0.4 })
-    .addGridLines()
+    .addGridLines({ y: { enabled: false } })
     .addTraces(curvesCategoricalYAxis)
     .addScatterPoints(pointsCategoricalYAxis)
     .addZoom()
