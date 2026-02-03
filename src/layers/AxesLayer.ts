@@ -147,7 +147,7 @@ export class AxesLayer extends OptionalLayer {
   ): AxisElements => {
     const { getHtmlId } = layerArgs;
     const {
-      count: tickCount,
+      count,
       specifier: tickSpecifier,
       padding: tickPadding,
       size: tickSize,
@@ -156,8 +156,9 @@ export class AxesLayer extends OptionalLayer {
     } = layerArgs.globals.tickConfig.numerical[axis];
     const { translation, axisConstructor } = this.axisConfig(axis, layerArgs);
 
+    const tickCount = count ?? 0;
     const numericalAxis = axisConstructor(scale)
-      .ticks(tickCount ?? 0, tickSpecifier)
+      .ticks(tickCount, tickSpecifier)
       .tickSize(tickSize ?? 0)
       .tickPadding(tickPadding ?? defaultTickPadding);
     if (tickFormatter) {
@@ -181,7 +182,7 @@ export class AxesLayer extends OptionalLayer {
         );
         axisLayer
           .selectAll("g")
-          .data((numericalAxis.scale() as ScaleNumeric).ticks())
+          .data((numericalAxis.scale() as ScaleNumeric).ticks(tickCount))
           .append("foreignObject")
           .attr("width", 50) 
           .attr("height", 50)

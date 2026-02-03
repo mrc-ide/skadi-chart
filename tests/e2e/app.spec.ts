@@ -61,6 +61,22 @@ class SkadiChartTest {
     });
   };
 
+  // Assert the number of ticks on the x and/or y axes, assuming only one axis of each type
+  expectTicks = (tickCount: Partial<XY<number>>) => {
+    return this.addTest(async () => {
+      if (tickCount.x) {
+        const xAxis = await this.selector(LayerType.Axes, "x");
+        const xAxisTicks = xAxis[0].locator(".tick");
+        await expect(xAxisTicks).toHaveCount(tickCount.x);
+      }
+      if (tickCount.y) {
+        const yAxis = await this.selector(LayerType.Axes, "y");
+        const yAxisTicks = yAxis[0].locator(".tick");
+        await expect(yAxisTicks).toHaveCount(tickCount.y);
+      }
+    });
+  };
+
   expectGridlines = (directions: XY<boolean> = { x: true, y: true }) => {
     return this.addTest(async () => {
       if (directions.x) {
@@ -156,6 +172,7 @@ test("basic traces and axes and grid", async ({ page }) => {
     .expectNTraces(10)
     .expectAxes()
     .expectGridlines()
+    .expectTicks({ x: 6 })
     .end()
 });
 
