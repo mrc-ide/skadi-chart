@@ -133,7 +133,7 @@ export class ZoomLayer extends OptionalLayer {
     const d3Brush = d3.brush<Point>()
       .extent([[margin.left, margin.top], [width - margin.right, height - margin.bottom]]);
     const brushLayer = layerArgs.coreLayers[LayerType.BaseLayer].append("g")
-      .attr("id", `${layerArgs.getHtmlId(LayerType.Zoom)}-brush`)
+      .attr("id", `brush-${layerArgs.getHtmlId(LayerType.Zoom)}`)
       // we hide the default brush layer and implement our own because
       // we would like additional behaviour such as visually showing a
       // 1D zoom if the selection has similar x or y coordinates
@@ -151,7 +151,7 @@ export class ZoomLayer extends OptionalLayer {
     // fill white and opacity set, the selection mask then subtracts everything
     // from our overlay because it has fill black and gives an alpha value of 0
     // in the user selection
-    const overlayMaskId = `${layerArgs.getHtmlId(LayerType.Zoom)}-overlay`;
+    const overlayMaskId = `overlay-${layerArgs.getHtmlId(LayerType.Zoom)}`;
     svg.select("defs").append("svg:mask")
       .attr("id", overlayMaskId)
       .append("svg:rect")
@@ -163,7 +163,7 @@ export class ZoomLayer extends OptionalLayer {
       .attr("fill-opacity", 0.15)
       .style("mask-type", "alpha");
 
-    const selectionMaskId = `${layerArgs.getHtmlId(LayerType.Zoom)}-selection`;
+    const selectionMaskId = `selection-${layerArgs.getHtmlId(LayerType.Zoom)}`;
     this.selectionMask = svg.select("defs").append("svg:mask")
       .attr("id", selectionMaskId)
       .append("svg:rect")
