@@ -7,6 +7,9 @@
 
   <h1>Axes and gridlines</h1>
   <div class="chart" ref="chartAxesAndGrid" id="chartAxesAndGrid"></div>
+  <label>X-numerical axis tick config 'count':</label>
+  <input type="number" v-model="gridChartTickCount"></input>
+  <button @click="() => gridChartEnableMathjax = !gridChartEnableMathjax">Toggle MathJax on X axis ticks</button>
 
   <h1>Axes, labels and gridlines</h1>
   <div class="chart" ref="chartAxesLabelsAndGrid" id="chartAxesLabelsAndGrid"></div>
@@ -351,6 +354,23 @@ const axesLabels = { x: "Time", y: "Value" };
 
 const exportToPng = ref<(name?: string) => void>();
 
+const gridChartTickCount = ref<number>(6);
+const gridChartEnableMathjax = ref<boolean>(true);
+
+const drawAxesAndGridChart = () => {
+  new Chart({ tickConfig: { numerical: { x: {
+    count: gridChartTickCount.value,
+    formatter: gridChartEnableMathjax.value ? (num) => `$${num}$` : undefined,
+    enableMathJax: gridChartEnableMathjax.value,
+  } } } })
+    .addTraces(curvesAxesAndGrid)
+    .addAxes()
+    .addGridLines()
+    .appendTo(chartAxesAndGrid.value!);
+}
+
+watch([gridChartTickCount, gridChartEnableMathjax], drawAxesAndGridChart);
+
 const numericalAxesLogScaleX = ref<boolean>(false);
 const numericalAxesLogScaleY = ref<boolean>(false);
 
@@ -448,11 +468,7 @@ onMounted(async () => {
     .addAxes()
     .appendTo(chartOnlyAxes.value!, scales);
 
-  new Chart()
-    .addTraces(curvesAxesAndGrid)
-    .addAxes()
-    .addGridLines()
-    .appendTo(chartAxesAndGrid.value!);
+  drawAxesAndGridChart();
 
   new Chart()
     .addTraces(curvesArea)
