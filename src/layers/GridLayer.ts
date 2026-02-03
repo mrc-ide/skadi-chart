@@ -90,7 +90,7 @@ export class GridLayer extends OptionalLayer {
           const gridG = svgLayer.append("g")
             .call((g) => addGridCallbacks[axis]?.({ g, scale }))
             .attr("opacity", this.gridOpacity)
-            .attr("id", `${getHtmlId(this.type)}-${axis}`);
+            .attr("id", `${axis}-${getHtmlId(this.type)}`);
           gridSets[axis].push({ g: gridG, scale });
         });
       };
