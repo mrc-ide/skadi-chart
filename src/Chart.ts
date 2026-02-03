@@ -3,7 +3,7 @@ import { AxesLayer } from "./layers/AxesLayer";
 import { TracesLayer, TracesOptions } from "./layers/TracesLayer";
 import { ZoomLayer, ZoomOptions } from "./layers/ZoomLayer";
 import { TooltipHtmlCallback, TooltipsLayer } from "./layers/TooltipsLayer";
-import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, ZoomExtents, PartialScales, Point, Scales, ScatterPoints, XY, XYLabel, ScaleNumeric, AxisType, CategoricalScaleConfig, ClipPathBounds, TickConfig } from "./types";
+import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, ZoomExtents, PartialScales, Point, Scales, ScatterPoints, XY, ScaleNumeric, AxisType, CategoricalScaleConfig, ClipPathBounds, TickConfig } from "./types";
 import { LayerType, LifecycleHooks, OptionalLayer } from "./layers/Layer";
 import { GridLayer, GridOptions } from "./layers/GridLayer";
 import html2canvas from "html2canvas";
@@ -86,15 +86,28 @@ export class Chart<Metadata = any> {
     return this;
   };
 
-  addAxes = (labels: XYLabel = {}, labelPositions?: Partial<XY<number>>) => {
+  addAxes = (
+    labels: Partial<XY<string>> = {},
+    labelPositions?: Partial<XY<number>>,
+    includeZeroLine?: Partial<XY<boolean>>,
+  ) => {
     if (labels.x) this.defaultMargin.bottom = 80;
     if (labels.y) this.defaultMargin.left = 90;
-    this.optionalLayers.push(new AxesLayer(
-      labels || {},
-      {
-        x: labelPositions?.x ?? 1/3,
-        y: labelPositions?.y ?? 1/3,
-      }));
+    if ((includeZeroLine?.x && this.options.logScale.x) || (includeZeroLine?.y && this.options.logScale.y)) {
+      console.warn("You have requested a zero line on a log scale axis, which is not possible. The zero line will not be shown.");
+    }
+    this.optionalLayers.push(new AxesLayer({
+      x: {
+        label: labels.x,
+        labelPosition: labelPositions?.x ?? 1 / 3,
+        includeZeroLine: includeZeroLine?.x ?? !this.options.logScale.x,
+      },
+      y: {
+        label: labels.y,
+        labelPosition: labelPositions?.y ?? 1 / 3,
+        includeZeroLine: includeZeroLine?.y ?? !this.options.logScale.y,
+      },
+    }));
     return this;
   };
 
