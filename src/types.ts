@@ -10,8 +10,6 @@ export type PointWithMetadata<Metadata> = Point & {
   bands?: Partial<XY<string>>
 }
 
-export type XYLabel = Partial<XY<string>>
-
 /*
   These are bounds of the svg element
 */
