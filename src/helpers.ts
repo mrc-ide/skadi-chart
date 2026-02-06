@@ -118,6 +118,8 @@ export type DebounceConfig = {
   time: number
 }
 
+// DebounceConfig in the first arg, we can let multiple debounced
+// calls share a timeout
 export const debounce = (cfg: DebounceConfig, callback: () => any) => {
   clearTimeout(cfg.timeout);
   cfg.timeout = setTimeout(() => {
