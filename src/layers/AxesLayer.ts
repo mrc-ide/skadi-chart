@@ -1,7 +1,7 @@
 import * as d3 from "@/d3";
 import { LayerType, OptionalLayer } from "./Layer";
 import { AxisType, D3Selection, LayerArgs, ScaleNumeric, XY } from "@/types";
-import { drawLine } from "@/helpers";
+import { drawLine, numScalesForAxis } from "@/helpers";
 
 declare const MathJax: any;
 
@@ -218,6 +218,10 @@ export class AxesLayer extends OptionalLayer {
   }
 
   // Draws a line perpendicular to the specified axis at the given position in scale coordinates.
+  // If the other axis is not a categorical axis, we simply draw one line and return.
+  // If the other axis is categorical, we draw a line for each category band of the other axis,
+  // to prevent lines cutting through inter-band padding (i.e. we draw 'one' interrupted 'line'
+  // out of multiple shorter lines with gaps for padding as required by the other axis).
   private drawLinePerpendicularToAxis = (
     axis: AxisType,
     positionSC: number,
@@ -225,39 +229,16 @@ export class AxesLayer extends OptionalLayer {
     color: string = "black",
   ): D3Selection<SVGLineElement>[] => {
     const baseLayer = layerArgs.coreLayers[LayerType.BaseLayer];
-    const { height, width, margin } = layerArgs.bounds;
     const otherAxis = axis === "x" ? "y" : "x";
-    const otherAxisCategoricalScale = layerArgs.scaleConfig.categoricalScales[otherAxis]?.main;
+    const otherAxisScales = numScalesForAxis(otherAxis, layerArgs);
 
-    // If the other axis is not a categorical axis, simply draw one line and return.
-    if (!otherAxisCategoricalScale) {
-      let lineCoordsSC = { [axis]: { start: positionSC, end: positionSC } };
-      if (axis === "x") {
-        lineCoordsSC.y = { start: margin.top, end: height - margin.bottom };
-      } else {
-        lineCoordsSC.x = { start: margin.left, end: width - margin.right };
-      }
-      return [drawLine(baseLayer, lineCoordsSC as XY<{start: number, end: number}>, color)];
-    }
-
-    // If the other axis is categorical, draw a line for each category band of the other axis,
-    // to prevent lines cutting through inter-band padding (i.e. we draw 'one' interrupted 'line'
-    // out of multiple shorter lines with gaps for padding as required by the other axis).
-    const otherAxisBandWidth = otherAxisCategoricalScale.bandwidth();
-    const otherAxisPositionSC = otherAxis === "x" ? height - margin.bottom : margin.left;
-    const lineParts = otherAxisCategoricalScale.domain().map(category => {
-      const otherAxisBandStart = otherAxisCategoricalScale(category);
-      if (otherAxisBandStart === undefined) return;
-
-      // Don't draw the line if it would be drawn on top of the other-axis line itself
-      if (positionSC === otherAxisPositionSC) return;
-
-      const lineCoordsSC = {
-        [axis]: { start: positionSC, end: positionSC },
-        [otherAxis]: { start: otherAxisBandStart, end: otherAxisBandStart + otherAxisBandWidth },
-      };
-
-      return drawLine(baseLayer, lineCoordsSC as XY<{start: number, end: number}>, color);
+    const lineParts = otherAxisScales.map(otherAxisScale => {
+      return baseLayer.append("g").append("line")
+        .attr(`${axis}1`, positionSC)
+        .attr(`${axis}2`, positionSC)
+        .attr(`${otherAxis}1`, otherAxisScale.range()[0])
+        .attr(`${otherAxis}2`, otherAxisScale.range()[1])
+        .style("stroke", color).style("stroke-width", 0.5);
     })
     return lineParts.filter(line => line !== undefined);
   }

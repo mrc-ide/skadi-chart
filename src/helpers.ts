@@ -60,6 +60,13 @@ export const numScales = (bands: Partial<XY<string>> | undefined, layerArgs: Lay
   }
 }
 
+// Given an axis ('x' or 'y'), return all the numerical scales for that axis.
+export const numScalesForAxis = (axis: AxisType, layerArgs: LayerArgs): ScaleNumeric[] => {
+  const { numericalScales, categoricalScales } = layerArgs.scaleConfig;
+  const bandScales = categoricalScales[axis]?.bands;
+  return bandScales ? Object.values(bandScales) : [numericalScales[axis]];
+}
+
 export const getXYMinMax = (points: Point[]) => {
   const scales: Scales = {
     x: { start: Infinity, end: -Infinity },
@@ -98,19 +105,6 @@ export const mapScales = <T>(
   }));
 
   return [mappedMainScales, mappedCategoricalScales]
-}
-
-export const drawLine = (
-  baseLayer: D3Selection<SVGGElement>,
-  coordsSC: XY<{start: number, end: number}>,
-  color: string,
-) => {
-  return baseLayer.append("g").append("line")
-    .attr("x1", coordsSC.x.start)
-    .attr("x2", coordsSC.x.end)
-    .attr("y1", coordsSC.y.start)
-    .attr("y2", coordsSC.y.end)
-    .style("stroke", color).style("stroke-width", 0.5);
 }
 
 export type DebounceConfig = {
