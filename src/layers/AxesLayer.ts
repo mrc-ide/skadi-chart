@@ -233,12 +233,12 @@ export class AxesLayer extends OptionalLayer {
     const otherAxisScales = numScalesForAxis(otherAxis, layerArgs);
 
     const lineParts = otherAxisScales.map(otherAxisScale => {
-      const lineCoordsSC = {
-        [axis]: { start: positionSC, end: positionSC },
-        [otherAxis]: { start: otherAxisScale.range()[0], end: otherAxisScale.range()[1] },
-      } as XY<{start: number, end: number}>;
-
-      return drawLine(baseLayer, lineCoordsSC, color);
+      return baseLayer.append("g").append("line")
+        .attr(`${axis}1`, positionSC)
+        .attr(`${axis}2`, positionSC)
+        .attr(`${otherAxis}1`, otherAxisScale.range()[0])
+        .attr(`${otherAxis}2`, otherAxisScale.range()[1])
+        .style("stroke", color).style("stroke-width", 0.5);
     })
     return lineParts.filter(line => line !== undefined);
   }
