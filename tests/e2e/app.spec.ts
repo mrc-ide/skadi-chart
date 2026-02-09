@@ -232,7 +232,7 @@ test("categorical y axis", async ({ page }) => {
     .expectAxes({ x: 1, y: 6 }) // 6 = 5 numerical axes within each band, plus 1 main categorical axis
     .expectTooltip()
     .expectLabels({ x: "Time", y: "Category" })
-    .expectGridlines({ x: 1, y: 0 })
+    .expectGridlines({ x: 5, y: 0 })
     .expectZoom()
     .end();
 });
@@ -246,6 +246,15 @@ test("categorical x axis", async ({ page }) => {
     .expectGridlines({ x: 2, y: 0 })
     .expectLabels({ x: "Category", y: "Value" })
     .expectZoom()
+    .end();
+});
+
+test("chart with both categorical x and y axes", async ({ page }) => {
+  await new SkadiChartTest(page, "chartBothCategoricalAxes")
+    .expectNPoints(1000)
+    .expectAxes({ x: 3, y: 6 })
+    .expectGridlines({ x: 10, y: 10 })
+    .expectLabels({ x: "Category", y: "Category" })
     .end();
 });
 

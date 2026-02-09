@@ -480,6 +480,8 @@ const drawChartBothCategoricalAxes = () => {
   })
     .addAxes({ x: "Category", y: "Category" }, { y: 0.2 }, drawZeroLinesOnBothCategoricalAxesChart.value)
     .addScatterPoints(pointsBothCategoricalAxes)
+    .addGridLines()
+    .addTooltips(tooltipHtmlCallback)
     .appendTo(
       chartBothCategoricalAxes.value!,
       { ...scales, x: { start: -1, end: scales.x.end } },

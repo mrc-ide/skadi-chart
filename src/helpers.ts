@@ -60,6 +60,15 @@ export const numScales = (bands: Partial<XY<string>> | undefined, layerArgs: Lay
   }
 }
 
+export const axes = ["x", "y"] as const satisfies [AxisType, AxisType];
+
+// Given an axis ('x' or 'y'), return all the numerical scales for that axis.
+export const numScalesForAxis = (axis: AxisType, layerArgs: LayerArgs): ScaleNumeric[] => {
+  const { numericalScales, categoricalScales } = layerArgs.scaleConfig;
+  const bandScales = categoricalScales[axis]?.bands;
+  return bandScales ? Object.values(bandScales) : [numericalScales[axis]];
+}
+
 export const getXYMinMax = (points: Point[]) => {
   const scales: Scales = {
     x: { start: Infinity, end: -Infinity },
