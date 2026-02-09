@@ -40,6 +40,8 @@
 
   <h1>Both categorical axes</h1>
   <div class="chart" ref="chartBothCategoricalAxes" id="chartBothCategoricalAxes"></div>
+  <button @click="() => drawZeroLinesOnBothCategoricalAxesChart.x = !drawZeroLinesOnBothCategoricalAxesChart.x">Toggle X-axis zero line</button>
+  <button @click="() => drawZeroLinesOnBothCategoricalAxesChart.y = !drawZeroLinesOnBothCategoricalAxesChart.y">Toggle Y-axis zero line</button>
 
   <h1>Area</h1>
   <div class="chart" ref="chartArea" id="chartArea"></div>
@@ -324,6 +326,7 @@ const curvesCategoricalXAxis = makeRandomCurvesForCategoricalAxis(categoricalXAx
 const curvesCategoricalYAxis = makeRandomCurvesForCategoricalAxis(categoricalYAxis, "y");
 const pointsCategoricalXAxis = makeRandomPointsForCategoricalAxis(categoricalXAxis, "x");
 const pointsCategoricalYAxis = makeRandomPointsForCategoricalAxis(categoricalYAxis, "y");
+const pointsBothCategoricalAxes = makeRandomPointsForBothCategoricalAxes(categoricalXAxis, categoricalYAxis);
 const curvesOverlappingBandsY = makeRandomCurvesForCategoricalAxis(categoricalYAxis, "y", true);
 curvesOverlappingBandsY.forEach(l => l.points = l.points.map(p => ({ ...p, y: Math.max(p.y, 0) })));
 
@@ -385,12 +388,18 @@ const categoricalYAxisLogScaleX = ref<boolean>(false);
 const categoricalYAxisLogScaleY = ref<boolean>(false);
 
 const drawChartCategoricalYAxis = () => {
+  const logSafeScales = {
+    ...scales,
+    x: { ...scales.x, start: categoricalYAxisLogScaleX.value ? 0.001 : scales.x.start },
+    y: { ...scales.y, start: categoricalYAxisLogScaleY.value ? 0.001 : scales.y.start },
+  };
+
   new Chart({
     logScale: { x: categoricalYAxisLogScaleX.value, y: categoricalYAxisLogScaleY.value },
     tickConfig: {
       numerical: {
         x: { specifier: categoricalYAxisLogScaleX.value ? "e" : undefined },
-        y: { specifier: ".0f", count: 1 },
+        y: { specifier: ".0f", count: categoricalYAxisLogScaleY.value ? 0 : 1 },
       },
       categorical: {
         y: { padding: 30 }
@@ -405,7 +414,7 @@ const drawChartCategoricalYAxis = () => {
     .addTooltips(tooltipHtmlCallback)
     .appendTo(
       chartCategoricalYAxis.value!,
-      categoricalYAxisLogScaleX.value ? { ...scales, x: { ...scales.x, start: 0.001 } } : scales,
+      logSafeScales,
       {},
       { y: categoricalYAxis },
       { left: 150, bottom: 70, right: 10 },
@@ -431,9 +440,9 @@ const drawChartCategoricalXAxis = () => {
 
   new Chart({
     logScale: { x: categoricalXAxisLogScaleX.value, y: categoricalXAxisLogScaleY.value },
-    categoricalScalePaddingInner: { x: 0.05 },
+    categoricalScalePaddingInner: { x: categoricalXAxisLogScaleX.value ? 0.1 : 0.05 },
     tickConfig: {
-      numerical: { x: { formatter: numericalTickFormatter } },
+      numerical: { x: { formatter: numericalTickFormatter, count: categoricalXAxisLogScaleX.value ? 3 : undefined } },
       categorical: { x: { padding: 36, formatter: (s) => s.toLocaleUpperCase() } },
     },
   })
@@ -447,6 +456,31 @@ const drawChartCategoricalXAxis = () => {
 };
 
 watch([categoricalXAxisLogScaleX, categoricalXAxisLogScaleY], drawChartCategoricalXAxis);
+
+const drawZeroLinesOnBothCategoricalAxesChart = ref<XY<boolean>>({ x: true, y: true });
+
+const drawChartBothCategoricalAxes = () => {
+  new Chart({
+    tickConfig: {
+      numerical: { y: { count: 1, specifier: ".0f" } },
+      categorical: { y: { padding: 36 } },
+    },
+    categoricalScalePaddingInner: { x: 0.04, y: 0.1 },
+  })
+    .addAxes({ x: "Category", y: "Category" }, { y: 0.2 }, drawZeroLinesOnBothCategoricalAxesChart.value)
+    .addScatterPoints(pointsBothCategoricalAxes)
+    .appendTo(
+      chartBothCategoricalAxes.value!,
+      { ...scales, x: { start: -1, end: scales.x.end } },
+      {},
+      { x: categoricalXAxis, y: categoricalYAxis },
+      { left: 150 },
+    );
+};
+
+watch([drawZeroLinesOnBothCategoricalAxesChart], () => {
+  drawChartBothCategoricalAxes();
+}, { deep: true });
 
 onMounted(async () => {
   new Chart()
@@ -497,23 +531,7 @@ onMounted(async () => {
 
   drawChartCategoricalYAxis();
   drawChartCategoricalXAxis();
-
-  new Chart({
-    tickConfig: {
-      numerical: { y: { count: 1, specifier: ".0f" } },
-      categorical: { y: { padding: 36 } },
-    },
-    categoricalScalePaddingInner: { x: 0.04, y: 0.1 },
-  })
-    .addAxes({ x: "Category", y: "Category" }, { y: 0.2 })
-    .addScatterPoints(makeRandomPointsForBothCategoricalAxes(categoricalXAxis, categoricalYAxis))
-    .appendTo(
-      chartBothCategoricalAxes.value!,
-      { ...scales, x: { start: -1, end: scales.x.end } },
-      {},
-      { x: categoricalXAxis, y: categoricalYAxis },
-      { left: 150 },
-    );
+  drawChartBothCategoricalAxes();
 
   curvesResponsive.forEach((l, i) => {
     l.style.strokeDasharray = `${i * 2} 5`
