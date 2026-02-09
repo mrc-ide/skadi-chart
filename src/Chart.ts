@@ -8,7 +8,7 @@ import { LayerType, LifecycleHooks, OptionalLayer } from "./layers/Layer";
 import { GridLayer, GridOptions } from "./layers/GridLayer";
 import html2canvas from "html2canvas";
 import { ScatterLayer } from "./layers/ScatterLayer";
-import { getXYMinMax } from "./helpers";
+import { debounce, DebounceConfig, getXYMinMax } from "./helpers";
 import { AreaLayer } from "./layers/AreaLayer";
 
 // used for holding custom lifecycle hooks only - layer has no visual effect
@@ -337,11 +337,11 @@ export class Chart<Metadata = any> {
  
     const svg = d3.create("svg")
       .attr("id", getHtmlId(LayerType.Svg))
-      .attr("width", "100%")
-      .attr("height", "100%")
+      .attr("width", width)
+      .attr("height", height)
       .attr("viewBox", `0 0 ${width} ${height}`)
       .attr("style", "overflow: visible;")
-      .attr("preserveAspectRatio", "xMinYMin") as any as D3Selection<SVGSVGElement>;
+      .attr("preserveAspectRatio", "none") as any as D3Selection<SVGSVGElement>;
 
     const { clipPath, clipPathBounds } = this.appendClipPath(bounds, clipPathBoundsOptions, svg, getHtmlId);
 
@@ -440,10 +440,15 @@ export class Chart<Metadata = any> {
     drawWithBounds(width, height);
 
     if (this.isResponsive) {
+      let debounceConfig: DebounceConfig = {
+        timeout: undefined,
+        time: 50
+      };
+
       // watch for changes in baseElement
       const resizeObserver = new ResizeObserver(entries => {
         const { blockSize: height, inlineSize: width } = entries[0].borderBoxSize[0];
-        drawWithBounds(width, height);
+        debounce(debounceConfig, () => drawWithBounds(width, height));
       });
       resizeObserver.observe(baseElement);
 
@@ -453,7 +458,7 @@ export class Chart<Metadata = any> {
       window.addEventListener("resize", e => {
         if (!e.view) return;
         const { innerHeight: height, innerWidth: width } = e.view;
-        drawWithBounds(width, height);
+        debounce(debounceConfig, () => drawWithBounds(width, height));
       });
     }
 
