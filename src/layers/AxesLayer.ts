@@ -1,9 +1,15 @@
 import * as d3 from "@/d3";
 import { LayerType, OptionalLayer } from "./Layer";
-import { AxisType, D3Selection, LayerArgs, ScaleNumeric, XY, XYLabel } from "@/types";
+import { AxisType, D3Selection, LayerArgs, ScaleNumeric, XY } from "@/types";
 import { drawLine } from "@/helpers";
 
 declare const MathJax: any;
+
+export type AxisConfig = {
+  label?: string,
+  labelPosition: number,
+  includeZeroLine: boolean,
+}
 
 type AxisElements = ({
   layer: D3Selection<SVGGElement>,
@@ -18,7 +24,7 @@ type AxisElements = ({
 export class AxesLayer extends OptionalLayer {
   type = LayerType.Axes;
 
-  constructor(public labels: XYLabel, public labelPositions: XY<number>) {
+  constructor(public options: XY<AxisConfig>) {
     super();
   };
 
@@ -27,21 +33,21 @@ export class AxesLayer extends OptionalLayer {
     const { getHtmlId } = layerArgs;
     const numericalScale = layerArgs.scaleConfig.numericalScales[axis];
 
-    if (this.labels[axis]) {
+    if (this.options[axis].label) {
       const label = layerArgs.coreLayers[LayerType.Svg].append("text")
         .attr("id", `label${axis}-${getHtmlId(LayerType.Axes)}`)
         .style("font-size", "1.2rem")
         .attr("text-anchor", "middle")
-        .text(this.labels[axis])
+        .text(this.options[axis].label)
       if (axis === "y") {
         const usableHeight = height - margin.top - margin.bottom;
         label.attr("x", - usableHeight / 2 - margin.top)
-          .attr("y", margin.left * this.labelPositions.y)
+          .attr("y", margin.left * this.options[axis].labelPosition)
           .attr("transform", "rotate(-90)")
       } else {
         const usableWidth = width - margin.left - margin.right;
         label.attr("x", usableWidth / 2 + margin.left)
-          .attr("y", height - margin.bottom * this.labelPositions.x)
+          .attr("y", height - margin.bottom * this.options[axis].labelPosition)
       }
     }
 
@@ -110,7 +116,7 @@ export class AxesLayer extends OptionalLayer {
     const bandwidth = categoricalScale.bandwidth();
 
     const axisMargin = axis === "x" ? margin.bottom : margin.left;
-    const defaultTickPadding = axisMargin * (1 - this.labelPositions?.[axis]) / 3;
+    const defaultTickPadding = axisMargin * (1 - this.options[axis].labelPosition) / 3;
     const categoricalAxis = axisConstructor(categoricalScale)
       .tickSize(tickSize ?? 0)
       .tickPadding(tickPadding ?? defaultTickPadding);
@@ -127,9 +133,7 @@ export class AxesLayer extends OptionalLayer {
     const bandNumericalScales = Object.entries(layerArgs.scaleConfig.categoricalScales[axis]!.bands);
     bandNumericalScales.forEach(([category, bandNumericalScale]) => {
       const bandStart = categoricalScale(category)!;
-      if (layerArgs.globals.tickConfig.numerical[axis].count) {
-        this.drawNumericalAxis(axis, bandNumericalScale, layerArgs, 6);
-      }
+      this.drawNumericalAxis(axis, bandNumericalScale, layerArgs, 6);
       if (categoricalScale.paddingInner()) {
         this.drawLinePerpendicularToAxis(axis, bandStart, layerArgs);
       }
@@ -206,7 +210,7 @@ export class AxesLayer extends OptionalLayer {
     let axisLines: D3Selection<SVGLineElement>[] = [];
     // Draw a line at [axis]=0 if this is within scale range
     const [minDC, maxDC] = [...scale.domain()].sort();
-    if (!layerArgs.chartOptions.logScale[axis] && minDC <= 0 && maxDC >= 0) {
+    if (this.options[axis].includeZeroLine && minDC <= 0 && maxDC >= 0) {
       axisLines = this.drawLinePerpendicularToAxis(axis, scale(0), layerArgs, "darkgrey");
     }
 
