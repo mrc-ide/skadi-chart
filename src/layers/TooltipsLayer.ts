@@ -3,7 +3,7 @@ import { LayerType, OptionalLayer } from "./Layer";
 import { TracesLayer } from "./TracesLayer";
 import { AxisType, D3Selection, LayerArgs, Point, PointWithMetadata, ScaleNumeric, XY } from "@/types";
 import { ScatterLayer } from "./ScatterLayer";
-import { mapScales, numScales } from "@/helpers";
+import { iterateOverPoints, mapScales, numScales } from "@/helpers";
 
 export type TooltipHtmlCallback<Metadata> =
   (pointWithMetadata: PointWithMetadata<Metadata>) => string
@@ -69,7 +69,8 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     eventCC: d3.ClientPointEvent,
     layerArgs: LayerArgs,
     tooltip: D3Selection<HTMLDivElement>,
-    flatPointsDC: PointWithMetadata<Metadata>[],
+    traceLayers: TracesLayer<Metadata>[],
+    scatterLayers: ScatterLayer<Metadata>[]
   ) => {
     // d3.pointer converts coords from CC to SC
     const pointer = d3.pointer(eventCC);
@@ -107,7 +108,9 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
     // distance if the axes are not the same aspect ratio as the height and
     // width of the svg)
     let minDistanceNormalized = Infinity;
-    const minPointDC = flatPointsDC.reduce((minPDC, pDC) => {
+    let minPointDC: PointWithMetadata<Metadata> = { x: 0, y: 0 };
+
+    iterateOverPoints<Metadata>(traceLayers, scatterLayers, pDC => {
       const bands = pDC.bands || {};
       const coordsDC = {
         x: bands.x ? catScalesPointerCoordsDC.x[bands.x] : mainScalesPointerCoordsDC.x,
@@ -121,20 +124,20 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
         // If using distanceAxis, compare distances along that axis first.
         // If points have equal distance on that axis (as in a stacked bar chart, or a histogram with multiple traces),
         // use full distance to break ties.
-        const [distanceOnAxisSC, minDistanceOnAxisSC] = [pDC, minPDC].map((point) => {
+        const [distanceOnAxisSC, minDistanceOnAxisSC] = [pDC, minPointDC].map((point) => {
           // This is equivalent to `getDistanceSqSC` but on only one axis.
           const coordsSC = coordsDC[distAx] * scalingFactors[distAx];
           const pointSC = point[distAx] * scalingFactors[distAx];
 
           return (coordsSC - pointSC) ** 2;
         });
-        if (distanceOnAxisSC > minDistanceOnAxisSC) return minPDC;
+        if (distanceOnAxisSC > minDistanceOnAxisSC) return;
       }
       const distanceSC = this.getDistanceSqSC(coordsDC, pDC, scalingFactors);
-      if (distanceSC >= minDistanceNormalized) return minPDC;
+      if (distanceSC >= minDistanceNormalized) return;
       minDistanceNormalized = distanceSC;
-      return pDC;
-    }, { x: 0, y: 0 });
+      minPointDC = pDC;
+    });
 
     const numericalScales = numScales(minPointDC.bands, layerArgs);
 
@@ -178,14 +181,6 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
       .style("position", "fixed")
       .style("pointer-events", "none") as any as D3Selection<HTMLDivElement>;
     
-    let flatPointsDC = traceLayers.reduce((pointsWithMetadata, layer) => {
-      const layerPointsWithMetadata = layer.linesDC.flatMap(({ points, metadata, bands }) => {
-        return points.map(p => ({ ...p, metadata, bands }) );
-      });
-      return [...layerPointsWithMetadata, ...pointsWithMetadata];
-    }, [] as PointWithMetadata<Metadata>[]);
-    flatPointsDC = scatterLayers.reduce((points, layer) => ([...layer.points, ...points]), flatPointsDC);
-
     const svg = layerArgs.coreLayers[LayerType.Svg];
     let timerFlag: NodeJS.Timeout | undefined = undefined;
     let hideTooltip = false;
@@ -194,7 +189,7 @@ export class TooltipsLayer<Metadata> extends OptionalLayer {
         // in laggy situation there is a persistent phantom tooltip left behind.
         // this gets rid of any other tooltips that are not meant to be there
         document.querySelectorAll(`*[id*="${this.type}"]`)?.forEach(el => el.innerHTML = "");
-        this.handleMouseMove(e, layerArgs, tooltip, flatPointsDC);
+        this.handleMouseMove(e, layerArgs, tooltip, traceLayers, scatterLayers);
         timerFlag = setTimeout(() => {
           timerFlag = undefined;
         }, 25);

@@ -1,7 +1,7 @@
 import { LayerArgs, Point, ZoomExtents, ZoomProperties } from "@/types";
 import { LayerType, OptionalLayer } from "./Layer";
 import { TracesLayer } from "./TracesLayer";
-import { customLineGen, getSvgRectPath, getXYMinMax, numScales } from "@/helpers";
+import { customLineGen, getSvgRectPath, numScales } from "@/helpers";
 
 type LineBoundaryInfo = {
   xMinDC: number,
@@ -40,7 +40,11 @@ export class AreaLayer<Metadata> extends OptionalLayer {
         const scales = numScales(line.bands, layerArgs);
         const lineSC = layer.lowResLinesSC[lineIdx];
 
-        const { x: xMinMax } = getXYMinMax(line.points);
+        const xMinMax = { start: Infinity, end: -Infinity };
+        line.points.forEach(({ x }) => {
+          if (x < xMinMax.start) xMinMax.start = x;
+          if (x > xMinMax.end) xMinMax.end = x;
+        });
 
         // For each line, we now create a "canvas path", which we will later
         // use for determining whether a given point lies within the inside of

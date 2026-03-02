@@ -1,4 +1,6 @@
-import { LayerArgs, ScaleNumeric, XY, Point, Scales, AxisType, D3Selection } from "./types";
+import { ScatterLayer } from "./layers/ScatterLayer";
+import { TracesLayer } from "./layers/TracesLayer";
+import { LayerArgs, ScaleNumeric, XY, Point, Scales, AxisType, D3Selection, PointWithMetadata } from "./types";
 
 const round = (num: number) => Math.floor(num * 10) / 10;
 
@@ -60,19 +62,23 @@ export const numScales = (bands: Partial<XY<string>> | undefined, layerArgs: Lay
   }
 }
 
-export const getXYMinMax = (points: Point[]) => {
-  const scales: Scales = {
+export const getXYMinMax = <Metadata>(
+  traceLayers: TracesLayer<Metadata>[],
+  scatterLayers: ScatterLayer<Metadata>[],
+) => {
+  const minMax: Scales = {
     x: { start: Infinity, end: -Infinity },
     y: { start: Infinity, end: -Infinity }
   };
-  for (let i = 0; i < points.length; i++) {
-    const { x, y } = points[i];
-    if (x < scales.x.start) scales.x.start = x;
-    if (x > scales.x.end) scales.x.end = x;
-    if (y < scales.y.start) scales.y.start = y;
-    if (y > scales.y.end) scales.y.end = y;
-  }
-  return scales;
+
+  iterateOverPoints<Metadata>(traceLayers, scatterLayers, ({ x, y }) => {
+    if (x < minMax.x.start) minMax.x.start = x;
+    if (x > minMax.x.end) minMax.x.end = x;
+    if (y < minMax.y.start) minMax.y.start = y;
+    if (y > minMax.y.end) minMax.y.end = y;
+  });
+
+  return minMax;
 };
 
 export const getSvgRectPath = (xStart: number, xEnd: number, yStart: number, yEnd: number) =>
@@ -113,16 +119,32 @@ export const drawLine = (
     .style("stroke", color).style("stroke-width", 0.5);
 }
 
-export type DebounceConfig = {
-  timeout: NodeJS.Timeout | undefined,
-  time: number
-}
+export const iterateOverPoints = <Metadata>(
+  traceLayers: TracesLayer<Metadata>[],
+  scatterLayers: ScatterLayer<Metadata>[],
+  callback: (point: PointWithMetadata<Metadata>) => void
+) => {
+  for (let i = 0; i < traceLayers.length; i++) {
+    const traceLayer = traceLayers[i];
+    for (let j = 0; j < traceLayer.linesDC.length; j++) {
+      const line = traceLayer.linesDC[j];
+      for (let k = 0; k < line.points.length; k++) {
+        const point = line.points[k];
+        const pointWithMetadata: PointWithMetadata<Metadata> = {
+          x: point.x,
+          y: point.y,
+          bands: line.bands,
+          metadata: line.metadata,
+        }
+        callback(pointWithMetadata);
+      }
+    }
+  }
 
-// DebounceConfig in the first arg, we can let multiple debounced
-// calls share a timeout
-export const debounce = (cfg: DebounceConfig, callback: () => any) => {
-  clearTimeout(cfg.timeout);
-  cfg.timeout = setTimeout(() => {
-    callback();
-  }, cfg.time);
+  for (let i = 0; i < scatterLayers.length; i++) {
+    const scatterLayer = scatterLayers[i];
+    for (let j = 0; j < scatterLayer.points.length; j++) {
+      callback(scatterLayer.points[j]);
+    }
+  }
 };
