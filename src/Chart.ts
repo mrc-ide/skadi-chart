@@ -3,12 +3,12 @@ import { AxesLayer } from "./layers/AxesLayer";
 import { TracesLayer, TracesOptions } from "./layers/TracesLayer";
 import { ZoomLayer, ZoomOptions } from "./layers/ZoomLayer";
 import { TooltipHtmlCallback, TooltipsLayer } from "./layers/TooltipsLayer";
-import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, ZoomExtents, PartialScales, Point, Scales, ScatterPoints, XY, ScaleNumeric, AxisType, CategoricalScaleConfig, ClipPathBounds, TickConfig } from "./types";
+import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, ZoomExtents, PartialScales, Scales, ScatterPoints, XY, ScaleNumeric, AxisType, CategoricalScaleConfig, ClipPathBounds, TickConfig } from "./types";
 import { LayerType, LifecycleHooks, OptionalLayer } from "./layers/Layer";
 import { GridLayer, GridOptions } from "./layers/GridLayer";
 import html2canvas from "html2canvas";
 import { ScatterLayer } from "./layers/ScatterLayer";
-import { debounce, DebounceConfig, getXYMinMax } from "./helpers";
+import { getXYMinMax } from "./helpers";
 import { AreaLayer } from "./layers/AreaLayer";
 
 // used for holding custom lifecycle hooks only - layer has no visual effect
@@ -268,14 +268,8 @@ export class Chart<Metadata = any> {
       .filter(l => l.type === LayerType.Trace) as TracesLayer<Metadata>[];
     const scatterLayers = this.optionalLayers
       .filter(l => l.type === LayerType.Scatter) as ScatterLayer<Metadata>[];
-    let flatPointsDC = traceLayers.reduce((points, layer) => {
-      return [...layer.linesDC.map(l => l.points).flat(), ...points];
-    }, [] as Point[]);
-    flatPointsDC = scatterLayers.reduce((points, layer) => {
-      return [...layer.points.map(p => ({ x: p.x, y: p.y })), ...points];
-    }, flatPointsDC);
 
-    const minMax = getXYMinMax(flatPointsDC);
+    const minMax = getXYMinMax(traceLayers, scatterLayers);
     const paddingFactorX = 0.02;
     const paddingFactorY = 0.03;
   
@@ -440,15 +434,10 @@ export class Chart<Metadata = any> {
     drawWithBounds(width, height);
 
     if (this.isResponsive) {
-      let debounceConfig: DebounceConfig = {
-        timeout: undefined,
-        time: 50
-      };
-
       // watch for changes in baseElement
       const resizeObserver = new ResizeObserver(entries => {
         const { blockSize: height, inlineSize: width } = entries[0].borderBoxSize[0];
-        debounce(debounceConfig, () => drawWithBounds(width, height));
+        drawWithBounds(width, height);
       });
       resizeObserver.observe(baseElement);
 
@@ -458,7 +447,7 @@ export class Chart<Metadata = any> {
       window.addEventListener("resize", e => {
         if (!e.view) return;
         const { innerHeight: height, innerWidth: width } = e.view;
-        debounce(debounceConfig, () => drawWithBounds(width, height));
+        drawWithBounds(width, height);
       });
     }
 

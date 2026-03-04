@@ -282,3 +282,12 @@ any functions that will remove layers after the chart is appended to the DOM.
 The pattern we use for reactivity outside of the scope of lifecycle hooks is to recreate the
 chart from scratch. The `appendTo` function will remove anything inside the chart `div` and
 append the new `Chart` into it. To see examples of reactivity see [here](./src/demo/App.vue).
+
+### Note for performance regarding reactivity
+
+Proxy objects can degrade performance. Frameworks like Vue proxy objects for reactivity or
+you may be manually creating them. Skadi chart does not modify arguments passed into it
+(i.e. does not use setters for any argument) however, Skadi chart does use getters many times
+as different layers scan your arguments, particularly your data. If you are experiencing
+performance issues, make sure to remove the proxy or remove getters. For example, in Vue
+you can use `markRaw` or `shallowRef` to prevent Vue from creating deep proxy objects.
