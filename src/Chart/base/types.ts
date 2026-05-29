@@ -12,18 +12,18 @@ export type Bounds = {
 
 
 
-export type BaseState = {
+export type CurrState = {
   id: string,
   getHtmlId: (key: string) => string,
   element: HTMLDivElement,
   bounds: Bounds,
 }
 
-export type BaseOutputs = {
+export type CurrOutputs = {
   [K in ChartType]: {
     chartType: K,
-    baseState: BaseState,
+    baseState: CurrState,
   }
 }
 
-export type BaseOutput = BaseOutputs[ChartType]
+export type CurrOutput = CurrOutputs[ChartType]

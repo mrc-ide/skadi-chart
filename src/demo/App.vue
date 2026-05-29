@@ -93,10 +93,10 @@
 </style>
 
 <script setup lang="ts">
-import { PointWithMetadata, ScatterPoints } from "@/types";
+import { PointWithMetadata, ScatterPoints, XY } from "@/types";
 import { Chart, LayerArgs, LayerType, Lines, OptionalLayer, Scales } from "../skadi-chart";
 import { onMounted, ref, watch } from "vue";
-import { Chart as ChartNew } from "../Chart/start/Start";
+import { Base as ChartNew } from "../Chart/base/Base";
 
 const chartSparkLines = ref<HTMLDivElement | null>(null);
 const chartOnlyAxes = ref<HTMLDivElement | null>(null);

@@ -1,8 +1,8 @@
 import { ChartType } from "@/types";
-import { BaseOutput, BaseState, Bounds } from "./types";
+import { CurrOutput, CurrState, Bounds } from "./types";
 import { Data } from "../data/Data";
 
-export class Chart<M, T extends ChartType> {
+export class Base<M, T extends ChartType> {
   private id: string;
   private getHtmlId: (key: string) => string;
   private bounds: Bounds;
@@ -22,7 +22,7 @@ export class Chart<M, T extends ChartType> {
   };
 
   startData() {
-    const baseState: BaseState = { 
+    const baseState: CurrState = { 
       id: this.id,
       getHtmlId: this.getHtmlId,
       element: this.element,
@@ -31,7 +31,7 @@ export class Chart<M, T extends ChartType> {
     const output = {
       chartType: this.chartType,
       baseState,
-    } as BaseOutput;
+    } as CurrOutput;
     return Data.start<M, T>(output);
   };
 }

@@ -1,10 +1,10 @@
 import * as d3 from "@/d3";
 import { Layer } from "./Layer";
 import { ScaleNumeric, XorY } from "@/types";
-import { ConfigOutput } from "@/Chart/config/types";
+import { CurrOutput as PrevOutput } from "@/Chart/config/types";
 import { CoreLayer, CoreLayers, VisualLayer } from "../types";
 import { ScaleCategory } from "@/Chart/config/scales";
-import { getInner } from "@/Chart/start/utils";
+import { getInner } from "@/Chart/base/utils";
 
 const animationDuration = 350;
 
@@ -12,7 +12,7 @@ export class AxesLayer<M> extends Layer<M, null> {
   private zoomCallbacks: (() => Promise<void>)[] = [];
 
   constructor(
-    private configOutput: ConfigOutput<M>,
+    private prevOutput: PrevOutput<M>,
     private coreLayers: CoreLayers,
   ) {
     super();
@@ -23,23 +23,23 @@ export class AxesLayer<M> extends Layer<M, null> {
   };
 
   draw = () => {
-    if (this.configOutput.chartType === "default") {
-      this.drawNumerical("x", this.configOutput.configState.scales.x, true);
-      this.drawNumerical("y", this.configOutput.configState.scales.y, true);
-    } else if (this.configOutput.chartType === "categoricalX") {
-      this.drawCategorical("x", this.configOutput.configState.scales.x);
-      this.drawNumerical("y", this.configOutput.configState.scales.y, true);
-    } else if (this.configOutput.chartType === "categoricalY") {
-      this.drawNumerical("x", this.configOutput.configState.scales.x, true);
-      this.drawCategorical("y", this.configOutput.configState.scales.y);
+    if (this.prevOutput.chartType === "default") {
+      this.drawNumerical("x", this.prevOutput.configState.scales.x, true);
+      this.drawNumerical("y", this.prevOutput.configState.scales.y, true);
+    } else if (this.prevOutput.chartType === "categoricalX") {
+      this.drawCategorical("x", this.prevOutput.configState.scales.x);
+      this.drawNumerical("y", this.prevOutput.configState.scales.y, true);
+    } else if (this.prevOutput.chartType === "categoricalY") {
+      this.drawNumerical("x", this.prevOutput.configState.scales.x, true);
+      this.drawCategorical("y", this.prevOutput.configState.scales.y);
     } else {
-      this.drawCategorical("x", this.configOutput.configState.scales.x);
-      this.drawCategorical("y", this.configOutput.configState.scales.y);
+      this.drawCategorical("x", this.prevOutput.configState.scales.x);
+      this.drawCategorical("y", this.prevOutput.configState.scales.y);
     }
   };
 
   private drawNumerical = (axis: XorY, scale: ScaleNumeric, addZoom: boolean) => {
-    const { getHtmlId, bounds } = this.configOutput.baseState;
+    const { getHtmlId, bounds } = this.prevOutput.baseState;
     const inner = getInner(bounds);
     const translation = axis === "x"
       ? { x: 0, y: inner.y.end }
@@ -67,7 +67,7 @@ export class AxesLayer<M> extends Layer<M, null> {
   };
 
   private drawCategorical = (axis: XorY, { scale, categories }: ScaleCategory) => {
-    const { getHtmlId, bounds } = this.configOutput.baseState;
+    const { getHtmlId, bounds } = this.prevOutput.baseState;
     const inner = getInner(bounds);
     const translation = axis === "x"
       ? { x: 0, y: inner.y.end }

@@ -1,22 +1,22 @@
 import { ChartType } from "@/types";
 import {
-  DefaultInteractiveFlags,
-  InteractiveFlags,
-  InteractiveOutput,
-  InteractiveState,
+  DefaultCurrFlags,
+  CurrFlags,
+  CurrOutput,
+  CurrState,
   This
 } from "./types";
 import { End } from "../end/End";
-import { VisualOutput } from "../visual/types";
+import { CurrFlags as PrevFlags, CurrOutput as PrevOutput } from "../visual/types";
 
-export class Interactive<M, T extends ChartType, Flags extends InteractiveFlags> {
-  private constructor(private visualOutput: VisualOutput<M>) {};
+export class Interactive<M, T extends ChartType, Flags extends CurrFlags> {
+  private constructor(private prevOutput: PrevOutput<M>) {};
 
-  static start<M, T extends ChartType, PrevFlags extends InteractiveFlags>(
-    visualOutput: VisualOutput<M>
+  static start<M, T extends ChartType, PFlags extends PrevFlags>(
+    prevOutput: PrevOutput<M>
   ) {
-    type NewFlags = DefaultInteractiveFlags<PrevFlags>
-    return new Interactive<M, T, NewFlags>(visualOutput) as This<M, T, NewFlags>
+    type NewFlags = DefaultCurrFlags<PFlags>
+    return new Interactive<M, T, NewFlags>(prevOutput) as This<M, T, NewFlags>
   };
 
   addZoom() {
@@ -28,11 +28,11 @@ export class Interactive<M, T extends ChartType, Flags extends InteractiveFlags>
   };
 
   end() {
-    const interactiveState: InteractiveState = {};
+    const interactiveState: CurrState = {};
     const output = {
-      ...this.visualOutput,
+      ...this.prevOutput,
       interactiveState,
-    } as InteractiveOutput<M>;
+    } as CurrOutput<M>;
     return new End<M, T, Flags>(output);
   };
 }
