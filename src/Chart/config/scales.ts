@@ -1,23 +1,30 @@
 import * as d3 from "@/d3";
 import { ChartType, HasAllKeys, ScaleNumeric, XY } from "@/types"
-import { DataOutput, DataState } from "../data/types"
+import { CurrOutput as PrevOutput, CurrState as PrevState } from "../data/types"
 import { iterateAllPoints, IterateAllPointsArgs } from "../data/utils"
 import { anyXY, doXY, makeObjXY } from "@/helpers"
-import { SingleRange } from "../start/types";
+import { SingleRange } from "../base/types";
 import { Categories } from "./types";
-import { getInner } from "../start/utils";
+import { getInner } from "../base/utils";
 
 type SingleAutoScale = { start: number | "auto", end: number | "auto" }
 
-export type ScaleArgs = XY<{
-  extents: SingleAutoScale,
+type ScaleArgsOptional = {
   initial?: Partial<SingleRange>,
   log?: boolean,
-}>
+}
+
+export type ScaleArgs = Partial<XY<
+  { extents?: Partial<SingleAutoScale> } & ScaleArgsOptional
+>>
+
+export type ScaleArgsParsed = XY<
+  { extents: SingleAutoScale } & ScaleArgsOptional
+>
 
 export const getXYMinMax = <M>(
   chartType: ChartType,
-  dataState: DataState<M, ChartType>
+  prevState: PrevState<M, ChartType>
 ) => {
   const minMax: XY<SingleRange> = {
     x: { start: Infinity, end: -Infinity },
@@ -25,7 +32,7 @@ export const getXYMinMax = <M>(
   };
 
   iterateAllPoints<M>({
-    chartType, ...dataState,
+    chartType, ...prevState,
     callback: ({ point }) => {
       doXY(axis => {
         if (point[axis] < minMax[axis].start) minMax[axis].start = point[axis];
@@ -68,10 +75,10 @@ export type ScaleOutput = HasAllKeys<ChartType, {
 }>
 
 export const processScaleArgs = <M>(
-  args: ScaleArgs, dataOutput: DataOutput<M>, categories: Categories["categoricalXY"]
+  args: ScaleArgsParsed, prevOutput: PrevOutput<M>, categories: Categories["categoricalXY"]
 ): ScaleOutput[ChartType] => {
   // get max extents
-  const extents = getXYMinMax<M>(dataOutput.chartType, dataOutput.dataState);
+  const extents = getXYMinMax<M>(prevOutput.chartType, prevOutput.dataState);
   const paddingFactor = { x: 0.02, y: 0.03 };
   doXY(axis => {
     const userArgs = args[axis];
@@ -110,7 +117,7 @@ export const processScaleArgs = <M>(
   }
 
   // base d3 scales
-  const ranges = getInner(dataOutput.baseState.bounds);
+  const ranges = getInner(prevOutput.baseState.bounds);
   const baseScales: XY<ScaleNumeric> = makeObjXY(axis => {
     const d3Scale = args[axis].log ? d3.scaleLog : d3.scaleLinear;
     const axisRange = ranges[axis];
@@ -127,7 +134,7 @@ export const processScaleArgs = <M>(
   }
 
   return makeObjXY(axis => {
-    if (!categoricalChartTypes[axis].includes(dataOutput.chartType)) {
+    if (!categoricalChartTypes[axis].includes(prevOutput.chartType)) {
       return baseScales[axis];
     };
 

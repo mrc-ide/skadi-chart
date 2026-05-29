@@ -1,12 +1,12 @@
 import { ChartType, Prettify } from "@/types"
-import { VisualFlags, VisualOutputs } from "../visual/types"
+import { CurrFlags as PrevFlags, CurrOutputs as PrevOutputs } from "../visual/types"
 import { Interactive } from "./Interactive"
 
 
 
-export type InteractiveFlags = {} & VisualFlags
-export type DefaultInteractiveFlags<PrevFlags extends InteractiveFlags> = Prettify<
-  {} & PrevFlags
+export type CurrFlags = {} & PrevFlags
+export type DefaultCurrFlags<PFlags extends PrevFlags> = Prettify<
+  {} & PFlags
 >
 type AllMethods = keyof Interactive<any, any, any>
 type Method<M extends AllMethods> = M
@@ -14,19 +14,19 @@ type Method<M extends AllMethods> = M
 
 
 type DataInteractiveLayers = Method<"addTooltips">
-type RemoveIfNoVisualData<Flags extends InteractiveFlags> =
+type RemoveIfNoVisualData<Flags extends CurrFlags> =
   Flags["hasVisualDataLayer"] extends true ? "" : DataInteractiveLayers
-type Omits<_T extends ChartType, Flags extends InteractiveFlags> = RemoveIfNoVisualData<Flags>
+type MethodsToRemove<_T extends ChartType, Flags extends CurrFlags> = RemoveIfNoVisualData<Flags>
 
-export type This<M, T extends ChartType, Flags extends VisualFlags> =
-  Omit<Interactive<M, T, Flags>, Omits<T, Flags>>
+export type This<M, T extends ChartType, Flags extends CurrFlags> =
+  Omit<Interactive<M, T, Flags>, MethodsToRemove<T, Flags>>
 
 
 
-export type InteractiveState = {}
+export type CurrState = {}
 
-export type InteractiveOutputs<M> = {
-  [K in ChartType]: VisualOutputs<M>[K] & { interactiveState: InteractiveState }
+export type CurrOutputs<M> = {
+  [K in ChartType]: PrevOutputs<M>[K] & { interactiveState: CurrState }
 }
 
-export type InteractiveOutput<M> = InteractiveOutputs<M>[ChartType]
+export type CurrOutput<M> = CurrOutputs<M>[ChartType]

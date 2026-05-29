@@ -1,32 +1,32 @@
 import * as d3 from "@/d3";
 import { ChartType, D3Selection, MixNewFlags } from "@/types";
 import {
-    CoreLayer,
+  CoreLayer,
   CoreLayers,
-  DefaultVisualFlags,
+  DefaultCurrFlags,
   This,
-  VisualFlags,
+  CurrFlags,
   VisualLayer,
   VisualLayers,
-  VisualOutput,
-  VisualState
+  CurrOutput,
+  CurrState
 } from "./types";
-import { ConfigFlags, ConfigOutput } from "../config/types";
+import { CurrFlags as PrevFlags, CurrOutput as PrevOutput } from "../config/types";
 import { Interactive } from "../interactive/Interactive";
 import { AxesLayer } from "./layers/AxesLayer";
-import { getInner } from "../start/utils";
+import { getInner } from "../base/utils";
 
-export class Visual<M, T extends ChartType, Flags extends VisualFlags> {
+export class Visual<M, T extends ChartType, Flags extends CurrFlags> {
   private coreLayers: CoreLayers;
   private visualLayers: VisualLayers<M> = {
     [VisualLayer.Axes]: null
   };
 
-  private constructor(private configOutput: ConfigOutput<M>) {
+  private constructor(private prevOutput: PrevOutput<M>) {
     const {
       getHtmlId,
       bounds,
-    } = configOutput.baseState;
+    } = prevOutput.baseState;
 
     const svg = d3.create("svg")
       .attr("id", getHtmlId(CoreLayer.Svg))
@@ -58,41 +58,41 @@ export class Visual<M, T extends ChartType, Flags extends VisualFlags> {
     };
   };
 
-  static start<M, T extends ChartType, PrevFlags extends ConfigFlags>(
-    configOutput: ConfigOutput<M>
+  static start<M, T extends ChartType, PFlags extends PrevFlags>(
+    prevOutput: PrevOutput<M>
   ) {
-    type NewFlags = DefaultVisualFlags<PrevFlags>
-    return new Visual<M, T, NewFlags>(configOutput) as This<M, T, NewFlags>
+    type NewFlags = DefaultCurrFlags<PFlags>
+    return new Visual<M, T, NewFlags>(prevOutput) as This<M, T, NewFlags>
   };
 
   addAxes() {
     this.visualLayers[VisualLayer.Axes] = new AxesLayer<M>(
-      this.configOutput, this.coreLayers
+      this.prevOutput, this.coreLayers
     );
     return this as This<M, T, Flags>;
   };
 
   addTraces() {
     // TODO
-    type NewFlags = MixNewFlags<VisualFlags, Flags, { hasVisualDataLayer: true }>
+    type NewFlags = MixNewFlags<CurrFlags, Flags, { hasVisualDataLayer: true }>
     return this as This<M, T, NewFlags>;
   };
 
   addScatterPoints() {
     // TODO
-    type NewFlags = MixNewFlags<VisualFlags, Flags, { hasVisualDataLayer: true }>
+    type NewFlags = MixNewFlags<CurrFlags, Flags, { hasVisualDataLayer: true }>
     return this as This<M, T, NewFlags>;
   };
 
   startInteractive() {
-    const visualState: VisualState<M> = {
+    const visualState: CurrState<M> = {
       coreLayers: this.coreLayers,
       visualLayers: this.visualLayers,
     };
     const output = {
-      ...this.configOutput,
+      ...this.prevOutput,
       visualState,
-    } as VisualOutput<M>;
+    } as CurrOutput<M>;
     return Interactive.start<M, T, Flags>(output);
   };
 }

@@ -1,13 +1,13 @@
 import { ChartType, D3Selection, HasAllKeys, Prettify } from "@/types"
-import { ConfigFlags, ConfigOutputs } from "../config/types"
+import { CurrFlags as PrevFlags, CurrOutputs as PrevOutputs } from "../config/types"
 import { Visual } from "./Visual"
 import { AxesLayer } from "./layers/AxesLayer"
 
 
 
-export type VisualFlags = { hasVisualDataLayer: boolean } & ConfigFlags
-export type DefaultVisualFlags<PrevFlags extends ConfigFlags> = Prettify<
-  { hasVisualDataLayer: false } & PrevFlags
+export type CurrFlags = { hasVisualDataLayer: boolean } & PrevFlags
+export type DefaultCurrFlags<PFlags extends PrevFlags> = Prettify<
+  { hasVisualDataLayer: false } & PFlags
 >
 type AllMethods = keyof Visual<any, any, any>
 type Method<M extends AllMethods> = M
@@ -15,12 +15,12 @@ type Method<M extends AllMethods> = M
 
 
 type VisualDataLayers = Method<"addTraces" | "addScatterPoints">
-type RemoveIfNoData<Flags extends VisualFlags> =
+type RemoveIfNoData<Flags extends CurrFlags> =
   Flags["hasData"] extends true ? "" : VisualDataLayers
-type Omits<_T extends ChartType, Flags extends VisualFlags> = RemoveIfNoData<Flags>
+type MethodsToRemove<_T extends ChartType, Flags extends CurrFlags> = RemoveIfNoData<Flags>
 
-export type This<M, T extends ChartType, Flags extends VisualFlags> =
-  Omit<Visual<M, T, Flags>, Omits<T, Flags>>
+export type This<M, T extends ChartType, Flags extends CurrFlags> =
+  Omit<Visual<M, T, Flags>, MethodsToRemove<T, Flags>>
 
 
 
@@ -50,13 +50,13 @@ export type VisualLayers<M> = HasAllKeys<VisualLayer, {
 
 
 
-export type VisualState<M> = {
+export type CurrState<M> = {
   coreLayers: CoreLayers,
   visualLayers: VisualLayers<M>
 }
 
-export type VisualOutputs<M> = {
-  [K in ChartType]: ConfigOutputs<M>[K] & { visualState: VisualState<M> }
+export type CurrOutputs<M> = {
+  [K in ChartType]: PrevOutputs<M>[K] & { visualState: CurrState<M> }
 }
 
-export type VisualOutput<M> = VisualOutputs<M>[ChartType]
+export type CurrOutput<M> = CurrOutputs<M>[ChartType]

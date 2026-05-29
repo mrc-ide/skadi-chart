@@ -1,15 +1,15 @@
 import { ChartType, Point, Prettify, WithExtensions } from "@/types"
 import { Data } from "./Data"
-import { BaseOutputs } from "../start/types"
+import { CurrOutputs as PrevOutputs } from "../base/types"
 
 
 
-export type DataFlags = { hasData: boolean }
-export type DefaultDataFlags = Prettify<{ hasData: false }>
+export type CurrFlags = { hasData: boolean }
+export type DefaultCurrFlags = Prettify<{ hasData: false }>
 
 
 
-export type This<M, T extends ChartType, Flags extends DataFlags> = Data<M, T, Flags>
+export type This<M, T extends ChartType, Flags extends CurrFlags> = Data<M, T, Flags>
 
 
 
@@ -53,13 +53,13 @@ export type ScatterPoints<M, T extends ChartType> = ScatterPointConfig<M, T>[];
 
 
 
-export type DataState<M, T extends ChartType> = {
+export type CurrState<M, T extends ChartType> = {
   lines: Lines<M, T>,
   scatterPoints: ScatterPoints<M, T>
 }
 
-export type DataOutputs<M> = {
-  [K in ChartType]: BaseOutputs[K] & { dataState: DataState<M, K> }
+export type CurrOutputs<M> = {
+  [K in ChartType]: PrevOutputs[K] & { dataState: CurrState<M, K> }
 }
 
-export type DataOutput<M> = DataOutputs<M>[ChartType]
+export type CurrOutput<M> = CurrOutputs<M>[ChartType]

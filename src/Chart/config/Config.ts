@@ -1,27 +1,28 @@
 import { ChartType, MixNewFlags } from "@/types";
 import {
-    Categories,
-  ConfigFlags,
-  ConfigOutput,
-  ConfigState,
-  DefaultConfigFlags,
+  Categories,
+  CurrFlags,
+  CurrOutput,
+  CurrState,
+  DefaultCurrFlags,
   This
 } from "./types";
-import { DataFlags, DataOutput } from "../data/types";
+import { CurrFlags as PrevFlags, CurrOutput as PrevOutput } from "../data/types";
 import { Visual } from "../visual/Visual";
-import { processScaleArgs, ScaleArgs, ScaleOutput } from "./scales";
+import { processScaleArgs, ScaleArgs, ScaleArgsParsed, ScaleOutput } from "./scales";
+import { doXY, makeObjXY } from "@/helpers";
 
-export class Config<M, T extends ChartType, Flags extends ConfigFlags> {
+export class Config<M, T extends ChartType, Flags extends CurrFlags> {
   private scales: ScaleOutput[ChartType] | null = null;
   private categories: Categories["categoricalXY"] = { x: ["_"], y: ["_"] };
 
-  private constructor(private dataOutput: DataOutput<M>) {};
+  private constructor(private prevOutput: PrevOutput<M>) {};
 
-  static start = <M, T extends ChartType, PrevFlags extends DataFlags>(
-    dataOutput: DataOutput<M>
+  static start = <M, T extends ChartType, PFlags extends PrevFlags>(
+    prevOutput: PrevOutput<M>
   ) => {
-    type NewFlags = DefaultConfigFlags<PrevFlags>
-    return new Config<M, T, NewFlags>(dataOutput) as This<M, T, NewFlags>;
+    type NewFlags = DefaultCurrFlags<PFlags>
+    return new Config<M, T, NewFlags>(prevOutput) as This<M, T, NewFlags>;
   };
 
   configureCategories(args: Categories[T]) {
@@ -31,13 +32,23 @@ export class Config<M, T extends ChartType, Flags extends ConfigFlags> {
     if ("y" in args && args.y.length > 0) {
       this.categories.y = args.y;
     }
-    type NewFlags = MixNewFlags<ConfigFlags, Flags, { hasConfiguredCategories: true }>
+    type NewFlags = MixNewFlags<CurrFlags, Flags, { hasConfiguredCategories: true }>
     return this as This<M, T, NewFlags>;
   };
 
-  configureScales(scaleArgs: ScaleArgs) {
-    this.scales = processScaleArgs(scaleArgs, this.dataOutput, this.categories);
-    type NewFlags = MixNewFlags<ConfigFlags, Flags, { hasConfiguredScale: true }>
+  configureScales(scaleArgs: ScaleArgs = {}) {
+    const scaleArgsParsed: ScaleArgsParsed =
+      makeObjXY(() => ({ extents: { start: "auto", end: "auto" } }));
+    doXY(axis => {
+      if (scaleArgs && scaleArgs[axis]?.extents?.start) {
+        scaleArgsParsed[axis].extents.start = scaleArgs[axis].extents.start;
+      }
+      if (scaleArgs && scaleArgs[axis]?.extents?.end) {
+        scaleArgsParsed[axis].extents.end = scaleArgs[axis].extents.end;
+      }
+    });
+    this.scales = processScaleArgs(scaleArgsParsed, this.prevOutput, this.categories);
+    type NewFlags = MixNewFlags<CurrFlags, Flags, { hasConfiguredScale: true }>
     return this as This<M, T, NewFlags>;
   };
 
@@ -45,14 +56,14 @@ export class Config<M, T extends ChartType, Flags extends ConfigFlags> {
     if (!this.scales) {
       throw new Error("Scales must be configured before going into startVisual")
     }
-    const configState: ConfigState<ChartType> = {
+    const configState: CurrState<ChartType> = {
       scales: this.scales,
       categories: this.categories
     };
     const output = {
-      ...this.dataOutput,
+      ...this.prevOutput,
       configState,
-    } as ConfigOutput<M>;
+    } as CurrOutput<M>;
     return Visual.start<M, T, Flags>(output);
   };
 };

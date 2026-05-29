@@ -1,47 +1,47 @@
 import { ChartType, MixNewFlags } from "@/types";
 import {
-  DataFlags,
-  DataOutput,
-  DataState,
-  DefaultDataFlags,
+  CurrFlags,
+  CurrOutput,
+  CurrState,
+  DefaultCurrFlags,
   Lines,
   ScatterPoints,
   This,
 } from "./types";
 import { Config } from "../config/Config";
-import { BaseOutput } from "../start/types";
+import { CurrOutput as PrevOutput } from "../base/types";
 
-export class Data<M, T extends ChartType, Flags extends DataFlags> {
+export class Data<M, T extends ChartType, Flags extends CurrFlags> {
   private lines: Lines<M, T> = [];
   private scatterPoints: ScatterPoints<M, T> = [];
   
-  constructor(private baseOutput: BaseOutput) {};
+  private constructor(private prevOutput: PrevOutput) {};
 
-  static start = <M, T extends ChartType>(baseOutput: BaseOutput) => {
-    return new Data<M, T, DefaultDataFlags>(baseOutput) as This<M, T, DefaultDataFlags>;
+  static start = <M, T extends ChartType>(prevOutput: PrevOutput) => {
+    return new Data<M, T, DefaultCurrFlags>(prevOutput) as This<M, T, DefaultCurrFlags>;
   };
 
   registerLines = (lines: Lines<M, T>) => {
     this.lines.push(...lines);
-    type NewFlags = MixNewFlags<DataFlags, Flags, { hasData: true }>;
+    type NewFlags = MixNewFlags<CurrFlags, Flags, { hasData: true }>;
     return this as This<M, T, NewFlags>;
   };
 
   registerPoints = (scatterPoints: ScatterPoints<M, T>) => {
     this.scatterPoints.push(...scatterPoints);
-    type NewFlags = MixNewFlags<DataFlags, Flags, { hasData: true }>;
+    type NewFlags = MixNewFlags<CurrFlags, Flags, { hasData: true }>;
     return this as This<M, T, NewFlags>;
   };
 
   startConfig = () => {
-    const dataState: DataState<M, ChartType> = {
+    const dataState: CurrState<M, ChartType> = {
       lines: this.lines,
       scatterPoints: this.scatterPoints,
     };
     const output = {
-      ...this.baseOutput,
+      ...this.prevOutput,
       dataState,
-    } as DataOutput<M>;
+    } as CurrOutput<M>;
     return Config.start<M, T, Flags>(output);
   };
 };
