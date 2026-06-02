@@ -1,5 +1,5 @@
 import * as d3 from "@/d3";
-import { ChartType, HasAllKeys, ScaleNumeric, XY } from "@/types"
+import { CategoricalChartType, ChartType, HasAllKeys, ScaleNumeric, XY } from "@/types"
 import { CurrOutput as PrevOutput, CurrState as PrevState } from "../data/types"
 import { iterateAllPoints, IterateAllPointsArgs } from "../data/utils"
 import { anyXY, doXY, makeObjXY } from "@/helpers"
@@ -74,6 +74,11 @@ export type ScaleOutput = HasAllKeys<ChartType, {
   categoricalXY: { x: ScaleCategory } & { y: ScaleCategory },
 }>
 
+const categoricalChartTypes: XY<ChartType[]> = {
+  x: ["categoricalX", "categoricalXY"],
+  y: ["categoricalY", "categoricalXY"],
+}
+
 export const processScaleArgs = <M>(
   args: ScaleArgsParsed, prevOutput: PrevOutput<M>, categories: Categories["categoricalXY"]
 ): ScaleOutput[ChartType] => {
@@ -126,12 +131,6 @@ export const processScaleArgs = <M>(
       .domain([ axisInitial.start, axisInitial.end ])
       .range([ axisRange.start, axisRange.end ]);
   });
-
-  // categorical scales
-  const categoricalChartTypes: XY<ChartType[]> = {
-    x: ["categoricalX", "categoricalXY"],
-    y: ["categoricalY", "categoricalXY"],
-  }
 
   return makeObjXY(axis => {
     if (!categoricalChartTypes[axis].includes(prevOutput.chartType)) {
