@@ -5,7 +5,7 @@
       {{ option }}
     </option>
   </select>
-  <div style="display: flex; flex-wrap: wrap; gap: 4rem;">
+  <div class="charts-container">
     <div v-if="chartTypes.includes('default')">
       <h2>Numerical axes (default)</h2>
       <div class="chart" ref="numericalAxes" id="numericalAxes"></div>
@@ -26,8 +26,15 @@
 </template>
 
 <style scoped>
+.charts-container {
+  --chart-gap: 4rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--chart-gap);
+}
+
 .chart {
-  width: 800px;
+  width: calc(50dvw - var(--chart-gap));
   height: 500px;
 }
 </style>
