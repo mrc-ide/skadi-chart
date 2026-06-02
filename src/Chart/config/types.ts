@@ -48,8 +48,18 @@ export type Categories = HasAllKeys<ChartType, {
   categoricalXY: { x: string[], y: string[] },
 }>
 
-export type AxisArgs = Partial<XY<{ label?: string }>>
-export type AxisConfig = XY<{ label: string }>;
+export type AxisArgs = Partial<XY<{
+  label?: {
+    text: string,
+    padding?: number,
+  }
+}>>
+export type AxisConfig = XY<{
+  label: {
+    text: string,
+    padding: number,
+  }
+}>;
 
 
 

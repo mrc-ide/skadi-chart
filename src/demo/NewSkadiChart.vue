@@ -90,8 +90,8 @@ const renderChart = (chartType: ChartType) => {
       .startData()
       .startConfig()
       .configureAxes({
-        x: { label: "Time" },
-        y: { label: "Value" },
+        x: { label: { text: "Time" } },
+        y: { label: { text: "Value" } },
       })
       .configureScales({
         x: { extents: { start: 0, end: 40 } },
@@ -109,8 +109,8 @@ const renderChart = (chartType: ChartType) => {
       .startData()
       .startConfig()
       .configureAxes({
-        x: { label: "X Category" },
-        y: { label: "Y Category" },
+        x: { label: { text: "X Category", padding: 70 } },
+        y: { label: { text: "Y Category", padding: 50 } },
       })
       .configureCategories({
         x: ["A", "B", "C"],
@@ -132,8 +132,8 @@ const renderChart = (chartType: ChartType) => {
       .startData()
       .startConfig()
       .configureAxes({
-        x: { label: "X Category" },
-        y: { label: "Value" },
+        x: { label: { text: "X Category", padding: 70 } },
+        y: { label: { text: "Value" } },
       })
       .configureCategories({
         x: ["A", "B", "C"],
@@ -153,8 +153,8 @@ const renderChart = (chartType: ChartType) => {
     .startData()
     .startConfig()
     .configureAxes({
-      x: { label: "Time" },
-      y: { label: "Y Category" },
+      x: { label: { text: "Time" } },
+      y: { label: { text: "Y Category" } },
     })
     .configureCategories({
       y: ["Category A", "Category B"],

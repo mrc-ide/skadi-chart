@@ -96,29 +96,27 @@ export class AxesLayer<M> extends Layer<M, null> {
     const { width, height, margin } = bounds;
 
     doXY(axis => {
-      const label = this.prevOutput.configState.axes[axis].label;
-      if (!label) return;
+      const { text, padding } = this.prevOutput.configState.axes[axis].label;
+      if (!text) return;
 
-      const labelElement = this.coreLayers[CoreLayer.Svg].append("text")
+      const label = this.coreLayers[CoreLayer.Svg].append("text")
         .attr("id", `label${axis}-${getHtmlId(VisualLayer.Axes)}`)
           .style("font-size", "1.2rem")
           .attr("text-anchor", "middle")
-          .text(label)
-
-      const labelPadding = axis === "y" ? 40 : 60; // This will become a configurable option.
+          .text(text);
 
       if (axis === "y") {
-        const xSC = margin.x.start - labelPadding;
+        const xSC = margin.x.start - padding;
         const usableHeight = height - margin.y.start - margin.y.end;
         const ySC = usableHeight / 2 + margin.y.start;
-        labelElement.attr("x", xSC)
+        label.attr("x", xSC)
           .attr("y", ySC)
           .attr("transform", "rotate(-90)")
           .attr("transform-origin", `${xSC} ${ySC}`);
       } else {
         const usableWidth = width - margin.x.start - margin.x.end;
-        labelElement.attr("x", usableWidth / 2 + margin.x.start)
-          .attr("y", height - margin.y.end + labelPadding)
+        label.attr("x", usableWidth / 2 + margin.x.start)
+          .attr("y", height - margin.y.end + padding)
       }
     });
   }

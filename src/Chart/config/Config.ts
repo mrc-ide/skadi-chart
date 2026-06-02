@@ -15,7 +15,7 @@ import { categoricalChartTypes, processScaleArgs, ScaleArgs, ScaleArgsParsed, Sc
 import { doXY, makeObjXY } from "@/helpers";
 
 export class Config<M, T extends ChartType, Flags extends CurrFlags> {
-  private axes: AxisConfig = { x: { label: "" }, y: { label: "" } };
+  private axes: AxisConfig = { x: { label: { text: "", padding: 50 } }, y: { label: { text: "", padding: 40 } } };
   private categories: Categories["categoricalXY"] = { x: [], y: [] };
   private scales: ScaleOutput[ChartType] | null = null;
 
@@ -31,7 +31,10 @@ export class Config<M, T extends ChartType, Flags extends CurrFlags> {
   configureAxes(args: AxisArgs = {}) {
     doXY(axis => {
       if (args[axis]?.label) {
-        this.axes[axis].label = args[axis].label;
+        this.axes[axis].label.text = args[axis].label.text;
+        if (args[axis].label.padding) {
+          this.axes[axis].label.padding = args[axis].label.padding;
+        }
       }
     });
     return this as This<M, T, Flags>;
