@@ -72,7 +72,7 @@
   <div class="chart" ref="chartStressPoints" id="chartStressPoints"></div>
 </template>
 
-<style>
+<style scoped>
 .chart {
   width: 1000px;
   height: 500px;
