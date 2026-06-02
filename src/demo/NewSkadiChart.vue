@@ -89,6 +89,10 @@ const renderChart = (chartType: ChartType) => {
     new ChartNew("default", container)
       .startData()
       .startConfig()
+      .configureAxes({
+        x: { label: "Time" },
+        y: { label: "Value" },
+      })
       .configureScales({
         x: { extents: { start: 0, end: 40 } },
         y: { extents: { start: -500, end: 500 } },
@@ -104,9 +108,13 @@ const renderChart = (chartType: ChartType) => {
     new ChartNew("categoricalXY", container)
       .startData()
       .startConfig()
+      .configureAxes({
+        x: { label: "X Category" },
+        y: { label: "Y Category" },
+      })
       .configureCategories({
         x: ["A", "B", "C"],
-        y: ["hey", "what"],
+        y: ["Category A", "Category B"],
       })
       .configureScales({
         x: { extents: { start: -20, end: 20 } },
@@ -123,6 +131,10 @@ const renderChart = (chartType: ChartType) => {
     new ChartNew("categoricalX", container)
       .startData()
       .startConfig()
+      .configureAxes({
+        x: { label: "X Category" },
+        y: { label: "Value" },
+      })
       .configureCategories({
         x: ["A", "B", "C"],
       })
@@ -140,8 +152,12 @@ const renderChart = (chartType: ChartType) => {
   new ChartNew("categoricalY", container)
     .startData()
     .startConfig()
+    .configureAxes({
+      x: { label: "Time" },
+      y: { label: "Y Category" },
+    })
     .configureCategories({
-      y: ["hey", "what"],
+      y: ["Category A", "Category B"],
     })
     .configureScales({
       x: { extents: { start: 0, end: 40 } },

@@ -1,5 +1,7 @@
 import { ChartType, MixNewFlags } from "@/types";
 import {
+  AxisArgs,
+  AxisConfig,
   Categories,
   CurrFlags,
   CurrOutput,
@@ -9,12 +11,13 @@ import {
 } from "./types";
 import { CurrFlags as PrevFlags, CurrOutput as PrevOutput } from "../data/types";
 import { Visual } from "../visual/Visual";
-import { processScaleArgs, ScaleArgs, ScaleArgsParsed, ScaleOutput } from "./scales";
+import { categoricalChartTypes, processScaleArgs, ScaleArgs, ScaleArgsParsed, ScaleOutput } from "./scales";
 import { doXY, makeObjXY } from "@/helpers";
 
 export class Config<M, T extends ChartType, Flags extends CurrFlags> {
+  private axes: AxisConfig = { x: { label: "" }, y: { label: "" } };
+  private categories: Categories["categoricalXY"] = { x: [], y: [] };
   private scales: ScaleOutput[ChartType] | null = null;
-  private categories: Categories["categoricalXY"] = { x: ["_"], y: ["_"] };
 
   private constructor(private prevOutput: PrevOutput<M>) {};
 
@@ -24,6 +27,15 @@ export class Config<M, T extends ChartType, Flags extends CurrFlags> {
     type NewFlags = DefaultCurrFlags<PFlags>
     return new Config<M, T, NewFlags>(prevOutput) as This<M, T, NewFlags>;
   };
+
+  configureAxes(args: AxisArgs = {}) {
+    doXY(axis => {
+      if (args[axis]?.label) {
+        this.axes[axis].label = args[axis].label;
+      }
+    });
+    return this as This<M, T, Flags>;
+  }
 
   configureCategories(args: Categories[T]) {
     if ("x" in args && args.x.length > 0) {
@@ -37,6 +49,11 @@ export class Config<M, T extends ChartType, Flags extends CurrFlags> {
   };
 
   configureScales(scaleArgs: ScaleArgs = {}) {
+    doXY(axis => {
+      if (categoricalChartTypes[axis].includes(this.prevOutput.chartType) && !this.categories[axis].length) {
+        throw new Error("Categories must be configured before scales")
+      }
+    });
     const scaleArgsParsed: ScaleArgsParsed =
       makeObjXY(() => ({ extents: { start: "auto", end: "auto" } }));
     doXY(axis => {
@@ -57,8 +74,9 @@ export class Config<M, T extends ChartType, Flags extends CurrFlags> {
       throw new Error("Scales must be configured before going into startVisual")
     }
     const configState: CurrState<ChartType> = {
+      axes: this.axes,
+      categories: this.categories,
       scales: this.scales,
-      categories: this.categories
     };
     const output = {
       ...this.prevOutput,

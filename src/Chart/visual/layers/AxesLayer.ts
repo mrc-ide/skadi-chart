@@ -3,8 +3,9 @@ import { Layer } from "./Layer";
 import { ScaleNumeric, XorY } from "@/types";
 import { CurrOutput as PrevOutput } from "@/Chart/config/types";
 import { CoreLayer, CoreLayers, VisualLayer } from "../types";
-import { ScaleCategory } from "@/Chart/config/scales";
+import { ScaleCategorical } from "@/Chart/config/scales";
 import { getInner } from "@/Chart/base/utils";
+import { doXY } from "@/helpers";
 
 const animationDuration = 350;
 
@@ -36,6 +37,8 @@ export class AxesLayer<M> extends Layer<M, null> {
       this.drawCategorical("x", this.prevOutput.configState.scales.x);
       this.drawCategorical("y", this.prevOutput.configState.scales.y);
     }
+
+    this.addLabels();
   };
 
   private drawNumerical = (axis: XorY, scale: ScaleNumeric, addZoom: boolean) => {
@@ -66,18 +69,19 @@ export class AxesLayer<M> extends Layer<M, null> {
     }
   };
 
-  private drawCategorical = (axis: XorY, { scale, categories }: ScaleCategory) => {
+  private drawCategorical = (axis: XorY, { scale, categories }: ScaleCategorical) => {
     const { getHtmlId, bounds } = this.prevOutput.baseState;
     const inner = getInner(bounds);
     const translation = axis === "x"
       ? { x: 0, y: inner.y.end }
       : { x: inner.x.start, y: 0 };
     const axisConstructor = axis === "x" ? d3.axisBottom : d3.axisLeft;
+    const tickPadding = 30; // This will become a configurable option.
     
-    const categoricalAxis = axisConstructor(scale);
+    const categoricalAxis = axisConstructor(scale).tickPadding(tickPadding);
     this.coreLayers[CoreLayer.Svg]
       .append("g")
-      .attr("id", `${axis}-${getHtmlId(VisualLayer.Axes)}`)
+      .attr("id", `${axis}-categorical-${getHtmlId(VisualLayer.Axes)}`)
       .style("font-size", "0.75rem")
       .attr("transform", `translate(${translation.x},${translation.y})`)
       .call(categoricalAxis);
@@ -86,4 +90,36 @@ export class AxesLayer<M> extends Layer<M, null> {
       this.drawNumerical(axis, categoryScale, false);
     });
   };
+
+  private addLabels = () => {
+    const { getHtmlId, bounds } = this.prevOutput.baseState;
+    const { width, height, margin } = bounds;
+
+    doXY(axis => {
+      const label = this.prevOutput.configState.axes[axis].label;
+      if (!label) return;
+
+      const labelElement = this.coreLayers[CoreLayer.Svg].append("text")
+        .attr("id", `label${axis}-${getHtmlId(VisualLayer.Axes)}`)
+          .style("font-size", "1.2rem")
+          .attr("text-anchor", "middle")
+          .text(label)
+
+      const labelPadding = axis === "y" ? 40 : 60; // This will become a configurable option.
+
+      if (axis === "y") {
+        const xSC = margin.x.start - labelPadding;
+        const usableHeight = height - margin.y.start - margin.y.end;
+        const ySC = usableHeight / 2 + margin.y.start;
+        labelElement.attr("x", xSC)
+          .attr("y", ySC)
+          .attr("transform", "rotate(-90)")
+          .attr("transform-origin", `${xSC} ${ySC}`);
+      } else {
+        const usableWidth = width - margin.x.start - margin.x.end;
+        labelElement.attr("x", usableWidth / 2 + margin.x.start)
+          .attr("y", height - margin.y.end + labelPadding)
+      }
+    });
+  }
 }

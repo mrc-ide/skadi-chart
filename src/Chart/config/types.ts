@@ -1,4 +1,4 @@
-import { CategoricalChartType, ChartType, HasAllKeys, Prettify } from "@/types"
+import { CategoricalChartType, ChartType, HasAllKeys, Prettify, XY } from "@/types"
 import { Config } from "./Config"
 import { CurrFlags as PrevFlags, CurrOutputs as PrevOutputs } from "../data/types"
 import { ScaleOutput } from "./scales"
@@ -6,13 +6,13 @@ import { ScaleOutput } from "./scales"
 
 
 export type CurrFlags = {
-  hasConfiguredScale: boolean,
   hasConfiguredCategories: boolean
+  hasConfiguredScale: boolean,
 } & PrevFlags
 export type DefaultCurrFlags<PFlags extends PrevFlags> = Prettify<
   {
-    hasConfiguredScale: false,
     hasConfiguredCategories: false,
+    hasConfiguredScale: false,
   } & PFlags
 >
 type AllMethods = keyof Config<any, any, any>
@@ -48,11 +48,15 @@ export type Categories = HasAllKeys<ChartType, {
   categoricalXY: { x: string[], y: string[] },
 }>
 
+export type AxisArgs = Partial<XY<{ label?: string }>>
+export type AxisConfig = XY<{ label: string }>;
+
 
 
 export type CurrState<T extends ChartType> = {
+  axes: AxisConfig,
+  categories: Categories[T],
   scales: ScaleOutput[T],
-  categories: T extends CategoricalChartType ? Categories[T] : never
 }
 
 export type CurrOutputs<M> = {
