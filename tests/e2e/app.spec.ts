@@ -4,6 +4,9 @@ import { test, expect, Page, Locator } from "@playwright/test";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("http://localhost:5173");
+  await page.locator("details").filter({ hasText: "Legacy Skadi Chart" }).evaluate((element) => {
+    element.setAttribute("open", "");
+  });
 });
 
 class SkadiChartTest {
