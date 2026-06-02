@@ -1,7 +1,4 @@
 <template>
-  <h1>New chart interface with axes</h1>
-  <div class="chart" ref="chartOnlyAxesNew" id="chartOnlyAxesNew"></div>
-
   <h1>Basic traces (spark lines)</h1>
   <div class="chart" ref="chartSparkLines" id="chartSparkLines"></div>
 
@@ -96,11 +93,9 @@
 import { PointWithMetadata, ScatterPoints, XY } from "@/types";
 import { Chart, LayerArgs, LayerType, Lines, OptionalLayer, Scales } from "../skadi-chart";
 import { onMounted, ref, watch } from "vue";
-import { Base as ChartNew } from "../Chart/base/Base";
 
 const chartSparkLines = ref<HTMLDivElement | null>(null);
 const chartOnlyAxes = ref<HTMLDivElement | null>(null);
-const chartOnlyAxesNew = ref<HTMLDivElement | null>(null);
 const chartAxesAndGrid = ref<HTMLDivElement | null>(null);
 const chartAxesLabelsAndGrid = ref<HTMLDivElement | null>(null);
 const chartAxesLabelGridAndZoom = ref<HTMLDivElement | null>(null);
@@ -507,22 +502,6 @@ onMounted(async () => {
     .addTraces(curvesOnlyAxes)
     .addAxes()
     .appendTo(chartOnlyAxes.value!, scales);
-
- new ChartNew("categoricalXY", chartOnlyAxesNew.value!)
-  .startData()
-  .startConfig()
-  .configureCategories({
-    x: ["A", "B", "C"],
-    y: ["hey", "what"]
-  })
-  .configureScales({
-    x: { extents: { start: 0, end: 40 } },
-    y: { extents: { start: 0, end: 500 } },
-  })
-  .startVisual()
-  .addAxes()
-  .startInteractive()
-  .end();
 
   drawAxesAndGridChart();
 
