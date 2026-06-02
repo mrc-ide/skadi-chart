@@ -1,24 +1,27 @@
 <template>
   <h1>Axes layer</h1>
-  <select v-model="chartTypes" multiple>
-    <option v-for="option in chartTypeOptions" :key="option" :value="option">
-      {{ option }}
-    </option>
-  </select>
+  <div style="width: 500px">
+    <VueSelect
+      v-model="selectedChartTypes"
+      :options="chartTypeOptions"
+      is-multi
+      placeholder="Select chart types"
+    />
+  </div>
   <div class="charts-container">
-    <div v-if="chartTypes.includes('default')">
+    <div v-if="selectedChartTypes.includes('default')">
       <h2>Numerical axes (default)</h2>
       <div class="chart" ref="numericalAxes" id="numericalAxes"></div>
     </div>
-    <div v-if="chartTypes.includes('categoricalXY')">
+    <div v-if="selectedChartTypes.includes('categoricalXY')">
       <h2>X and Y categorical axes</h2>
       <div class="chart" ref="categoricalXYAxes" id="categoricalXYAxes"></div>
     </div>
-    <div v-if="chartTypes.includes('categoricalX')">
+    <div v-if="selectedChartTypes.includes('categoricalX')">
       <h2>Categorical x-axis</h2>
       <div class="chart" ref="categoricalXAxis" id="categoricalXAxis"></div>
     </div>
-    <div v-if="chartTypes.includes('categoricalY')">
+    <div v-if="selectedChartTypes.includes('categoricalY')">
       <h2>Categorical y-axis</h2>
       <div class="chart" ref="categoricalYAxis" id="categoricalYAxis"></div>
     </div>
@@ -41,6 +44,8 @@
 
 <script setup lang="ts">
 import type { ChartType } from "@/types";
+import type { Option } from "vue3-select-component";
+import VueSelect from "vue3-select-component";
 import { onMounted, ref, watch } from "vue";
 import { Base as ChartNew } from "../Chart/base/Base";
 
@@ -49,13 +54,18 @@ const categoricalXYAxes = ref<HTMLDivElement | null>(null);
 const categoricalXAxis = ref<HTMLDivElement | null>(null);
 const categoricalYAxis = ref<HTMLDivElement | null>(null);
 
-const chartTypeOptions: readonly ChartType[] = [
+const chartTypes: readonly ChartType[] = [
   "default",
   "categoricalXY",
   "categoricalX",
   "categoricalY",
 ];
-const chartTypes = ref<ChartType[]>([...chartTypeOptions]);
+
+const chartTypeOptions: Option<ChartType>[] = chartTypes.map((chartType) => ({
+  label: chartType,
+  value: chartType,
+}));
+const selectedChartTypes = ref<ChartType[]>([...chartTypes]);
 
 const chartContainers: Record<ChartType, typeof numericalAxes> = {
   default: numericalAxes,
@@ -144,8 +154,8 @@ const renderChart = (chartType: ChartType) => {
 };
 
 onMounted(() => {
-  watch(chartTypes, (selectedChartTypes, oldChartTypes = []) => {
-    chartTypeOptions.forEach((chartType) => {
+  watch(selectedChartTypes, (selectedChartTypes, oldChartTypes = []) => {
+    chartTypes.forEach((chartType) => {
       if (selectedChartTypes.includes(chartType) && !oldChartTypes.includes(chartType)) {
         renderChart(chartType);
       }
