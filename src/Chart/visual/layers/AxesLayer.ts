@@ -79,12 +79,13 @@ export class AxesLayer<M> extends Layer<M, null> {
     const tickPadding = 30; // This will become a configurable option.
     
     const categoricalAxis = axisConstructor(scale).tickPadding(tickPadding);
-    this.coreLayers[CoreLayer.Svg]
+    const axisGElement = this.coreLayers[CoreLayer.Svg]
       .append("g")
       .attr("id", `${axis}-categorical-${getHtmlId(VisualLayer.Axes)}`)
       .style("font-size", "0.75rem")
       .attr("transform", `translate(${translation.x},${translation.y})`)
       .call(categoricalAxis);
+    axisGElement.select(".domain").style("stroke-opacity", 0);
 
     Object.entries(categories).forEach(([_, categoryScale]) => {
       this.drawNumerical(axis, categoryScale, false);
