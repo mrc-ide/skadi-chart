@@ -94,7 +94,7 @@ export class AxesLayer<M> extends Layer<M, null> {
 
   private addLabels = () => {
     const { getHtmlId, bounds } = this.prevOutput.baseState;
-    const { width, height, margin } = bounds;
+    const inner = getInner(bounds);
 
     doXY(axis => {
       const { text, padding } = this.prevOutput.configState.axes[axis].label;
@@ -107,17 +107,15 @@ export class AxesLayer<M> extends Layer<M, null> {
           .text(text);
 
       if (axis === "y") {
-        const xSC = margin.x.start - padding;
-        const usableHeight = height - margin.y.start - margin.y.end;
-        const ySC = usableHeight / 2 + margin.y.start;
+        const xSC = inner.x.start - padding;
+        const ySC = inner.y.center;
         label.attr("x", xSC)
           .attr("y", ySC)
           .attr("transform", "rotate(-90)")
           .attr("transform-origin", `${xSC} ${ySC}`);
       } else {
-        const usableWidth = width - margin.x.start - margin.x.end;
-        label.attr("x", usableWidth / 2 + margin.x.start)
-          .attr("y", height - margin.y.end + padding)
+        label.attr("x", inner.x.center)
+          .attr("y", inner.y.end + padding)
       }
     });
   }
