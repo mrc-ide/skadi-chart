@@ -101,7 +101,7 @@ export class AxesLayer<M> extends Layer<M, null> {
       if (!text) return;
 
       const label = this.coreLayers[CoreLayer.Svg].append("text")
-        .attr("id", `label${axis}-${getHtmlId(VisualLayer.Axes)}`)
+        .attr("id", `${axis}-label-${getHtmlId(VisualLayer.Axes)}`)
           .style("font-size", "1.2rem")
           .attr("text-anchor", "middle")
           .text(text);

@@ -64,11 +64,11 @@ class NewSkadiChartTest {
   expectLabels = (labels: Partial<XY<string>>) => {
     return this.addTest(async () => {
       if (labels.x) {
-        const xLabel = await this.selector(VisualLayer.Axes, "labelx");
+        const xLabel = await this.selector(VisualLayer.Axes, "x-label");
         await expect(xLabel[0]).toHaveText(labels.x);
       }
       if (labels.y) {
-        const yLabel = await this.selector(VisualLayer.Axes, "labely");
+        const yLabel = await this.selector(VisualLayer.Axes, "y-label");
         await expect(yLabel[0]).toHaveText(labels.y);
       }
     });
