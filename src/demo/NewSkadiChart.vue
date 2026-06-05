@@ -149,16 +149,13 @@ const renderChart = (chartType: ChartType) => {
     .end();
 };
 
+watch(selectedChartTypes, (newChartTypes) => {
+  newChartTypes.forEach(renderChart);
+}, {
+  flush: "post", // Ensure v-if container refs update before we attempt to render charts
+});
+
 onMounted(() => {
-  watch(selectedChartTypes, (selectedChartTypes, oldChartTypes = []) => {
-    chartTypes.forEach((chartType) => {
-      if (selectedChartTypes.includes(chartType) && !oldChartTypes.includes(chartType)) {
-        renderChart(chartType);
-      }
-    });
-  }, {
-    immediate: true,
-    flush: "post", // Ensure v-if container refs update before we attempt to render charts
-  });
+  selectedChartTypes.value.forEach(renderChart);
 });
 </script>
