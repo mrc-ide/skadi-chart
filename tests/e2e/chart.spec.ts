@@ -40,12 +40,64 @@ class NewSkadiChartTest {
     return this;
   };
 
-  expectAxes = (numberOfAxes: XY<number> = { x: 1, y: 1 }) => {
+  selectAxis = async (axis: "x" | "y", categorical = false) =>
+    this.selector(VisualLayer.Axes, `${axis}${categorical ? "-categorical" : ""}`);
+
+  expectNumericalAxes = (numberOfAxes: XY<number> = { x: 1, y: 1 }) => {
     return this.addTest(async () => {
-      const xAxis = await this.selector(VisualLayer.Axes, "x");
+      const xAxis = await this.selectAxis("x", false);
       expect(xAxis).toHaveLength(numberOfAxes.x);
-      const yAxis = await this.selector(VisualLayer.Axes, "y");
+      const yAxis = await this.selectAxis("y", false);
       expect(yAxis).toHaveLength(numberOfAxes.y);
+    });
+  };
+
+  expectCategoricalAxes = (numberOfAxes: XY<number> = { x: 1, y: 1 }) => {
+    return this.addTest(async () => {
+      const xAxis = await this.selectAxis("x", true);
+      expect(xAxis).toHaveLength(numberOfAxes.x);
+      const yAxis = await this.selectAxis("y", true);
+      expect(yAxis).toHaveLength(numberOfAxes.y);
+    });
+  };
+
+  expectLabels = (labels: Partial<XY<string>>) => {
+    return this.addTest(async () => {
+      if (labels.x) {
+        const xLabel = await this.selector(VisualLayer.Axes, "x-label");
+        await expect(xLabel[0]).toHaveText(labels.x);
+      }
+      if (labels.y) {
+        const yLabel = await this.selector(VisualLayer.Axes, "y-label");
+        await expect(yLabel[0]).toHaveText(labels.y);
+      }
+    });
+  };
+
+  expectTicks = (args: Partial<XY<Partial<{ categorical: boolean, text: string[], count: number }>>>) => {
+    return this.addTest(async () => {
+      if (args.x) {
+        const xAxis = await this.selectAxis("x", args.x.categorical);
+        const xAxisTicks = xAxis[0].locator(".tick");
+        if (args.x.count) {
+          await expect(xAxisTicks).toHaveCount(args.x.count);
+        }
+        if (args.x.text) {
+          const tickTexts = await xAxisTicks.locator("text").allTextContents();
+          expect(tickTexts).toEqual(args.x.text);
+        }
+      }
+      if (args.y) {
+        const yAxis = await this.selectAxis("y", args.y.categorical);
+        const yAxisTicks = yAxis[0].locator(".tick");
+        if (args.y.count) {
+          await expect(yAxisTicks).toHaveCount(args.y.count);
+        }
+        if (args.y.text) {
+          const tickTexts = await yAxisTicks.locator("text").allTextContents();
+          expect(tickTexts).toEqual(args.y.text);
+        }
+      }
     });
   };
 
@@ -56,11 +108,54 @@ class NewSkadiChartTest {
   };
 };
 
+test("chart with numerical axes", async ({ page }) => {
+  await new NewSkadiChartTest(page, "numericalAxes")
+    .expectNumericalAxes()
+    .expectLabels({
+      x: "Time",
+      y: "Value",
+    })
+    .end();
+});
+
 test("chart with categorical x and y axes", async ({ page }) => {
   await new NewSkadiChartTest(page, "categoricalXYAxes")
-    .expectAxes({
-      x: 4, // 4 = 3 numerical axes (one for each band) plus 1 main categorical axis
-      y: 3, // 3 = 2 numerical axes (one for each band) plus 1 main categorical axis
+    .expectNumericalAxes({ x: 3, y: 2 })
+    .expectCategoricalAxes()
+    .expectLabels({
+      x: "X Category",
+      y: "Y Category",
+    })
+    .expectTicks({
+      x: { categorical: true, text: ["A", "B", "C"] },
+      y: { categorical: true, text: ["Category A", "Category B"] },
+    })
+    .end();
+});
+
+test("chart with categorical x axis", async ({ page }) => {
+  await new NewSkadiChartTest(page, "categoricalXAxis")
+    .expectNumericalAxes({ x: 3, y: 1 })
+    .expectCategoricalAxes({ x: 1, y: 0 })
+    .expectLabels({
+      x: "X Category",
+      y: "Value",
+    })
+    .expectTicks({
+      x: { categorical: true, text: ["A", "B", "C"] },    })
+    .end();
+});
+
+test("chart with categorical y axis", async ({ page }) => {
+  await new NewSkadiChartTest(page, "categoricalYAxis")
+    .expectNumericalAxes({ x: 1, y: 2 })
+    .expectCategoricalAxes({ x: 0, y: 1 })
+    .expectLabels({
+      x: "Time",
+      y: "Y Category",
+    })
+    .expectTicks({
+      y: { categorical: true, text: ["Category A", "Category B"] },
     })
     .end();
 });

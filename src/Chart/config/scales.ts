@@ -62,17 +62,22 @@ const addPadding = (scale: SingleRange, paddingFactor: number, isLog: boolean) =
   }
 };
 
-export type ScaleCategory = {
-  scale: d3.ScaleBand<string>,
-  categories: Record<string, ScaleNumeric>
+export type ScaleCategorical = {
+  scale: d3.ScaleBand<string>, // The main categorical scale
+  categories: Record<string, ScaleNumeric> // The numerical scales within each category
 }
 
 export type ScaleOutput = HasAllKeys<ChartType, {
   default: XY<ScaleNumeric>,
-  categoricalX: { x: ScaleCategory } & { y: ScaleNumeric },
-  categoricalY: { x: ScaleNumeric } & { y: ScaleCategory },
-  categoricalXY: { x: ScaleCategory } & { y: ScaleCategory },
+  categoricalX: { x: ScaleCategorical } & { y: ScaleNumeric },
+  categoricalY: { x: ScaleNumeric } & { y: ScaleCategorical },
+  categoricalXY: { x: ScaleCategorical } & { y: ScaleCategorical },
 }>
+
+export const categoricalChartTypes: XY<ChartType[]> = {
+  x: ["categoricalX", "categoricalXY"],
+  y: ["categoricalY", "categoricalXY"],
+}
 
 export const processScaleArgs = <M>(
   args: ScaleArgsParsed, prevOutput: PrevOutput<M>, categories: Categories["categoricalXY"]
@@ -126,12 +131,6 @@ export const processScaleArgs = <M>(
       .domain([ axisInitial.start, axisInitial.end ])
       .range([ axisRange.start, axisRange.end ]);
   });
-
-  // categorical scales
-  const categoricalChartTypes: XY<ChartType[]> = {
-    x: ["categoricalX", "categoricalXY"],
-    y: ["categoricalY", "categoricalXY"],
-  }
 
   return makeObjXY(axis => {
     if (!categoricalChartTypes[axis].includes(prevOutput.chartType)) {

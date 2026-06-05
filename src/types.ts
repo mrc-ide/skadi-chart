@@ -12,7 +12,6 @@ export type Point = XY<number>
 
 export type CategoricalChartType = "categoricalX" | "categoricalY" | "categoricalXY"
 export type ChartType = "default" | CategoricalChartType
-export type NewDiscriminateChartType<T> = null
 
 
 
