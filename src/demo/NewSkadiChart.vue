@@ -74,10 +74,6 @@ const chartContainers: Record<ChartType, typeof numericalAxes> = {
   categoricalY: categoricalYAxis,
 };
 
-const clearChart = (chartType: ChartType) => {
-  chartContainers[chartType].value?.replaceChildren();
-};
-
 const renderChart = (chartType: ChartType) => {
   const container = chartContainers[chartType].value;
 
@@ -158,10 +154,6 @@ onMounted(() => {
     chartTypes.forEach((chartType) => {
       if (selectedChartTypes.includes(chartType) && !oldChartTypes.includes(chartType)) {
         renderChart(chartType);
-      }
-
-      if (!selectedChartTypes.includes(chartType) && oldChartTypes.includes(chartType)) {
-        clearChart(chartType);
       }
     });
   }, {
