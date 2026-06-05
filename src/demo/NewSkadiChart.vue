@@ -1,13 +1,16 @@
 <template>
-  <h1>Axes layer</h1>
-  <div style="width: 500px">
-    <VueSelect
-      v-model="selectedChartTypes"
-      :options="chartTypeOptions"
-      is-multi
-      placeholder="Select chart types"
-    />
+  <div class="chart-type-container">
+    <label>chartTypes:</label>
+    <div style="width: 500px">
+      <VueSelect
+        v-model="selectedChartTypes"
+        :options="chartTypeOptions"
+        is-multi
+        placeholder="Select chart types"
+      />
+    </div>
   </div>
+  <h1>Axes layer</h1>
   <div class="charts-container">
     <div v-if="selectedChartTypes.includes('default')">
       <h2>Numerical axes (default)</h2>
@@ -39,6 +42,12 @@
 .chart {
   width: calc(50dvw - var(--chart-gap));
   height: 500px;
+}
+
+.chart-type-container {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 </style>
 
