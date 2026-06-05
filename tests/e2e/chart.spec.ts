@@ -57,7 +57,7 @@ class NewSkadiChartTest {
 };
 
 test("chart with categorical x and y axes", async ({ page }) => {
-  await new NewSkadiChartTest(page, "chartOnlyAxesNew")
+  await new NewSkadiChartTest(page, "categoricalXYAxes")
     .expectAxes({
       x: 4, // 4 = 3 numerical axes (one for each band) plus 1 main categorical axis
       y: 3, // 3 = 2 numerical axes (one for each band) plus 1 main categorical axis
