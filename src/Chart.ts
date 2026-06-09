@@ -37,7 +37,7 @@ type PartialChartOptions = {
 // large values and standard form for small values, 0.00000026 -> 2.6e-7
 const formatLarge = d3.format('.2~s');
 const formatSmall = d3.format('.2~g');
-const defaultFormatter = (val: number) => Math.abs(val) < 1
+export const defaultFormatter = (val: number) => Math.abs(val) < 1
   ? formatSmall(val)
   : formatLarge(val)
 
