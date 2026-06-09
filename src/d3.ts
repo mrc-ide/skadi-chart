@@ -8,3 +8,4 @@ export { line, type Line } from "d3-shape";
 export { create, type BaseType, type Selection, type ClientPointEvent, pointer } from "d3-selection";
 export { brush, type D3BrushEvent } from "d3-brush";
 export { scaleBand, scaleLinear, scaleLog, type NumberValue, type ScaleBand, type ScaleContinuousNumeric } from "d3-scale";
+export { format } from "d3-format";

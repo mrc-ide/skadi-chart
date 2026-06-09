@@ -33,6 +33,14 @@ type PartialChartOptions = {
   },
 }
 
+// an SI-prefix with 2 significant figures and no trailing zeros, 42e6 -> 42M for
+// large values and standard form for small values, 0.00000026 -> 2.6e-7
+const formatLarge = d3.format('.2~s');
+const formatSmall = d3.format('.2~g');
+export const defaultFormatter = (val: number) => Math.abs(val) < 1
+  ? formatSmall(val)
+  : formatLarge(val)
+
 export class Chart<Metadata = any> {
   id: string;
   optionalLayers: AllOptionalLayers[] = [];
@@ -41,8 +49,8 @@ export class Chart<Metadata = any> {
     animationDuration: 350,
     tickConfig: {
       numerical: {
-        x: { specifier: ".2~s" }, // an SI-prefix with 2 significant figures and no trailing zeros, 42e6 -> 42M
-        y: { specifier: ".2~s" },
+        x: { formatter: defaultFormatter },
+        y: { formatter: defaultFormatter },
       },
       categorical: { x: {}, y: {} },
     } as LayerArgs["globals"]["tickConfig"],
