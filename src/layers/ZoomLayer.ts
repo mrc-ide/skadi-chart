@@ -11,6 +11,7 @@ export class ZoomLayer extends OptionalLayer {
   zooming = false;
   selectionMask: D3Selection<SVGRectElement> | null = null;
   overlay: D3Selection<SVGRectElement> | null = null;
+  handleZoom: (zoomProperties: ZoomProperties) => Promise<void> = async () => {};
 
   constructor(public options: ZoomOptions) {
     super();
@@ -38,27 +39,6 @@ export class ZoomLayer extends OptionalLayer {
     } else {
       return [[x0, y0], [x1, y1]];
     }
-  };
-
-  private handleZoom = async (zoomProperties: ZoomProperties, layerArgs: LayerArgs) => {
-    if (this.zooming) return;
-    this.zooming = true;
-
-    const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.numericalScales;
-
-    layerArgs.optionalLayers.forEach(layer => layer.beforeZoom(zoomProperties));
-
-    // updates the scales which are implicitly used by a lot of other
-    // components
-    if (zoomProperties.x) scaleX.domain(zoomProperties.x);
-    if (zoomProperties.y) scaleY.domain(zoomProperties.y);
-
-    const promises: Promise<void>[] = [];
-    layerArgs.optionalLayers.forEach(layer => promises.push(layer.zoom(zoomProperties)));
-    await Promise.all(promises);
-
-    layerArgs.optionalLayers.forEach(layer => layer.afterZoom(zoomProperties));
-    this.zooming = false;
   };
 
   private handleBrushEnd = (event: d3.D3BrushEvent<Point>, brushLayer: D3Selection<SVGGElement>, layerArgs: LayerArgs) => {
@@ -99,7 +79,7 @@ export class ZoomLayer extends OptionalLayer {
       y: [extentYStart, extentYEnd],
       eventType: "brush"
     };
-    this.handleZoom(zoomProperties, layerArgs);
+    this.handleZoom(zoomProperties);
   };
 
   private handleBrushMove = (event: d3.D3BrushEvent<Point>, layerArgs: LayerArgs) => {
@@ -182,7 +162,27 @@ export class ZoomLayer extends OptionalLayer {
       .style("display", "none")
       .style("mask-image", `url(#${overlayMaskId}), url(#${selectionMaskId})`)
       .style("mask-composite", "subtract") as any as D3Selection<SVGRectElement>;
-    
+
+    this.handleZoom = async (zoomProperties: ZoomProperties) => {
+      if (this.zooming) return;
+      this.zooming = true;
+
+      const { x: scaleX, y: scaleY } = layerArgs.scaleConfig.numericalScales;
+
+      layerArgs.optionalLayers.forEach(layer => layer.beforeZoom(zoomProperties));
+
+      // updates the scales which are implicitly used by a lot of other
+      // components
+      if (zoomProperties.x) scaleX.domain(zoomProperties.x);
+      if (zoomProperties.y) scaleY.domain(zoomProperties.y);
+
+      const promises: Promise<void>[] = [];
+      layerArgs.optionalLayers.forEach(layer => promises.push(layer.zoom(zoomProperties)));
+      await Promise.all(promises);
+
+      layerArgs.optionalLayers.forEach(layer => layer.afterZoom(zoomProperties));
+      this.zooming = false;
+    };
 
     d3Brush.on("start", () => layerArgs.optionalLayers.forEach(l => l.brushStart()));
     d3Brush.on("brush", e => this.handleBrushMove(e, layerArgs));
@@ -205,6 +205,6 @@ export class ZoomLayer extends OptionalLayer {
     }
 
     layerArgs.coreLayers[LayerType.Svg]
-      .on("dblclick",() => this.handleZoom(dblClickZoomProperties, layerArgs));
+      .on("dblclick",() => this.handleZoom(dblClickZoomProperties));
   };
 };
