@@ -3,7 +3,7 @@ import { AxesLayer } from "./layers/AxesLayer";
 import { TracesLayer, TracesOptions } from "./layers/TracesLayer";
 import { ZoomLayer, ZoomOptions } from "./layers/ZoomLayer";
 import { TooltipHtmlCallback, TooltipsLayer } from "./layers/TooltipsLayer";
-import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, ZoomExtents, PartialScales, Scales, ScatterPoints, XY, ScaleNumeric, AxisType, CategoricalScaleConfig, ClipPathBounds, TickConfig } from "./types";
+import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, ZoomExtents, PartialScales, Scales, ScatterPoints, XY, ScaleNumeric, AxisType, CategoricalScaleConfig, ClipPathBounds, TickConfig, ZoomProperties } from "./types";
 import { LayerType, LifecycleHooks, OptionalLayer } from "./layers/Layer";
 import { GridLayer, GridOptions } from "./layers/GridLayer";
 import html2canvas from "html2canvas";
@@ -62,6 +62,7 @@ export class Chart<Metadata = any> {
     x: { start: -Infinity, end: Infinity },
     y: { start: -Infinity, end: Infinity }
   };
+  handleZoom: (zoomProperties: ZoomProperties) => Promise<void> = async () => {};
 
   constructor(options?: PartialChartOptions) {
     this.options = {
@@ -421,6 +422,9 @@ export class Chart<Metadata = any> {
     baseElement.childNodes.forEach(n => n.remove());
 
     this.optionalLayers.forEach(l => l.draw(layerArgs, initialDomain));
+
+    const zoomLayer = this.optionalLayers.find(l => l.type === LayerType.Zoom) as ZoomLayer | undefined ;
+    if (zoomLayer) this.handleZoom = zoomLayer.handleZoom;
 
     baseElement.append(layerArgs.coreLayers[LayerType.Svg].node()!);
   };
