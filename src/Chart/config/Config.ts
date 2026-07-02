@@ -2,7 +2,8 @@ import { ChartType, MixNewFlags } from "@/types";
 import {
   AxisArgs,
   AxisConfig,
-  Categories,
+  CategoriesArgs,
+  CategoriesConfig,
   CurrFlags,
   CurrOutput,
   CurrState,
@@ -16,7 +17,7 @@ import { doXY, makeObjXY } from "@/helpers";
 
 export class Config<M, T extends ChartType, Flags extends CurrFlags> {
   private axes: AxisConfig = { x: { label: { text: "", padding: 50 } }, y: { label: { text: "", padding: 40 } } };
-  private categories: Categories["categoricalXY"] = { x: [], y: [] };
+  private categories: CategoriesConfig["categoricalXY"] = { x: { labels: [], innerPadding: 0.1 }, y: { labels: [], innerPadding: 0.1 } };
   private scales: ScaleOutput[ChartType] | null = null;
 
   private constructor(private prevOutput: PrevOutput<M>) {};
@@ -40,20 +41,25 @@ export class Config<M, T extends ChartType, Flags extends CurrFlags> {
     return this as This<M, T, Flags>;
   }
 
-  configureCategories(args: Categories[T]) {
-    if ("x" in args && args.x.length > 0) {
-      this.categories.x = args.x;
-    }
-    if ("y" in args && args.y.length > 0) {
-      this.categories.y = args.y;
-    }
+  configureCategories(args: CategoriesArgs[T]) {
+    doXY(axis => {
+      if (axis in args) {
+        const { labels, innerPadding } = (args as CategoriesArgs["categoricalXY"])[axis];
+        if (labels.length > 0) {
+          this.categories[axis].labels = labels;
+          if (innerPadding !== undefined) {
+            this.categories[axis].innerPadding = innerPadding;
+          }
+        }
+      }
+    });
     type NewFlags = MixNewFlags<CurrFlags, Flags, { hasConfiguredCategories: true }>
     return this as This<M, T, NewFlags>;
   };
 
   configureScales(scaleArgs: ScaleArgs = {}) {
     doXY(axis => {
-      if (categoricalChartTypes[axis].includes(this.prevOutput.chartType) && !this.categories[axis].length) {
+      if (categoricalChartTypes[axis].includes(this.prevOutput.chartType) && !this.categories[axis].labels.length) {
         throw new Error("Categories must be configured before scales")
       }
     });

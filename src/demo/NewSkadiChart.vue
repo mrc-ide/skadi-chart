@@ -118,8 +118,14 @@ const renderChart = (chartType: ChartType) => {
         y: { label: { text: "Y Category", padding: 50 } },
       })
       .configureCategories({
-        x: ["A", "B", "C"],
-        y: ["Category A", "Category B"],
+        x: {
+          labels: ["A", "B", "C"],
+          innerPadding: 0.2,
+        },
+        y: {
+          labels: ["Category A", "Category B"],
+          innerPadding: 0.25,
+        },
       })
       .configureScales({
         x: { extents: { start: -20, end: 20 } },
@@ -140,9 +146,7 @@ const renderChart = (chartType: ChartType) => {
         x: { label: { text: "X Category", padding: 70 } },
         y: { label: { text: "Value" } },
       })
-      .configureCategories({
-        x: ["A", "B", "C"],
-      })
+      .configureCategories({ x: { labels: ["A", "B", "C"] } })
       .configureScales({
         x: { extents: { start: 0, end: 40 } },
         y: { extents: { start: -500, end: 500 } },
@@ -162,7 +166,7 @@ const renderChart = (chartType: ChartType) => {
       y: { label: { text: "Y Category" } },
     })
     .configureCategories({
-      y: ["Category A", "Category B"],
+      y: { labels: ["Category A", "Category B"], innerPadding: 0.1 },
     })
     .configureScales({
       x: { extents: { start: 0, end: 40 } },

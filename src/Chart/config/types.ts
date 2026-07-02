@@ -40,14 +40,6 @@ export type This<M, T extends ChartType, Flags extends CurrFlags> =
   Omit<Config<M, T, Flags>, MethodsToRemove<T, Flags>>
 
 
-
-export type Categories = HasAllKeys<ChartType, {
-  default: never,
-  categoricalX: { x: string[] },
-  categoricalY: { y: string[] },
-  categoricalXY: { x: string[], y: string[] },
-}>
-
 export type AxisArgs = Partial<XY<{
   label?: {
     text: string,
@@ -62,10 +54,27 @@ export type AxisConfig = XY<{
 }>;
 
 
+type CategoriesPropertiesByChartType<Props> = HasAllKeys<ChartType, {
+  default: never,
+  categoricalX: { x: Props },
+  categoricalY: { y: Props },
+  categoricalXY: XY<Props>,
+}>
+
+export type CategoriesArgs = CategoriesPropertiesByChartType<{
+  labels: string[],
+  innerPadding?: number,
+}>
+
+export type CategoriesConfig = CategoriesPropertiesByChartType<{
+  labels: string[],
+  innerPadding: number,
+}>
+
 
 export type CurrState<T extends ChartType> = {
   axes: AxisConfig,
-  categories: Categories[T],
+  categories: CategoriesConfig[T],
   scales: ScaleOutput[T],
 }
 
