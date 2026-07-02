@@ -32,7 +32,7 @@ export class Config<M, T extends ChartType, Flags extends CurrFlags> {
     doXY(axis => {
       if (args[axis]?.label) {
         this.axes[axis].label.text = args[axis].label.text;
-        if (args[axis].label.padding) {
+        if (args[axis].label.padding !== undefined) {
           this.axes[axis].label.padding = args[axis].label.padding;
         }
       }
