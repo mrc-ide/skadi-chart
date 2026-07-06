@@ -67,6 +67,8 @@ export class AxesLayer<M> extends Layer<M, null> {
       };
       this.zoomCallbacks.push(zoom);
     }
+
+    this.drawOriginLine(axis, scale, addZoom);
   };
 
   private drawCategorical = (axis: XorY, scaleCategorical: ScaleCategorical) => {
@@ -93,6 +95,56 @@ export class AxesLayer<M> extends Layer<M, null> {
       this.drawNumerical(axis, scale, false);
     });
   };
+
+  // Draw a line at the origin (where axis value is 0) of a numerical scale.
+  // This line will be made up of 1 or more segments, since if the other axis is categorical,
+  // inter-segment gaps are required for skipping over the padding of the categorical bands.
+  private drawOriginLine = (axis: XorY, numScale: ScaleNumeric, addZoom: boolean) => {
+    const originSC = numScale(0);
+    const [minSC, maxSC] = d3.extent(numScale.range()) as [number, number];
+    // If origin is out of range, don't draw the line. Otherwise we might draw a line onto another band.
+    if (originSC < minSC || originSC > maxSC) return;
+
+    // The 'main' scale is different from the numerical scale if the numerical scale belongs to a band.
+    const mainScaleConfig = this.prevOutput.configState.scales[axis];
+    const mainScale = "categories" in mainScaleConfig ? mainScaleConfig.scale : numScale;
+    // Due to the clip path, if the origin is at the edge of the chart,
+    // a thicker stroke width is required to achieve the same visual thickness.
+    const strokeWidthBase = 0.5;
+    const strokeWidth = mainScale.range().includes(Math.round(originSC)) ? strokeWidthBase * 2 : strokeWidthBase;
+
+    // Get all the numerical scales for the other axis, termed the 'foreign axis'.
+    // Categorical axes contain multiple numerical scales; non-categorical axes contain exactly one.
+    const foreignAxis = axis === "x" ? "y" : "x";
+    const foreignMainScale = this.prevOutput.configState.scales[foreignAxis];
+    const foreignNumScales: ScaleNumeric[] =
+      "categories" in foreignMainScale
+        ? Object.values(foreignMainScale.categories)
+        : [foreignMainScale];
+
+    foreignNumScales.forEach(scale => {
+      const lineSegment = this.coreLayers[CoreLayer.BaseLayer].append("g").append("line")
+        .attr(`${axis}1`, originSC)
+        .attr(`${axis}2`, originSC)
+        .attr(`${foreignAxis}1`, scale.range()[0])
+        .attr(`${foreignAxis}2`, scale.range()[1])
+        .style("stroke", "darkgrey").style("stroke-width", strokeWidth);
+
+      if (addZoom) {
+        const zoom = async () => {
+          const newOriginSC = numScale(0);
+          const newStrokeWidth = mainScale.range().includes(Math.round(newOriginSC)) ? strokeWidthBase * 2 : strokeWidthBase;
+          await lineSegment.transition()
+            .duration(animationDuration)
+            .attr(`${axis}1`, newOriginSC)
+            .attr(`${axis}2`, newOriginSC)
+            .style("stroke-width", newStrokeWidth)
+            .end();
+        };
+        this.zoomCallbacks.push(zoom);
+      }
+    });
+  }
 
   private addLabels = () => {
     const { getHtmlId, bounds } = this.prevOutput.baseState;
