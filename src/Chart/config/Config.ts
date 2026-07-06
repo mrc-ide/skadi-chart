@@ -2,8 +2,7 @@ import { ChartType, MixNewFlags } from "@/types";
 import {
   AxisArgs,
   AxisConfig,
-  CategoriesArgs,
-  CategoriesConfig,
+  Categories,
   CurrFlags,
   CurrOutput,
   CurrState,
@@ -16,8 +15,11 @@ import { categoricalChartTypes, processScaleArgs, ScaleArgs, ScaleArgsParsed, Sc
 import { doXY, makeObjXY } from "@/helpers";
 
 export class Config<M, T extends ChartType, Flags extends CurrFlags> {
-  private axes: AxisConfig = { x: { label: { text: "", padding: 50 } }, y: { label: { text: "", padding: 40 } } };
-  private categories: CategoriesConfig["categoricalXY"] = { x: { labels: [], innerPadding: 0.1 }, y: { labels: [], innerPadding: 0.1 } };
+  private axes: AxisConfig["categoricalXY"] = {
+    x: { label: { text: "", padding: 50 }, innerPadding: 0.1 },
+    y: { label: { text: "", padding: 40 }, innerPadding: 0.1 },
+  };
+  private categories: Categories["categoricalXY"] = { x: [], y: [] };
   private scales: ScaleOutput[ChartType] | null = null;
 
   private constructor(private prevOutput: PrevOutput<M>) {};
@@ -29,7 +31,7 @@ export class Config<M, T extends ChartType, Flags extends CurrFlags> {
     return new Config<M, T, NewFlags>(prevOutput) as This<M, T, NewFlags>;
   };
 
-  configureAxes(args: AxisArgs = {}) {
+  configureAxes(args: AxisArgs[T] = {}) {
     doXY(axis => {
       if (args[axis]?.label) {
         this.axes[axis].label.text = args[axis].label.text;
@@ -37,29 +39,27 @@ export class Config<M, T extends ChartType, Flags extends CurrFlags> {
           this.axes[axis].label.padding = args[axis].label.padding;
         }
       }
+      if (args[axis] && "innerPadding" in args[axis] && args[axis].innerPadding !== undefined) {
+        this.axes[axis].innerPadding = args[axis].innerPadding;
+      }
     });
     return this as This<M, T, Flags>;
   }
 
-  configureCategories(args: CategoriesArgs[T]) {
-    doXY(axis => {
-      if (axis in args) {
-        const { labels, innerPadding } = (args as CategoriesArgs["categoricalXY"])[axis];
-        if (labels.length > 0) {
-          this.categories[axis].labels = labels;
-          if (innerPadding !== undefined) {
-            this.categories[axis].innerPadding = innerPadding;
-          }
-        }
-      }
-    });
+  configureCategories(args: Categories[T]) {
+    if ("x" in args && args.x.length > 0) {
+      this.categories.x = args.x;
+    }
+    if ("y" in args && args.y.length > 0) {
+      this.categories.y = args.y;
+    }
     type NewFlags = MixNewFlags<CurrFlags, Flags, { hasConfiguredCategories: true }>
     return this as This<M, T, NewFlags>;
   };
 
   configureScales(scaleArgs: ScaleArgs = {}) {
     doXY(axis => {
-      if (categoricalChartTypes[axis].includes(this.prevOutput.chartType) && !this.categories[axis].labels.length) {
+      if (categoricalChartTypes[axis].includes(this.prevOutput.chartType) && !this.categories[axis].length) {
         throw new Error("Categories must be configured before scales")
       }
     });
@@ -73,7 +73,7 @@ export class Config<M, T extends ChartType, Flags extends CurrFlags> {
         scaleArgsParsed[axis].extents.end = scaleArgs[axis].extents.end;
       }
     });
-    this.scales = processScaleArgs(scaleArgsParsed, this.prevOutput, this.categories);
+    this.scales = processScaleArgs(scaleArgsParsed, this.prevOutput, this.categories, this.axes);
     type NewFlags = MixNewFlags<CurrFlags, Flags, { hasConfiguredScale: true }>
     return this as This<M, T, NewFlags>;
   };
