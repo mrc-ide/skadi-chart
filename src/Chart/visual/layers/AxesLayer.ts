@@ -101,7 +101,7 @@ export class AxesLayer<M> extends Layer<M, null> {
   // inter-segment gaps are required for skipping over the padding of the categorical bands.
   private drawOriginLine = (axis: XorY, numScale: ScaleNumeric, addZoom: boolean) => {
     const originSC = numScale(0);
-    const [minSC, maxSC] = d3.extent(numScale.range()) as [number, number];
+    const [minSC, maxSC] = numScale.range().sort((a, b) => a - b);
     // If origin is out of range, don't draw the line. Otherwise we might draw a line onto another band.
     if (originSC < minSC || originSC > maxSC) return;
 

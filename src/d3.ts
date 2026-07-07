@@ -3,7 +3,6 @@ import { transition } from "d3-transition";
 select.prototype.transition = transition;
 
 export { select };
-export { extent } from "d3-array";
 export { type Axis, axisBottom, axisLeft } from "d3-axis";
 export { line, type Line } from "d3-shape";
 export { create, type BaseType, type Selection, type ClientPointEvent, pointer } from "d3-selection";
