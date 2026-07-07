@@ -72,6 +72,23 @@ export type AxisConfig = XY<{
   }
 }>;
 
+type TickConfigBase<Domain> = {
+  padding: number,
+  size: number,
+  formatter?: (value: Domain, index: number) => string,
+} & (Domain extends number ? {
+  count: number,
+  specifier: string,
+  enableMathJax: boolean,
+} : {})
+export type TickConfigCategorical = { categorical: TickConfigBase<string> }
+export type TickConfigDefault = { numerical: TickConfigBase<number> } & TickConfigCategorical
+export type TickConfig = AxisTypesByChartType<TickConfigDefault, TickConfigCategorical>
+
+type TickArgsBase<Domain> = Partial<TickConfigBase<Domain>>
+export type TickArgsCategorical = { categorical?: TickArgsBase<string> }
+export type TickArgsDefault = { numerical?: TickArgsBase<number> } & TickArgsCategorical
+export type TickArgs = AxisTypesByChartType<TickArgsDefault, TickArgsCategorical, "optional">
 
 
 export type CurrState<T extends ChartType> = {
