@@ -40,13 +40,24 @@ export type This<M, T extends ChartType, Flags extends CurrFlags> =
   Omit<Config<M, T, Flags>, MethodsToRemove<T, Flags>>
 
 
+type AxisTypesByChartType<
+  Default,
+  Categorical,
+  AxisKeyMode extends "required" | "optional" = "required"
+> = HasAllKeys<ChartType, {
+  default: Default extends never ? never : XY<Default>,
+  categoricalX: { x: Categorical, y: Default },
+  categoricalY: { x: Default, y: Categorical },
+  categoricalXY: Categorical extends never ? never : XY<Categorical>,
+} extends infer Types ? {
+  [T in keyof Types]: AxisKeyMode extends "optional"
+    ? Partial<Types[T]> // In 'optional' mode, each axis can be omitted.
+    : Types[T]
+} : never>
 
-export type Categories = HasAllKeys<ChartType, {
-  default: never,
-  categoricalX: { x: string[] },
-  categoricalY: { y: string[] },
-  categoricalXY: { x: string[], y: string[] },
-}>
+
+export type Categories = AxisTypesByChartType<never, string[]>
+
 
 export type AxisArgs = Partial<XY<{
   label?: {
