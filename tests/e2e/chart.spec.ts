@@ -155,7 +155,53 @@ test("chart with categorical y axis", async ({ page }) => {
       y: "Y Category",
     })
     .expectTicks({
-      y: { categorical: true, text: ["Category A", "Category B"] },
+      y: { categorical: true, text: ["Cat A", "Cat B"] },
     })
     .end();
+});
+
+test("chart ticks: numerical count and specifier", async ({ page }) => {
+  // Configured with count: 5, specifier: ".1f" over a [-500, 500] extent -
+  // d3 resolves this to a "nice" step of 200, producing exactly 5 ticks.
+  // d3-format renders negative numbers with U+2212 MINUS SIGN rather than
+  // an ASCII hyphen, so we must match that character here; this doesn't
+  // apply to categorical tick text elsewhere, which is plain user-supplied
+  // strings, not numbers passed through a d3-format specifier.
+  await new NewSkadiChartTest(page, "numericalAxes")
+    .expectTicks({
+      y: { count: 5, text: ["\u2212400.0", "\u2212200.0", "0.0", "200.0", "400.0"] },
+    })
+    .end();
+});
+
+test("chart ticks: numerical count nested in categorical axis", async ({ page }) => {
+  // Configured with count: 3 over a [-20, 20] extent - d3 resolves this to
+  // a "nice" step of 10, producing 5 ticks (vs. 9 with the default count).
+  await new NewSkadiChartTest(page, "categoricalXYAxes")
+    .expectTicks({
+      x: { categorical: false, count: 5 },
+    })
+    .end();
+});
+
+test("chart ticks: custom numerical formatter", async ({ page }) => {
+  const test = new NewSkadiChartTest(page, "categoricalXAxis");
+  const yAxis = (await test.selectAxis("y", false))[0];
+  const tickTexts = await yAxis.locator(".tick text").allTextContents();
+  expect(tickTexts.length).toBeGreaterThan(0);
+  for (const text of tickTexts) {
+    expect(text).toMatch(/^v=-?\d+$/);
+  }
+});
+
+test("chart ticks: MathJax rendering", async ({ page }) => {
+  const test = new NewSkadiChartTest(page, "numericalAxes");
+  const xAxis = (await test.selectAxis("x", false))[0];
+  const tickTexts = await xAxis.locator(".tick text").allTextContents();
+  // The plain <text> tick labels are left blank; MathJax renders into a
+  // sibling <span class="tick-mathjax"> instead, asynchronously.
+  expect(tickTexts.every((text) => text === "")).toBe(true);
+  const mathJaxTicks = xAxis.locator(".tick-mathjax mjx-container");
+  await expect(mathJaxTicks.first()).toBeVisible();
+  await expect(mathJaxTicks).toHaveCount(await xAxis.locator(".tick").count());
 });

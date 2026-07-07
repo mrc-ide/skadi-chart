@@ -66,11 +66,55 @@ export type AxisConfig = HasAllKeys<ChartType, {
   categoricalXY: { x: AxisConfigCategorical } & { y: AxisConfigCategorical },
 }>
 
+// Shared per-domain shape (mirrors legacy's TickConfig<Domain> in src/types.ts): numerical and
+// categorical only need to say how they differ (formatter's value type, and count/specifier/
+// enableMathJax being numerical-only) rather than repeating padding/size/formatter twice.
+// `formatter` is intentionally optional on both storage (Config) types: if unset, AxesLayer never
+// calls d3's `.tickFormat(...)`, so d3-axis falls back to its own built-in default
+// (scale.tickFormat(...) for numerical scales, which already respects `specifier`/`count`;
+// identity for band/categorical scales).
+type TickArgsBase<Domain> = {
+  padding?: number,
+  size?: number,
+  formatter?: (value: Domain, index: number) => string,
+} & (Domain extends number ? { count?: number, specifier?: string, enableMathJax?: boolean } : {})
+
+export type TickArgsNumerical = TickArgsBase<number>
+export type TickArgsCategorical = TickArgsBase<string>
+export type TickArgsAxisNumerical = { numerical?: TickArgsNumerical }
+export type TickArgsAxisCategorical = { categorical?: TickArgsCategorical, numerical?: TickArgsNumerical }
+
+export type TickArgs = HasAllKeys<ChartType, {
+  default: Partial<XY<TickArgsAxisNumerical>>,
+  categoricalX: Partial<{ x: TickArgsAxisCategorical } & { y: TickArgsAxisNumerical }>,
+  categoricalY: Partial<{ x: TickArgsAxisNumerical } & { y: TickArgsAxisCategorical }>,
+  categoricalXY: Partial<{ x: TickArgsAxisCategorical } & { y: TickArgsAxisCategorical }>,
+}>
+
+type TickConfigBase<Domain> = {
+  padding: number,
+  size: number,
+  formatter?: (value: Domain, index: number) => string,
+} & (Domain extends number ? { count: number, specifier: string, enableMathJax: boolean } : {})
+
+export type TickConfigNumerical = TickConfigBase<number>
+export type TickConfigCategorical = TickConfigBase<string>
+export type TickConfigAxisNumerical = { numerical: TickConfigNumerical }
+export type TickConfigAxisCategorical = { categorical: TickConfigCategorical, numerical: TickConfigNumerical }
+
+export type TickConfig = HasAllKeys<ChartType, {
+  default: XY<TickConfigAxisNumerical>,
+  categoricalX: { x: TickConfigAxisCategorical } & { y: TickConfigAxisNumerical },
+  categoricalY: { x: TickConfigAxisNumerical } & { y: TickConfigAxisCategorical },
+  categoricalXY: { x: TickConfigAxisCategorical } & { y: TickConfigAxisCategorical },
+}>
+
 
 export type CurrState<T extends ChartType> = {
   axes: AxisConfig[T],
   categories: Categories[T],
   scales: ScaleOutput[T],
+  ticks: TickConfig[T],
 }
 
 export type CurrOutputs<M> = {

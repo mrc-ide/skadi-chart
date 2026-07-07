@@ -7,12 +7,25 @@ import {
   CurrOutput,
   CurrState,
   DefaultCurrFlags,
+  TickArgs,
+  TickConfig,
+  TickConfigNumerical,
   This
 } from "./types";
 import { CurrFlags as PrevFlags, CurrOutput as PrevOutput } from "../data/types";
 import { Visual } from "../visual/Visual";
 import { categoricalChartTypes, processScaleArgs, ScaleArgs, ScaleArgsParsed, ScaleOutput } from "./scales";
 import { doXY, makeObjXY } from "@/helpers";
+
+const defaultNumericalSpecifier = ".2~s"; // an SI-prefix with 2 significant figures and no trailing zeros, 42e6 -> 42M
+
+// A responsive default tick count, based on the size (in svg pixels) of the axis's own relevant
+// dimension (bounds.width for x, bounds.height for y).
+const getDefaultTickCount = (size: number) => {
+  if (size < 250) return 3;
+  if (size < 450) return 6;
+  return 10;
+};
 
 export class Config<M, T extends ChartType, Flags extends CurrFlags> {
   private axes: AxisConfig["categoricalXY"] = {
@@ -21,8 +34,24 @@ export class Config<M, T extends ChartType, Flags extends CurrFlags> {
   };
   private categories: Categories["categoricalXY"] = { x: [], y: [] };
   private scales: ScaleOutput[ChartType] | null = null;
+  private ticks: TickConfig[T];
 
-  private constructor(private prevOutput: PrevOutput<M>) {};
+  private constructor(private prevOutput: PrevOutput<M>) {
+    const { bounds } = prevOutput.baseState;
+    this.ticks = makeObjXY(axis => {
+      const isCategorical = categoricalChartTypes[axis].includes(prevOutput.chartType);
+      const numerical: TickConfigNumerical = {
+        padding: isCategorical ? 6 : 12,
+        size: 0,
+        count: getDefaultTickCount(axis === "x" ? bounds.width : bounds.height),
+        specifier: defaultNumericalSpecifier,
+        enableMathJax: false,
+      };
+      return isCategorical
+        ? { numerical, categorical: { padding: 30, size: 0 } }
+        : { numerical };
+    }) as TickConfig[T];
+  };
 
   static start = <M, T extends ChartType, PFlags extends PrevFlags>(
     prevOutput: PrevOutput<M>
@@ -78,6 +107,22 @@ export class Config<M, T extends ChartType, Flags extends CurrFlags> {
     return this as This<M, T, NewFlags>;
   };
 
+  configureTicks(args: TickArgs[T] = {}) {
+    doXY(axis => {
+      const axisArgs = args[axis];
+      if (!axisArgs) return;
+      const axisTicks = this.ticks[axis];
+
+      if (axisArgs.numerical) {
+        axisTicks.numerical = { ...axisTicks.numerical, ...axisArgs.numerical };
+      }
+      if ("categorical" in axisArgs && axisArgs.categorical && "categorical" in axisTicks) {
+        axisTicks.categorical = { ...axisTicks.categorical, ...axisArgs.categorical };
+      }
+    });
+    return this as This<M, T, Flags>;
+  }
+
   startVisual() {
     if (!this.scales) {
       throw new Error("Scales must be configured before going into startVisual")
@@ -86,6 +131,7 @@ export class Config<M, T extends ChartType, Flags extends CurrFlags> {
       axes: this.axes,
       categories: this.categories,
       scales: this.scales,
+      ticks: this.ticks,
     };
     const output = {
       ...this.prevOutput,
