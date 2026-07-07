@@ -1,11 +1,13 @@
 import * as d3 from "@/d3";
 import { Layer } from "./Layer";
 import { ScaleNumeric, XorY } from "@/types";
-import { CurrOutput as PrevOutput } from "@/Chart/config/types";
+import { CategoricalTickConfig, CurrOutput as PrevOutput, NumericalTickConfig } from "@/Chart/config/types";
 import { CoreLayer, CoreLayers, VisualLayer } from "../types";
 import { ScaleCategorical } from "@/Chart/config/scales";
 import { getInner } from "@/Chart/base/utils";
 import { doXY } from "@/helpers";
+
+declare const MathJax: any;
 
 const animationDuration = 350;
 
@@ -25,31 +27,47 @@ export class AxesLayer<M> extends Layer<M, null> {
 
   draw = () => {
     if (this.prevOutput.chartType === "default") {
-      this.drawNumerical("x", this.prevOutput.configState.scales.x, true);
-      this.drawNumerical("y", this.prevOutput.configState.scales.y, true);
+      this.drawNumerical("x", this.prevOutput.configState.scales.x, this.prevOutput.configState.ticks.x.numerical, true);
+      this.drawNumerical("y", this.prevOutput.configState.scales.y, this.prevOutput.configState.ticks.y.numerical, true);
     } else if (this.prevOutput.chartType === "categoricalX") {
-      this.drawCategorical("x", this.prevOutput.configState.scales.x);
-      this.drawNumerical("y", this.prevOutput.configState.scales.y, true);
+      this.drawCategorical("x", this.prevOutput.configState.scales.x, this.prevOutput.configState.ticks.x);
+      this.drawNumerical("y", this.prevOutput.configState.scales.y, this.prevOutput.configState.ticks.y.numerical, true);
     } else if (this.prevOutput.chartType === "categoricalY") {
-      this.drawNumerical("x", this.prevOutput.configState.scales.x, true);
-      this.drawCategorical("y", this.prevOutput.configState.scales.y);
+      this.drawNumerical("x", this.prevOutput.configState.scales.x, this.prevOutput.configState.ticks.x.numerical, true);
+      this.drawCategorical("y", this.prevOutput.configState.scales.y, this.prevOutput.configState.ticks.y);
     } else {
-      this.drawCategorical("x", this.prevOutput.configState.scales.x);
-      this.drawCategorical("y", this.prevOutput.configState.scales.y);
+      this.drawCategorical("x", this.prevOutput.configState.scales.x, this.prevOutput.configState.ticks.x);
+      this.drawCategorical("y", this.prevOutput.configState.scales.y, this.prevOutput.configState.ticks.y);
     }
 
     this.addLabels();
   };
 
-  private drawNumerical = (axis: XorY, scale: ScaleNumeric, addZoom: boolean) => {
+  private drawNumerical = (
+    axis: XorY,
+    scale: ScaleNumeric,
+    tickConfig: NumericalTickConfig,
+    addZoom: boolean,
+  ) => {
     const { getHtmlId, bounds } = this.prevOutput.baseState;
     const inner = getInner(bounds);
     const translation = axis === "x"
       ? { x: 0, y: inner.y.end }
       : { x: inner.x.start, y: 0 };
     const axisConstructor = axis === "x" ? d3.axisBottom : d3.axisLeft;
+    const { count, specifier, padding, size, formatter, enableMathJax } = tickConfig;
 
-    const numericalAxis = axisConstructor(scale);
+    const numericalAxis = axisConstructor(scale)
+      .ticks(count, specifier)
+      .tickSize(size)
+      .tickPadding(padding);
+    if (formatter) {
+      if (!enableMathJax) {
+        numericalAxis.tickFormat((val: d3.NumberValue, i) => formatter(val as number, i));
+      } else {
+        numericalAxis.tickFormat(() => "");
+      }
+    }
     const axisGElement = this.coreLayers[CoreLayer.Svg]
       .append("g")
       .attr("id", `${axis}-${getHtmlId(VisualLayer.Axes)}`)
@@ -57,6 +75,34 @@ export class AxesLayer<M> extends Layer<M, null> {
       .attr("transform", `translate(${translation.x},${translation.y})`)
       .call(numericalAxis);
     axisGElement.select(".domain").style("stroke-opacity", 0);
+
+    if (formatter && enableMathJax) {
+      console.warn(
+        "enableMathJax is currently not compatible with zoom layer" +
+        " and is only available for the x axis"
+      );
+      axisGElement
+        .selectAll("g")
+        .data((numericalAxis.scale() as ScaleNumeric).ticks(count))
+        .append("foreignObject")
+        .attr("width", 50)
+        .attr("height", 50)
+        .attr("x", 0)
+        .attr("y", padding)
+        .append("xhtml:span")
+        .attr("class", "tick-mathjax")
+        .text((d, i) => formatter(d, i));
+      MathJax.typesetPromise().then(() => {
+        const spanNodes = this.coreLayers[CoreLayer.Svg]
+          .selectAll("span.tick-mathjax")
+          .nodes() as HTMLSpanElement[];
+        spanNodes.forEach(sn => {
+          const { width } = sn.getBoundingClientRect();
+          const foreignObject = sn.parentElement! as unknown as SVGForeignObjectElement;
+          foreignObject.x.baseVal.value = - width / 2;
+        });
+      });
+    }
 
     if (addZoom) {
       const zoom = async () => {
@@ -71,17 +117,26 @@ export class AxesLayer<M> extends Layer<M, null> {
     this.drawOriginLine(axis, scale, addZoom);
   };
 
-  private drawCategorical = (axis: XorY, scaleCategorical: ScaleCategorical) => {
+  private drawCategorical = (
+    axis: XorY,
+    scaleCategorical: ScaleCategorical,
+    tickConfig: { numerical: NumericalTickConfig, categorical: CategoricalTickConfig },
+  ) => {
     const { getHtmlId, bounds } = this.prevOutput.baseState;
     const inner = getInner(bounds);
     const translation = axis === "x"
       ? { x: 0, y: inner.y.end }
       : { x: inner.x.start, y: 0 };
     const axisConstructor = axis === "x" ? d3.axisBottom : d3.axisLeft;
-    const tickPadding = 30; // This will become a configurable option.
-    
+    const { padding, size, formatter } = tickConfig.categorical;
+
     const bandScale = scaleCategorical.scale; // The main, "outer" scale, containing all the bands
-    const categoricalAxis = axisConstructor(bandScale).tickPadding(tickPadding);
+    const categoricalAxis = axisConstructor(bandScale)
+      .tickSize(size)
+      .tickPadding(padding);
+    if (formatter) {
+      categoricalAxis.tickFormat((val: string, i) => formatter(val, i));
+    }
     const axisGElement = this.coreLayers[CoreLayer.Svg]
       .append("g")
       .attr("id", `${axis}-categorical-${getHtmlId(VisualLayer.Axes)}`)
@@ -92,7 +147,7 @@ export class AxesLayer<M> extends Layer<M, null> {
 
     const numericalScales = scaleCategorical.categories; // Each band's "inner" scale
     Object.entries(numericalScales).forEach(([_, scale]) => {
-      this.drawNumerical(axis, scale, false);
+      this.drawNumerical(axis, scale, tickConfig.numerical, false);
     });
   };
 

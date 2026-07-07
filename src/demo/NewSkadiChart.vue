@@ -102,6 +102,10 @@ const renderChart = (chartType: ChartType) => {
         x: { extents: { start: 0, end: 40 } },
         y: { extents: { start: -500, end: 500 } },
       })
+      .configureTicks({
+        x: { numerical: { count: 4, formatter: (v) => `$${v}$`, enableMathJax: true } },
+        y: { numerical: { specifier: ".1~f", padding: 12, size: 6 } },
+      })
       .startVisual()
       .addAxes()
       .startInteractive()
@@ -131,6 +135,15 @@ const renderChart = (chartType: ChartType) => {
         x: { extents: { start: -20, end: 20 } },
         y: { extents: { start: -500, end: 500 } },
       })
+      .configureTicks({
+        x: {
+          categorical: { formatter: (v) => `[${v}]` },
+          numerical: { count: 3 },
+        },
+        y: {
+          categorical: { padding: 40, size: 4 },
+        },
+      })
       .startVisual()
       .addAxes()
       .startInteractive()
@@ -150,6 +163,10 @@ const renderChart = (chartType: ChartType) => {
       .configureScales({
         x: { extents: { start: 0, end: 40 } },
         y: { extents: { start: -500, end: 500 } },
+      })
+      .configureTicks({
+        x: { categorical: { padding: 20, size: 4 } },
+        y: { numerical: { specifier: ".2~f" } },
       })
       .startVisual()
       .addAxes()
@@ -171,6 +188,10 @@ const renderChart = (chartType: ChartType) => {
     .configureScales({
       x: { extents: { start: 0, end: 40 } },
       y: { extents: { start: 0, end: 500 } },
+    })
+    .configureTicks({
+      x: { numerical: { count: 5 } },
+      y: { categorical: { formatter: (v) => v.replace("Category ", "") } },
     })
     .startVisual()
     .addAxes()
