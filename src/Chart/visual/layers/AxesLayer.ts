@@ -8,6 +8,7 @@ import { getInner } from "@/Chart/base/utils";
 import { doXY } from "@/helpers";
 
 const animationDuration = 350;
+export const originLineStrokeWidth = 1;
 
 export class AxesLayer<M> extends Layer<M, null> {
   private zoomCallbacks: (() => Promise<void>)[] = [];
@@ -108,10 +109,6 @@ export class AxesLayer<M> extends Layer<M, null> {
     // The 'main' scale is different from the numerical scale if the numerical scale belongs to a band.
     const mainScaleConfig = this.prevOutput.configState.scales[axis];
     const mainScale = "categories" in mainScaleConfig ? mainScaleConfig.scale : numScale;
-    // Due to the clip path, if the origin is at the edge of the chart,
-    // a thicker stroke width is required to achieve the same visual thickness.
-    const strokeWidthBase = 0.5;
-    const strokeWidth = mainScale.range().includes(Math.round(originSC)) ? strokeWidthBase * 2 : strokeWidthBase;
 
     // Get all the numerical scales for the other axis, termed the 'foreign axis'.
     // Categorical axes contain multiple numerical scales; non-categorical axes contain exactly one.
@@ -128,17 +125,16 @@ export class AxesLayer<M> extends Layer<M, null> {
         .attr(`${axis}2`, originSC)
         .attr(`${foreignAxis}1`, scale.range()[0])
         .attr(`${foreignAxis}2`, scale.range()[1])
-        .style("stroke", "darkgrey").style("stroke-width", strokeWidth);
+        .style("stroke", "darkgrey").style("stroke-width", originLineStrokeWidth);
 
       if (addZoom) {
         const zoom = async () => {
           const newOriginSC = numScale(0);
-          const newStrokeWidth = mainScale.range().includes(Math.round(newOriginSC)) ? strokeWidthBase * 2 : strokeWidthBase;
           await lineSegment.transition()
             .duration(animationDuration)
             .attr(`${axis}1`, newOriginSC)
             .attr(`${axis}2`, newOriginSC)
-            .style("stroke-width", newStrokeWidth)
+            .style("stroke-width", originLineStrokeWidth)
             .end();
         };
         this.zoomCallbacks.push(zoom);
