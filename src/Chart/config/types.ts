@@ -1,4 +1,4 @@
-import { CategoricalChartType, ChartType, HasAllKeys, Prettify, XY } from "@/types"
+import { CategoricalChartType, ChartType, HasAllKeys, Prettify, XorY, XY } from "@/types"
 import { Config } from "./Config"
 import { CurrFlags as PrevFlags, CurrOutputs as PrevOutputs } from "../data/types"
 import { ScaleOutput } from "./scales"
@@ -39,24 +39,28 @@ type MethodsToRemove<T extends ChartType, Flags extends CurrFlags> =
 export type This<M, T extends ChartType, Flags extends CurrFlags> =
   Omit<Config<M, T, Flags>, MethodsToRemove<T, Flags>>
 
+// When the per-axis type is never, that axis must be omitted.
+type XYOmitNever<X, Y> =
+  ([X] extends [never] ? {} : { x: X })
+  & ([Y] extends [never] ? {} : { y: Y })
 
-type AxisTypesByChartType<
+type PerAxisConfigByChartType<
   Default,
   Categorical,
   AxisKeyMode extends "required" | "optional" = "required"
 > = HasAllKeys<ChartType, {
-  default: Default extends never ? never : XY<Default>,
-  categoricalX: { x: Categorical, y: Default },
-  categoricalY: { x: Default, y: Categorical },
-  categoricalXY: Categorical extends never ? never : XY<Categorical>,
+  default: XYOmitNever<Default, Default>,
+  categoricalX: XYOmitNever<Categorical, Default>,
+  categoricalY: XYOmitNever<Default, Categorical>,
+  categoricalXY: XYOmitNever<Categorical, Categorical>,
 } extends infer Types ? {
   [T in keyof Types]: AxisKeyMode extends "optional"
-    ? Partial<Types[T]> // In 'optional' mode, each axis can be omitted.
+    ? Partial<Types[T]> // In 'optional' mode, each axis can be omitted (if it isn't already omitted by XYOmitNever).
     : Types[T]
 } : never>
 
 
-export type Categories = AxisTypesByChartType<never, string[]>
+export type Categories = PerAxisConfigByChartType<never, string[]>
 
 
 export type AxisArgs = Partial<XY<{
@@ -72,29 +76,31 @@ export type AxisConfig = XY<{
   }
 }>;
 
-type TickConfigBase<Domain> = {
+export type TickFormatter<Domain> = (value: Domain, index: number) => string
+export type TickConfigBase<Domain> = {
   padding: number,
   size: number,
-  formatter?: (value: Domain, index: number) => string,
+  formatter?: TickFormatter<Domain> 
 } & (Domain extends number ? {
   count: number,
   specifier: string,
   enableMathJax: boolean,
 } : {})
-export type TickConfigCategorical = { categorical: TickConfigBase<string> }
-export type TickConfigDefault = { numerical: TickConfigBase<number> } & TickConfigCategorical
-export type TickConfig = AxisTypesByChartType<TickConfigDefault, TickConfigCategorical>
+export type TickConfigDefault = { numerical: TickConfigBase<number> }
+type TickConfigCategorical = TickConfigDefault & { categorical: TickConfigBase<string> }
+export type TickConfig = PerAxisConfigByChartType<TickConfigDefault, TickConfigCategorical>
 
 type TickArgsBase<Domain> = Partial<TickConfigBase<Domain>>
-export type TickArgsCategorical = { categorical?: TickArgsBase<string> }
-export type TickArgsDefault = { numerical?: TickArgsBase<number> } & TickArgsCategorical
-export type TickArgs = AxisTypesByChartType<TickArgsDefault, TickArgsCategorical, "optional">
+type TickArgsDefault = { numerical?: TickArgsBase<number> }
+type TickArgsCategorical = TickArgsDefault & { categorical?: TickArgsBase<string> }
+export type TickArgs = PerAxisConfigByChartType<TickArgsDefault, TickArgsCategorical, "optional">
 
 
 export type CurrState<T extends ChartType> = {
   axes: AxisConfig,
   categories: Categories[T],
   scales: ScaleOutput[T],
+  ticks: TickConfig[T],
 }
 
 export type CurrOutputs<M> = {
