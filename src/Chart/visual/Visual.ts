@@ -13,7 +13,7 @@ import {
 } from "./types";
 import { CurrFlags as PrevFlags, CurrOutput as PrevOutput } from "../config/types";
 import { Interactive } from "../interactive/Interactive";
-import { AxesLayer } from "./layers/AxesLayer";
+import { AxesLayer, originLineStrokeWidth } from "./layers/AxesLayer";
 import { getInner } from "../base/utils";
 
 export class Visual<M, T extends ChartType, Flags extends CurrFlags> {
@@ -41,11 +41,12 @@ export class Visual<M, T extends ChartType, Flags extends CurrFlags> {
       .append("svg:clipPath")
       .attr("id", clipPathId) as any as D3Selection<SVGClipPathElement>;
     const { x, y } = getInner(bounds);
+    const buffer = originLineStrokeWidth / 2; // Add a buffer to the clip path to ensure the origin line is not clipped
     clipPath.append("svg:rect")
-      .attr("width", x.end - x.start)
-      .attr("height", y.end - y.start)
-      .attr("x", x.start)
-      .attr("y", y.start);
+      .attr("width", x.end - x.start + buffer * 2)
+      .attr("height", y.end - y.start + buffer * 2)
+      .attr("x", x.start - buffer)
+      .attr("y", y.start - buffer);
 
     const baseLayer = svg.append('g')
       .attr("id", getHtmlId(CoreLayer.BaseLayer))
