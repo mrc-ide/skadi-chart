@@ -106,10 +106,6 @@ export class AxesLayer<M> extends Layer<M, null> {
     // If origin is out of range, don't draw the line. Otherwise we might draw a line onto another band.
     if (originSC < minSC || originSC > maxSC) return;
 
-    // The 'main' scale is different from the numerical scale if the numerical scale belongs to a band.
-    const mainScaleConfig = this.prevOutput.configState.scales[axis];
-    const mainScale = "categories" in mainScaleConfig ? mainScaleConfig.scale : numScale;
-
     // Get all the numerical scales for the other axis, termed the 'foreign axis'.
     // Categorical axes contain multiple numerical scales; non-categorical axes contain exactly one.
     const foreignAxis = axis === "x" ? "y" : "x";
