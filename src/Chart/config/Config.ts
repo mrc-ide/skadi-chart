@@ -16,8 +16,8 @@ import { doXY, makeObjXY } from "@/helpers";
 
 export class Config<M, T extends ChartType, Flags extends CurrFlags> {
   private axes: AxisConfig["categoricalXY"] = {
-    x: { label: { text: "", padding: 50 }, innerPadding: 0.1 },
-    y: { label: { text: "", padding: 40 }, innerPadding: 0.1 },
+    x: { label: { text: "", padding: 50 }, innerPadding: 0.1, drawOrigin: true },
+    y: { label: { text: "", padding: 40 }, innerPadding: 0.1, drawOrigin: true },
   };
   private categories: Categories["categoricalXY"] = { x: [], y: [] };
   private scales: ScaleOutput[ChartType] | null = null;
@@ -38,6 +38,9 @@ export class Config<M, T extends ChartType, Flags extends CurrFlags> {
         if (args[axis].label.padding !== undefined) {
           this.axes[axis].label.padding = args[axis].label.padding;
         }
+      }
+      if (args[axis]?.drawOrigin !== undefined) {
+        this.axes[axis].drawOrigin = args[axis].drawOrigin!;
       }
       if (args[axis] && "innerPadding" in args[axis] && args[axis].innerPadding !== undefined) {
         this.axes[axis].innerPadding = args[axis].innerPadding;

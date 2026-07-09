@@ -47,15 +47,15 @@ export type Categories = HasAllKeys<ChartType, {
   categoricalXY: { x: string[], y: string[] },
 }>
 
-type AxisArgsBase = { label?: { text: string, padding?: number } }
-type AxisArgsCategorical = AxisArgsBase & { innerPadding?: number }
-type AxisConfigNumerical = { label: { text: string, padding: number } }
+type AxisArgsNumerical = { label?: { text: string, padding?: number }, drawOrigin?: boolean }
+type AxisArgsCategorical = AxisArgsNumerical & { innerPadding?: number }
+type AxisConfigNumerical = { label: { text: string, padding: number }, drawOrigin: boolean }
 type AxisConfigCategorical = AxisConfigNumerical & { innerPadding: number }
 
 export type AxisArgs = HasAllKeys<ChartType, {
-  default: Partial<XY<AxisArgsBase>>,
-  categoricalX: Partial<{ x: AxisArgsCategorical } & { y: AxisArgsBase }>,
-  categoricalY: Partial<{ x: AxisArgsBase } & { y: AxisArgsCategorical }>,
+  default: Partial<XY<AxisArgsNumerical>>,
+  categoricalX: Partial<{ x: AxisArgsCategorical } & { y: AxisArgsNumerical }>,
+  categoricalY: Partial<{ x: AxisArgsNumerical } & { y: AxisArgsCategorical }>,
   categoricalXY: Partial<{ x: AxisArgsCategorical } & { y: AxisArgsCategorical }>,
 }>
 

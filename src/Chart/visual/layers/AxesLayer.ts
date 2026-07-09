@@ -69,7 +69,9 @@ export class AxesLayer<M> extends Layer<M, null> {
       this.zoomCallbacks.push(zoom);
     }
 
-    this.drawOriginLine(axis, scale, addZoom);
+    if (this.prevOutput.configState.axes[axis].drawOrigin) {
+      this.drawOriginLine(axis, scale, addZoom);
+    }
   };
 
   private drawCategorical = (axis: XorY, scaleCategorical: ScaleCategorical) => {
