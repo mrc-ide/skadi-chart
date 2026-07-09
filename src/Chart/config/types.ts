@@ -40,7 +40,6 @@ export type This<M, T extends ChartType, Flags extends CurrFlags> =
   Omit<Config<M, T, Flags>, MethodsToRemove<T, Flags>>
 
 
-
 export type Categories = HasAllKeys<ChartType, {
   default: never,
   categoricalX: { x: string[] },
@@ -48,23 +47,28 @@ export type Categories = HasAllKeys<ChartType, {
   categoricalXY: { x: string[], y: string[] },
 }>
 
-export type AxisArgs = Partial<XY<{
-  label?: {
-    text: string,
-    padding?: number,
-  }
-}>>
-export type AxisConfig = XY<{
-  label: {
-    text: string,
-    padding: number,
-  }
-}>;
+type AxisArgsBase = { label?: { text: string, padding?: number } }
+type AxisArgsCategorical = AxisArgsBase & { innerPadding?: number }
+type AxisConfigNumerical = { label: { text: string, padding: number } }
+type AxisConfigCategorical = AxisConfigNumerical & { innerPadding: number }
 
+export type AxisArgs = HasAllKeys<ChartType, {
+  default: Partial<XY<AxisArgsBase>>,
+  categoricalX: Partial<{ x: AxisArgsCategorical } & { y: AxisArgsBase }>,
+  categoricalY: Partial<{ x: AxisArgsBase } & { y: AxisArgsCategorical }>,
+  categoricalXY: Partial<{ x: AxisArgsCategorical } & { y: AxisArgsCategorical }>,
+}>
+
+export type AxisConfig = HasAllKeys<ChartType, {
+  default: XY<AxisConfigNumerical>,
+  categoricalX: { x: AxisConfigCategorical } & { y: AxisConfigNumerical },
+  categoricalY: { x: AxisConfigNumerical } & { y: AxisConfigCategorical },
+  categoricalXY: { x: AxisConfigCategorical } & { y: AxisConfigCategorical },
+}>
 
 
 export type CurrState<T extends ChartType> = {
-  axes: AxisConfig,
+  axes: AxisConfig[T],
   categories: Categories[T],
   scales: ScaleOutput[T],
 }

@@ -69,7 +69,7 @@ export class AxesLayer<M> extends Layer<M, null> {
     }
   };
 
-  private drawCategorical = (axis: XorY, { scale, categories }: ScaleCategorical) => {
+  private drawCategorical = (axis: XorY, scaleCategorical: ScaleCategorical) => {
     const { getHtmlId, bounds } = this.prevOutput.baseState;
     const inner = getInner(bounds);
     const translation = axis === "x"
@@ -78,7 +78,8 @@ export class AxesLayer<M> extends Layer<M, null> {
     const axisConstructor = axis === "x" ? d3.axisBottom : d3.axisLeft;
     const tickPadding = 30; // This will become a configurable option.
     
-    const categoricalAxis = axisConstructor(scale).tickPadding(tickPadding);
+    const bandScale = scaleCategorical.scale; // The main, "outer" scale, containing all the bands
+    const categoricalAxis = axisConstructor(bandScale).tickPadding(tickPadding);
     const axisGElement = this.coreLayers[CoreLayer.Svg]
       .append("g")
       .attr("id", `${axis}-categorical-${getHtmlId(VisualLayer.Axes)}`)
@@ -87,8 +88,9 @@ export class AxesLayer<M> extends Layer<M, null> {
       .call(categoricalAxis);
     axisGElement.select(".domain").style("stroke-opacity", 0);
 
-    Object.entries(categories).forEach(([_, categoryScale]) => {
-      this.drawNumerical(axis, categoryScale, false);
+    const numericalScales = scaleCategorical.categories; // Each band's "inner" scale
+    Object.entries(numericalScales).forEach(([_, scale]) => {
+      this.drawNumerical(axis, scale, false);
     });
   };
 
