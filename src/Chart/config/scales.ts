@@ -4,7 +4,7 @@ import { CurrOutput as PrevOutput, CurrState as PrevState } from "../data/types"
 import { iterateAllPoints, IterateAllPointsArgs } from "../data/utils"
 import { anyXY, doXY, makeObjXY } from "@/helpers"
 import { SingleRange } from "../base/types";
-import { Categories } from "./types";
+import { AxisConfig, Categories } from "./types";
 import { getInner } from "../base/utils";
 
 type SingleAutoScale = { start: number | "auto", end: number | "auto" }
@@ -80,7 +80,10 @@ export const categoricalChartTypes: XY<ChartType[]> = {
 }
 
 export const processScaleArgs = <M>(
-  args: ScaleArgsParsed, prevOutput: PrevOutput<M>, categories: Categories["categoricalXY"]
+  args: ScaleArgsParsed,
+  prevOutput: PrevOutput<M>,
+  categories: Categories["categoricalXY"],
+  axes: AxisConfig["categoricalXY"],
 ): ScaleOutput[ChartType] => {
   // get max extents
   const extents = getXYMinMax<M>(prevOutput.chartType, prevOutput.dataState);
@@ -140,7 +143,8 @@ export const processScaleArgs = <M>(
     const axisRange = ranges[axis];
     const d3Scale = d3.scaleBand()
       .domain(categories[axis])
-      .range([ axisRange.start, axisRange.end ]);
+      .range([ axisRange.start, axisRange.end ])
+      .paddingInner(axes[axis].innerPadding);
     const categoryWidth = d3Scale.bandwidth();
 
     const categoriesScales = categories[axis].reduce((acc, category) => {

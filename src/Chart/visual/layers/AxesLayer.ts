@@ -1,14 +1,16 @@
 import * as d3 from "@/d3";
 import { Layer } from "./Layer";
 import { Point, ScaleNumeric, XorY } from "@/types";
-import { CurrOutput as PrevOutput, TickConfigBase, TickFormatter } from "@/Chart/config/types";
+import { CurrOutput as PrevOutput } from "@/Chart/config/types";
 import { CoreLayer, CoreLayers, VisualLayer } from "../types";
 import { ScaleCategorical } from "@/Chart/config/scales";
 import { getInner } from "@/Chart/base/utils";
 import { doXY } from "@/helpers";
+import { TickConfigBase, TickFormatter } from "@/Chart/config/ticks";
 
 const animationDuration = 350;
 declare const MathJax: any;
+export const originLineStrokeWidth = 1;
 
 export class AxesLayer<M> extends Layer<M, null> {
   private zoomCallbacks: (() => Promise<void>)[] = [];
@@ -93,11 +95,13 @@ export class AxesLayer<M> extends Layer<M, null> {
       };
       this.zoomCallbacks.push(zoom);
     }
+
+    this.drawOriginLine(axis, scale, addZoom);
   };
 
   private drawCategorical = (
     axis: XorY,
-    { scale, categories }: ScaleCategorical,
+    scaleCategorical: ScaleCategorical,
     tickConfig: { categorical: TickConfigBase<string>, numerical: TickConfigBase<number> },
   ) => {
     const { getHtmlId, bounds } = this.prevOutput.baseState;
@@ -108,7 +112,8 @@ export class AxesLayer<M> extends Layer<M, null> {
       : { x: inner.x.start, y: 0 };
     const axisConstructor = axis === "x" ? d3.axisBottom : d3.axisLeft;
     
-    const categoricalAxis = axisConstructor(scale)
+    const bandScale = scaleCategorical.scale; // The main, "outer" scale, containing all the bands
+    const categoricalAxis = axisConstructor(bandScale)
       .tickSize(tickConfig.categorical.size)
       .tickPadding(tickConfig.categorical.padding);
     if (formatter) {
@@ -122,8 +127,9 @@ export class AxesLayer<M> extends Layer<M, null> {
       .call(categoricalAxis);
     axisGElement.select(".domain").style("stroke-opacity", 0);
 
-    Object.entries(categories).forEach(([_, categoryScale]) => {
-      this.drawNumerical(axis, categoryScale, tickConfig.numerical, false);
+    const numericalScales = scaleCategorical.categories; // Each band's "inner" scale
+    Object.entries(numericalScales).forEach(([_, scale]) => {
+      this.drawNumerical(axis, scale, tickConfig.numerical, false);
     });
   };
 
@@ -157,6 +163,47 @@ export class AxesLayer<M> extends Layer<M, null> {
         const foreignObject = sn.parentElement! as unknown as SVGForeignObjectElement;
         foreignObject.x.baseVal.value = - width / 2;
       });
+    });
+  };
+
+  // Draw a line at the origin (where axis value is 0) of a numerical scale.
+  // This line will be made up of 1 or more segments, since if the other axis is categorical,
+  // inter-segment gaps are required for skipping over the padding of the categorical bands.
+  private drawOriginLine = (axis: XorY, numScale: ScaleNumeric, addZoom: boolean) => {
+    const originSC = numScale(0);
+    const [minSC, maxSC] = numScale.range().sort((a, b) => a - b);
+    // If origin is out of range, don't draw the line. Otherwise we might draw a line onto another band.
+    if (originSC < minSC || originSC > maxSC) return;
+
+    // Get all the numerical scales for the other axis, termed the 'foreign axis'.
+    // Categorical axes contain multiple numerical scales; non-categorical axes contain exactly one.
+    const foreignAxis = axis === "x" ? "y" : "x";
+    const foreignMainScale = this.prevOutput.configState.scales[foreignAxis];
+    const foreignNumScales: ScaleNumeric[] =
+      "categories" in foreignMainScale
+        ? Object.values(foreignMainScale.categories)
+        : [foreignMainScale];
+
+    foreignNumScales.forEach(scale => {
+      const lineSegment = this.coreLayers[CoreLayer.BaseLayer].append("g").append("line")
+        .attr(`${axis}1`, originSC)
+        .attr(`${axis}2`, originSC)
+        .attr(`${foreignAxis}1`, scale.range()[0])
+        .attr(`${foreignAxis}2`, scale.range()[1])
+        .style("stroke", "darkgrey").style("stroke-width", originLineStrokeWidth);
+
+      if (addZoom) {
+        const zoom = async () => {
+          const newOriginSC = numScale(0);
+          await lineSegment.transition()
+            .duration(animationDuration)
+            .attr(`${axis}1`, newOriginSC)
+            .attr(`${axis}2`, newOriginSC)
+            .style("stroke-width", originLineStrokeWidth)
+            .end();
+        };
+        this.zoomCallbacks.push(zoom);
+      }
     });
   }
 

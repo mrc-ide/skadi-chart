@@ -8,9 +8,8 @@ import {
   CurrState,
   DefaultCurrFlags,
   This,
-  TickArgs,
-  TickConfig,
 } from "./types";
+import { TickArgs, TickConfig } from "./ticks";
 import { CurrFlags as PrevFlags, CurrOutput as PrevOutput } from "../data/types";
 import { Visual } from "../visual/Visual";
 import { categoricalChartTypes, processScaleArgs, ScaleArgs, ScaleArgsParsed, ScaleOutput } from "./scales";
@@ -18,7 +17,10 @@ import { doXY, makeObjXY } from "@/helpers";
 import { defaultTickConfig } from "./ticks";
 
 export class Config<M, T extends ChartType, Flags extends CurrFlags> {
-  private axes: AxisConfig = { x: { label: { text: "", padding: 50 } }, y: { label: { text: "", padding: 40 } } };
+  private axes: AxisConfig["categoricalXY"] = {
+    x: { label: { text: "", padding: 50 }, innerPadding: 0.1 },
+    y: { label: { text: "", padding: 40 }, innerPadding: 0.1 },
+  };
   private categories: Categories["categoricalXY"] = { x: [], y: [] };
   private scales: ScaleOutput[ChartType] | null = null;
   private ticks: TickConfig[ChartType] | null = null;
@@ -32,13 +34,17 @@ export class Config<M, T extends ChartType, Flags extends CurrFlags> {
     return new Config<M, T, NewFlags>(prevOutput) as This<M, T, NewFlags>;
   };
 
-  configureAxes(args: AxisArgs = {}) {
+  configureAxes(args: AxisArgs[T] = {}) {
     doXY(axis => {
-      if (args[axis]?.label) {
-        this.axes[axis].label.text = args[axis].label.text;
-        if (args[axis].label.padding) {
-          this.axes[axis].label.padding = args[axis].label.padding;
+      const axArgs = args[axis];
+      if (axArgs?.label) {
+        this.axes[axis].label.text = axArgs.label.text;
+        if (axArgs.label.padding !== undefined) {
+          this.axes[axis].label.padding = axArgs.label.padding;
         }
+      }
+      if (axArgs && "innerPadding" in axArgs && axArgs.innerPadding !== undefined) {
+        this.axes[axis].innerPadding = axArgs.innerPadding;
       }
     });
     return this as This<M, T, Flags>;
@@ -71,7 +77,7 @@ export class Config<M, T extends ChartType, Flags extends CurrFlags> {
         scaleArgsParsed[axis].extents.end = scaleArgs[axis].extents.end;
       }
     });
-    this.scales = processScaleArgs(scaleArgsParsed, this.prevOutput, this.categories);
+    this.scales = processScaleArgs(scaleArgsParsed, this.prevOutput, this.categories, this.axes);
     type NewFlags = MixNewFlags<CurrFlags, Flags, { hasConfiguredScale: true }>
     return this as This<M, T, NewFlags>;
   };

@@ -2,6 +2,7 @@ import { CategoricalChartType, ChartType, HasAllKeys, Prettify, XorY, XY } from 
 import { Config } from "./Config"
 import { CurrFlags as PrevFlags, CurrOutputs as PrevOutputs } from "../data/types"
 import { ScaleOutput } from "./scales"
+import { TickConfig } from "./ticks"
 
 
 
@@ -44,7 +45,7 @@ type XYOmitNever<X, Y> =
   ([X] extends [never] ? {} : { x: X })
   & ([Y] extends [never] ? {} : { y: Y })
 
-type PerAxisConfigByChartType<
+export type PerAxisConfigByChartType<
   Default,
   Categorical,
   AxisKeyMode extends "required" | "optional" = "required"
@@ -63,41 +64,17 @@ type PerAxisConfigByChartType<
 export type Categories = PerAxisConfigByChartType<never, string[]>
 
 
-export type AxisArgs = Partial<XY<{
-  label?: {
-    text: string,
-    padding?: number,
-  }
-}>>
-export type AxisConfig = XY<{
-  label: {
-    text: string,
-    padding: number,
-  }
-}>;
+type AxisArgsBase = { label?: { text: string, padding?: number } }
+type AxisArgsCategorical = AxisArgsBase & { innerPadding?: number }
+export type AxisArgs = PerAxisConfigByChartType<AxisArgsBase, AxisArgsCategorical, "optional">
 
-export type TickFormatter<Domain> = (value: Domain, index: number) => string
-export type TickConfigBase<Domain> = {
-  padding: number,
-  size: number,
-  formatter?: TickFormatter<Domain> 
-} & (Domain extends number ? {
-  count: number,
-  specifier: string,
-  enableMathJax: boolean,
-} : {})
-export type TickConfigDefault = { numerical: TickConfigBase<number> }
-type TickConfigCategorical = TickConfigDefault & { categorical: TickConfigBase<string> }
-export type TickConfig = PerAxisConfigByChartType<TickConfigDefault, TickConfigCategorical>
-
-type TickArgsBase<Domain> = Partial<TickConfigBase<Domain>>
-type TickArgsDefault = { numerical?: TickArgsBase<number> }
-type TickArgsCategorical = TickArgsDefault & { categorical?: TickArgsBase<string> }
-export type TickArgs = PerAxisConfigByChartType<TickArgsDefault, TickArgsCategorical, "optional">
+type AxisConfigNumerical = { label: { text: string, padding: number } }
+type AxisConfigCategorical = AxisConfigNumerical & { innerPadding: number }
+export type AxisConfig = PerAxisConfigByChartType<AxisConfigNumerical, AxisConfigCategorical>
 
 
 export type CurrState<T extends ChartType> = {
-  axes: AxisConfig,
+  axes: AxisConfig[T],
   categories: Categories[T],
   scales: ScaleOutput[T],
   ticks: TickConfig[T],
