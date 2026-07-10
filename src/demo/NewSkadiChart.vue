@@ -29,6 +29,10 @@
       <div class="chart" ref="categoricalYAxis" id="categoricalYAxis"></div>
     </div>
   </div>
+  <h1 style="margin-top: 100px">
+    With MathJax (experimental)
+  </h1>
+  <div class="chart" ref="chartMathJax" id="chartMathJax"></div>
 </template>
 
 <style scoped>
@@ -62,6 +66,7 @@ const numericalAxes = ref<HTMLDivElement | null>(null);
 const categoricalXYAxes = ref<HTMLDivElement | null>(null);
 const categoricalXAxis = ref<HTMLDivElement | null>(null);
 const categoricalYAxis = ref<HTMLDivElement | null>(null);
+const chartMathJax = ref<HTMLDivElement | null>(null);
 
 const chartTypes: readonly ChartType[] = [
   "default",
@@ -83,6 +88,32 @@ const chartContainers: Record<ChartType, typeof numericalAxes> = {
   categoricalY: categoricalYAxis,
 };
 
+const renderMathJaxChart = () => {
+  const container = chartMathJax.value;
+  if (!container) {
+    return;
+  }
+  new ChartNew("default", container)
+    .startData()
+    .startConfig()
+    .configureAxes({
+      x: { label: { text: "Time" } },
+      y: { label: { text: "Value" } },
+    })
+    .configureScales({
+      x: { extents: { start: 0, end: 40 } },
+      y: { extents: { start: -500, end: 500 } },
+    })
+    .configureTicks({
+      x: { numerical: { formatter: (num) => `$${num}^{1}$`, enableMathJax: true } },
+      y: { numerical: { specifier: ".1f", padding: 2, size: 5, count: 20 } },
+    })
+    .startVisual()
+    .addAxes()
+    .startInteractive()
+    .end();
+}
+
 const renderChart = (chartType: ChartType) => {
   const container = chartContainers[chartType].value;
 
@@ -103,7 +134,6 @@ const renderChart = (chartType: ChartType) => {
         y: { extents: { start: -500, end: 500 } },
       })
       .configureTicks({
-        x: { numerical: { formatter: (num) => `$${num}^{1}$`, enableMathJax: true } },
         y: { numerical: { specifier: ".1f", padding: 2, size: 5, count: 20 } },
       })
       .startVisual()
@@ -111,9 +141,7 @@ const renderChart = (chartType: ChartType) => {
       .startInteractive()
       .end();
     return;
-  }
-
-  if (chartType === "categoricalXY") {
+  } else if (chartType === "categoricalXY") {
     new ChartNew("categoricalXY", container)
       .startData()
       .startConfig()
@@ -143,9 +171,7 @@ const renderChart = (chartType: ChartType) => {
       .startInteractive()
       .end();
     return;
-  }
-
-  if (chartType === "categoricalX") {
+  } else if (chartType === "categoricalX") {
     new ChartNew("categoricalX", container)
       .startData()
       .startConfig()
@@ -196,5 +222,7 @@ watch(selectedChartTypes, (newChartTypes) => {
 
 onMounted(() => {
   selectedChartTypes.value.forEach(renderChart);
+
+  renderMathJaxChart();
 });
 </script>
