@@ -40,25 +40,23 @@ type MethodsToRemove<T extends ChartType, Flags extends CurrFlags> =
 export type This<M, T extends ChartType, Flags extends CurrFlags> =
   Omit<Config<M, T, Flags>, MethodsToRemove<T, Flags>>
 
+type AxisKeyMode = "required" | "optional"
 // When the per-axis type is never, that axis must be omitted.
-type XYOmitNever<X, Y> =
-  ([X] extends [never] ? {} : { x: X })
-  & ([Y] extends [never] ? {} : { y: Y })
+type XYOmitNever<X, Y, Mode extends AxisKeyMode> =
+  ([X] extends [never] ? {} : Mode extends "optional" ? Partial<{ x: X }> : { x: X })
+  & ([Y] extends [never] ? {} : Mode extends "optional" ? Partial<{ y: Y }> : { y: Y })
 
+// In 'optional' mode, each axis can be omitted (if it isn't already omitted by XYOmitNever).
 export type PerAxisConfigByChartType<
   Default,
   Categorical,
-  AxisKeyMode extends "required" | "optional" = "required"
-> = HasAllKeys<ChartType, {
-  default: XYOmitNever<Default, Default>,
-  categoricalX: XYOmitNever<Categorical, Default>,
-  categoricalY: XYOmitNever<Default, Categorical>,
-  categoricalXY: XYOmitNever<Categorical, Categorical>,
-} extends infer Types ? {
-  [T in keyof Types]: AxisKeyMode extends "optional"
-    ? Partial<Types[T]> // In 'optional' mode, each axis can be omitted (if it isn't already omitted by XYOmitNever).
-    : Types[T]
-} : never>
+  Mode extends AxisKeyMode = "required",
+> = {
+  default: XYOmitNever<Default, Default, Mode>,
+  categoricalX: XYOmitNever<Categorical, Default, Mode>,
+  categoricalY: XYOmitNever<Default, Categorical, Mode>,
+  categoricalXY: XYOmitNever<Categorical, Categorical, Mode>,
+};
 
 
 export type Categories = PerAxisConfigByChartType<never, string[]>
