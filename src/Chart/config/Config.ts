@@ -120,10 +120,4 @@ export class Config<M, T extends ChartType, Flags extends CurrFlags> {
     } as CurrOutput<M>;
     return Visual.start<M, T, Flags>(output);
   };
-
-  private getDefaultTickCount(size: number) {
-    if (size < 250) return 3;
-    if (size < 450) return 6;
-    return 10;
-  };
 };
