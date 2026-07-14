@@ -41,22 +41,23 @@ export type This<M, T extends ChartType, Flags extends CurrFlags> =
   Omit<Config<M, T, Flags>, MethodsToRemove<T, Flags>>
 
 type AxisKeyMode = "required" | "optional"
+type MaybePartial<T, Mode extends AxisKeyMode> = Mode extends "optional" ? Partial<T> : T
 // When the per-axis type is never, that axis must be omitted.
 type XYOmitNever<X, Y, Mode extends AxisKeyMode> =
-  ([X] extends [never] ? {} : Mode extends "optional" ? Partial<{ x: X }> : { x: X })
-  & ([Y] extends [never] ? {} : Mode extends "optional" ? Partial<{ y: Y }> : { y: Y })
+  ([X] extends [never] ? {} : MaybePartial<{ x: X }, Mode>)
+  & ([Y] extends [never] ? {} : MaybePartial<{ y: Y }, Mode>)
 
 // In 'optional' mode, each axis can be omitted (if it isn't already omitted by XYOmitNever).
 export type PerAxisConfigByChartType<
   Default,
   Categorical,
   Mode extends AxisKeyMode = "required",
-> = {
+> = HasAllKeys<ChartType, {
   default: XYOmitNever<Default, Default, Mode>,
   categoricalX: XYOmitNever<Categorical, Default, Mode>,
   categoricalY: XYOmitNever<Default, Categorical, Mode>,
   categoricalXY: XYOmitNever<Categorical, Categorical, Mode>,
-};
+}>
 
 
 export type Categories = PerAxisConfigByChartType<never, string[]>
