@@ -41,7 +41,7 @@ export class Visual<M, T extends ChartType, Flags extends CurrFlags> {
       .append("svg:clipPath")
       .attr("id", clipPathId) as any as D3Selection<SVGClipPathElement>;
     const { x, y } = getInner(bounds);
-    const buffer = originLineStrokeWidth / 2; // Add a buffer to the clip path to ensure the origin line is not clipped
+    const buffer = 1; // Add a buffer to the clip path to ensure origin lines and band border lines are not clipped
     clipPath.append("svg:rect")
       .attr("width", x.end - x.start + buffer * 2)
       .attr("height", y.end - y.start + buffer * 2)

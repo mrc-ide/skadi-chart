@@ -8,7 +8,6 @@ import { getInner } from "@/Chart/base/utils";
 import { doXY } from "@/helpers";
 
 const animationDuration = 350;
-export const originLineStrokeWidth = 1;
 
 export class AxesLayer<M> extends Layer<M, null> {
   private zoomCallbacks: (() => Promise<void>)[] = [];
@@ -70,7 +69,7 @@ export class AxesLayer<M> extends Layer<M, null> {
     }
 
     // Draw origin line
-    this.drawPerpendicularLine(axis, scale, addZoom, 0, originLineStrokeWidth, "darkgrey");
+    this.drawPerpendicularLine(axis, scale, addZoom, 0);
   };
 
   private drawCategorical = (axis: XorY, scaleCategorical: ScaleCategorical) => {
@@ -82,7 +81,8 @@ export class AxesLayer<M> extends Layer<M, null> {
     const axisConstructor = axis === "x" ? d3.axisBottom : d3.axisLeft;
     const tickPadding = 30; // This will become a configurable option.
     
-    const bandScale = scaleCategorical.scale; // The main, "outer" scale, containing all the bands
+    // Process the main, "outer" scale, containing all the bands
+    const bandScale = scaleCategorical.scale;
     const categoricalAxis = axisConstructor(bandScale).tickPadding(tickPadding);
     const axisGElement = this.coreLayers[CoreLayer.Svg]
       .append("g")
@@ -92,13 +92,29 @@ export class AxesLayer<M> extends Layer<M, null> {
       .call(categoricalAxis);
     axisGElement.select(".domain").style("stroke-opacity", 0);
 
-    const numericalScales = scaleCategorical.categories; // Each band's "inner" scale
-    Object.entries(numericalScales).forEach(([_, scale]) => {
-      this.drawNumerical(axis, scale, false);
-      // Draw lines at edges of each band, except if an origin line is already drawn there.
-      const [bandStartDC, bandEndDC] = scale.domain().filter(d => d !== 0);
-      if (bandStartDC) this.drawPerpendicularLine(axis, scale, false, bandStartDC);
-      if (bandEndDC && bandScale.paddingInner() !== 0) this.drawPerpendicularLine(axis, scale, false, bandEndDC);
+    // Process each band's "inner" scale, which is a numerical scale
+    Object.entries(scaleCategorical.categories).forEach(([_, innerNumScale]) => {
+      this.drawNumerical(axis, innerNumScale, false);
+
+      // Draw each band's edge lines. The number of edges we draw lines on depends on whether there is inner padding.
+      const [bandStartDC, bandEndDC] = innerNumScale.domain();
+      // Always draw a line on the starting edge of each band.
+      this.drawPerpendicularLine(axis, innerNumScale, false, bandStartDC);
+
+      // Draw lines on all borders of each band when there is padding between bands.
+      if (bandScale.paddingInner() !== 0) {
+        this.drawPerpendicularLine(axis, innerNumScale, false, bandEndDC);
+
+        // Draw the border lines that are parallel to current axis (i.e. perpendicular to foreign axis).
+        // If the foreign scale is categorical, those lines will be drawn when that scale is processed,
+        // so we only need to draw them here if the foreign scale is numerical.
+        const foreignScaleIsNumerical = ["default", (axis === "x" ? "categoricalX" : "categoricalY")].includes(this.prevOutput.chartType);
+        if (foreignScaleIsNumerical) {
+          const foreignAxis = axis === "x" ? "y" : "x";
+          const foreignScale = this.prevOutput.configState.scales[foreignAxis] as ScaleNumeric;
+          foreignScale.domain().forEach(extentDC => this.drawPerpendicularLine(foreignAxis, foreignScale, false, extentDC));
+        }
+      }
     });
   };
 
@@ -110,7 +126,7 @@ export class AxesLayer<M> extends Layer<M, null> {
     numScale: ScaleNumeric,
     addZoom: boolean,
     positionDC: number,
-    strokeWidthPx: number = 0.5,
+    strokeWidthPx: number = 1,
     color: string = "black",
   ) => {
     const positionSC = numScale(positionDC);
