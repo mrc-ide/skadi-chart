@@ -15,6 +15,7 @@ import { Visual } from "../visual/Visual";
 import { categoricalChartTypes, processScaleArgs, ScaleArgs, ScaleArgsParsed, ScaleOutput } from "./scales";
 import { doXY, makeObjXY } from "@/helpers";
 import { defaultTickConfig } from "./ticks";
+import { deepAssignRecordIfDefined } from "./utils";
 
 export class Config<M, T extends ChartType, Flags extends CurrFlags> {
   private axes: AxisConfig["categoricalXY"] = {
@@ -35,28 +36,12 @@ export class Config<M, T extends ChartType, Flags extends CurrFlags> {
   };
 
   configureAxes(args: AxisArgs[T] = {}) {
-    doXY(axis => {
-      const axArgs = args[axis];
-      if (axArgs?.label) {
-        this.axes[axis].label.text = axArgs.label.text;
-        if (axArgs.label.padding !== undefined) {
-          this.axes[axis].label.padding = axArgs.label.padding;
-        }
-      }
-      if (axArgs && "innerPadding" in axArgs && axArgs.innerPadding !== undefined) {
-        this.axes[axis].innerPadding = axArgs.innerPadding;
-      }
-    });
+    deepAssignRecordIfDefined(this.axes, args);
     return this as This<M, T, Flags>;
   }
 
   configureCategories(args: Categories[T]) {
-    if ("x" in args && args.x.length > 0) {
-      this.categories.x = args.x;
-    }
-    if ("y" in args && args.y.length > 0) {
-      this.categories.y = args.y;
-    }
+    deepAssignRecordIfDefined(this.categories, args);
     type NewFlags = MixNewFlags<CurrFlags, Flags, { hasConfiguredCategories: true }>
     return this as This<M, T, NewFlags>;
   };
@@ -69,37 +54,19 @@ export class Config<M, T extends ChartType, Flags extends CurrFlags> {
     });
     const scaleArgsParsed: ScaleArgsParsed =
       makeObjXY(() => ({ extents: { start: "auto", end: "auto" } }));
-    doXY(axis => {
-      if (scaleArgs && scaleArgs[axis]?.extents?.start) {
-        scaleArgsParsed[axis].extents.start = scaleArgs[axis].extents.start;
-      }
-      if (scaleArgs && scaleArgs[axis]?.extents?.end) {
-        scaleArgsParsed[axis].extents.end = scaleArgs[axis].extents.end;
-      }
-    });
+    deepAssignRecordIfDefined(scaleArgsParsed, scaleArgs);
     this.scales = processScaleArgs(scaleArgsParsed, this.prevOutput, this.categories, this.axes);
     type NewFlags = MixNewFlags<CurrFlags, Flags, { hasConfiguredScale: true }>
     return this as This<M, T, NewFlags>;
   };
 
   configureTicks(tickArgs: TickArgs[T]) {
-    const defaultTickCfg = defaultTickConfig(this.prevOutput);
-    this.ticks = makeObjXY(axis => {
-      const args = tickArgs[axis];
-      const tickDefault = { ...defaultTickCfg[axis] };
-      if (!args) { return tickDefault; }
-
-      const numerical = { ...tickDefault.numerical, ...args.numerical };
-      if (numerical.enableMathJax && !numerical.formatter) {
+    this.ticks ??= defaultTickConfig(this.prevOutput);
+    deepAssignRecordIfDefined(this.ticks, tickArgs);
+    doXY((axis) => {
+      if (this.ticks?.[axis].numerical.enableMathJax && !this.ticks?.[axis].numerical.formatter) {
         throw new Error("When MathJax is enabled, a formatter must be provided.");
       }
-      if ("categorical" in tickDefault) {
-        return {
-          numerical,
-          categorical: { ...tickDefault.categorical, ...("categorical" in args ? args.categorical : {}) },
-        }
-      }
-      return { numerical };
     });
     return this as This<M, T, Flags>;
   }
