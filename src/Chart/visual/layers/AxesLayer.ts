@@ -25,17 +25,27 @@ export class AxesLayer<M> extends Layer<M, null> {
 
   draw = () => {
     if (this.prevOutput.chartType === "default") {
-      this.drawNumerical("x", this.prevOutput.configState.scales.x, true);
-      this.drawNumerical("y", this.prevOutput.configState.scales.y, true);
+      const { x: xScale, y: yScale } = this.prevOutput.configState.scales;
+      this.drawNumerical("x", xScale, true);
+      this.drawNumerical("y", yScale, true);
     } else if (this.prevOutput.chartType === "categoricalX") {
-      this.drawCategorical("x", this.prevOutput.configState.scales.x);
-      this.drawNumerical("y", this.prevOutput.configState.scales.y, true);
+      const { x: xScale, y: yScale } = this.prevOutput.configState.scales;
+      this.drawCategorical("x", xScale);
+      this.drawNumerical("y", yScale, true);
+      if (xScale.scale.paddingInner() !== 0) {
+        yScale.domain().forEach(d => this.drawPerpendicularLine("y", yScale, false, d));
+      }
     } else if (this.prevOutput.chartType === "categoricalY") {
-      this.drawNumerical("x", this.prevOutput.configState.scales.x, true);
-      this.drawCategorical("y", this.prevOutput.configState.scales.y);
+      const { x: xScale, y: yScale } = this.prevOutput.configState.scales;
+      this.drawNumerical("x", xScale, true);
+      this.drawCategorical("y", yScale);
+      if (yScale.scale.paddingInner() !== 0) {
+        xScale.domain().forEach(d => this.drawPerpendicularLine("x", xScale, false, d));
+      }
     } else {
-      this.drawCategorical("x", this.prevOutput.configState.scales.x);
-      this.drawCategorical("y", this.prevOutput.configState.scales.y);
+      const { x: xScale, y: yScale } = this.prevOutput.configState.scales;
+      this.drawCategorical("x", xScale);
+      this.drawCategorical("y", yScale);
     }
 
     this.addLabels();
@@ -95,25 +105,8 @@ export class AxesLayer<M> extends Layer<M, null> {
     // Process each band's "inner" scale, which is a numerical scale
     Object.entries(scaleCategorical.categories).forEach(([_, innerNumScale]) => {
       this.drawNumerical(axis, innerNumScale, false);
-
-      // Draw each band's edge lines. The number of edges we draw lines on depends on whether there is inner padding.
-      const [bandStartDC, bandEndDC] = innerNumScale.domain();
-      // Always draw a line on the starting edge of each band.
-      this.drawPerpendicularLine(axis, innerNumScale, false, bandStartDC);
-
-      // Draw lines on all borders of each band when there is padding between bands.
       if (bandScale.paddingInner() !== 0) {
-        this.drawPerpendicularLine(axis, innerNumScale, false, bandEndDC);
-
-        // Draw the border lines that are parallel to current axis (i.e. perpendicular to foreign axis).
-        // If the foreign scale is categorical, those lines will be drawn when that scale is processed,
-        // so we only need to draw them here if the foreign scale is numerical.
-        const foreignScaleIsNumerical = ["default", (axis === "x" ? "categoricalX" : "categoricalY")].includes(this.prevOutput.chartType);
-        if (foreignScaleIsNumerical) {
-          const foreignAxis = axis === "x" ? "y" : "x";
-          const foreignScale = this.prevOutput.configState.scales[foreignAxis] as ScaleNumeric;
-          foreignScale.domain().forEach(extentDC => this.drawPerpendicularLine(foreignAxis, foreignScale, false, extentDC));
-        }
+        innerNumScale.domain().forEach(d => this.drawPerpendicularLine(axis, innerNumScale, false, d));
       }
     });
   };
