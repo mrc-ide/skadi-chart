@@ -1,6 +1,6 @@
 # Skadi Chart
 
-This charting library provides a structured and thin wrapper around [d3](https://d3js.org)
+This charting library provides a structured, thin wrapper around [d3](https://d3js.org)
 to provide an fully flexible and extensible interface to plot customised graphs that
 out-of-the-box solutions haven't prepared for.
 
