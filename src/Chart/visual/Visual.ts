@@ -13,7 +13,7 @@ import {
 } from "./types";
 import { CurrFlags as PrevFlags, CurrOutput as PrevOutput } from "../config/types";
 import { Interactive } from "../interactive/Interactive";
-import { AxesLayer, originLineStrokeWidth } from "./layers/AxesLayer";
+import { AxesLayer } from "./layers/AxesLayer";
 import { getInner } from "../base/utils";
 
 export class Visual<M, T extends ChartType, Flags extends CurrFlags> {
