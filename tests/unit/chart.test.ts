@@ -1,4 +1,4 @@
-import { Chart } from "../../src/Chart";
+import { Chart, defaultFormatter } from "../../src/Chart";
 import { AxesLayer } from "@/layers/AxesLayer";
 import { TracesLayer } from "@/layers/TracesLayer";
 import { ZoomLayer } from "@/layers/ZoomLayer";
@@ -144,5 +144,14 @@ describe("Chart tests", () => {
 
     expect(autoscaled.x.end).toBeCloseTo(5 * logXPaddingFactor);
     expect(autoscaled.y.end).toBeCloseTo(3 * logYPaddingFactor);
+  });
+
+  test("default formatter is sensible for big and small numbers", () => {
+    let val = 1e6;
+    let formatted = defaultFormatter(val)
+    expect(formatted).toBe("1M")
+    val = 1e-8;
+    formatted = defaultFormatter(val)
+    expect(formatted).toBe("1e-8")
   });
 });
