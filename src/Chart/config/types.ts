@@ -63,11 +63,11 @@ export type PerAxisConfigByChartType<
 export type Categories = PerAxisConfigByChartType<never, string[]>
 
 
-type AxisArgsNumerical = { label?: { text: string, padding?: number } }
+type AxisArgsNumerical = { label?: { text: string, padding?: number }, drawOrigin?: boolean }
 type AxisArgsCategorical = AxisArgsNumerical & { innerPadding?: number }
 export type AxisArgs = PerAxisConfigByChartType<AxisArgsNumerical, AxisArgsCategorical, "optional">
 
-type AxisConfigNumerical = { label: { text: string, padding: number } }
+type AxisConfigNumerical = { label: { text: string, padding: number }, drawOrigin: boolean }
 type AxisConfigCategorical = AxisConfigNumerical & { innerPadding: number }
 export type AxisConfig = PerAxisConfigByChartType<AxisConfigNumerical, AxisConfigCategorical>
 

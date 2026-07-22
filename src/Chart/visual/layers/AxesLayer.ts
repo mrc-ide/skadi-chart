@@ -109,8 +109,10 @@ export class AxesLayer<M> extends Layer<M, null> {
       this.zoomCallbacks.push(zoom);
     }
 
-    // Draw origin line
-    this.drawPerpendicularLine(axis, scale, addZoom, 0);
+    if (this.prevOutput.configState.axes[axis].drawOrigin) {
+      // Draw origin line
+      this.drawPerpendicularLine(axis, scale, addZoom, 0);
+    }
   };
 
   private drawCategorical = (
