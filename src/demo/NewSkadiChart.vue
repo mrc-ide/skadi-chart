@@ -199,7 +199,7 @@ const renderChart = (chartType: ChartType) => {
     .startConfig()
     .configureAxes({
       x: { label: { text: "Time" } },
-      y: { label: { text: "Y Category" }, innerPadding: 0.1 },
+      y: { label: { text: "Y Category" }, innerPadding: 0 },
     })
     .configureCategories({
       y: ["Category A", "Category B"],
