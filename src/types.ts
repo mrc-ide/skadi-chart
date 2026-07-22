@@ -20,7 +20,13 @@ export type HasAllKeys<
   T extends Record<Keys, any>
 > = T
 
-
+export type DeepPartialRecord<T extends Record<string, unknown>> = {
+  [K in keyof T]?: T[K] extends Function
+    ? T[K]
+    : T[K] extends Record<string, unknown>
+      ? DeepPartialRecord<T[K]>
+      : T[K];
+};
 
 type EmptyExtensions = { [K in ChartType]: {} }
 type Category<Key extends XorY> = {

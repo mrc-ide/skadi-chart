@@ -127,8 +127,8 @@ test("chart with categorical x and y axes", async ({ page }) => {
       y: "Y Category",
     })
     .expectTicks({
-      x: { categorical: true, text: ["A", "B", "C"] },
-      y: { categorical: true, text: ["Category A", "Category B"] },
+      x: { categorical: true, text: ["a", "b", "c"] },
+      y: { categorical: true, text: ["CATEGORY A", "CATEGORY B"] },
     })
     .end();
 });

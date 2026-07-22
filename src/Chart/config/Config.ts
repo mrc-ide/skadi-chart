@@ -7,12 +7,15 @@ import {
   CurrOutput,
   CurrState,
   DefaultCurrFlags,
-  This
+  This,
 } from "./types";
+import { TickArgs, TickConfig } from "./ticks";
 import { CurrFlags as PrevFlags, CurrOutput as PrevOutput } from "../data/types";
 import { Visual } from "../visual/Visual";
 import { categoricalChartTypes, processScaleArgs, ScaleArgs, ScaleArgsParsed, ScaleOutput } from "./scales";
 import { doXY, makeObjXY } from "@/helpers";
+import { defaultTickConfig } from "./ticks";
+import { deepAssignRecordIfDefined } from "./utils";
 
 export class Config<M, T extends ChartType, Flags extends CurrFlags> {
   private axes: AxisConfig["categoricalXY"] = {
@@ -21,6 +24,7 @@ export class Config<M, T extends ChartType, Flags extends CurrFlags> {
   };
   private categories: Categories["categoricalXY"] = { x: [], y: [] };
   private scales: ScaleOutput[ChartType] | null = null;
+  private ticks: TickConfig[ChartType] | null = null;
 
   private constructor(private prevOutput: PrevOutput<M>) {};
 
@@ -32,27 +36,12 @@ export class Config<M, T extends ChartType, Flags extends CurrFlags> {
   };
 
   configureAxes(args: AxisArgs[T] = {}) {
-    doXY(axis => {
-      if (args[axis]?.label) {
-        this.axes[axis].label.text = args[axis].label.text;
-        if (args[axis].label.padding !== undefined) {
-          this.axes[axis].label.padding = args[axis].label.padding;
-        }
-      }
-      if (args[axis] && "innerPadding" in args[axis] && args[axis].innerPadding !== undefined) {
-        this.axes[axis].innerPadding = args[axis].innerPadding;
-      }
-    });
+    deepAssignRecordIfDefined(this.axes, args);
     return this as This<M, T, Flags>;
   }
 
   configureCategories(args: Categories[T]) {
-    if ("x" in args && args.x.length > 0) {
-      this.categories.x = args.x;
-    }
-    if ("y" in args && args.y.length > 0) {
-      this.categories.y = args.y;
-    }
+    deepAssignRecordIfDefined(this.categories, args);
     type NewFlags = MixNewFlags<CurrFlags, Flags, { hasConfiguredCategories: true }>
     return this as This<M, T, NewFlags>;
   };
@@ -65,18 +54,22 @@ export class Config<M, T extends ChartType, Flags extends CurrFlags> {
     });
     const scaleArgsParsed: ScaleArgsParsed =
       makeObjXY(() => ({ extents: { start: "auto", end: "auto" } }));
-    doXY(axis => {
-      if (scaleArgs && scaleArgs[axis]?.extents?.start) {
-        scaleArgsParsed[axis].extents.start = scaleArgs[axis].extents.start;
-      }
-      if (scaleArgs && scaleArgs[axis]?.extents?.end) {
-        scaleArgsParsed[axis].extents.end = scaleArgs[axis].extents.end;
-      }
-    });
+    deepAssignRecordIfDefined(scaleArgsParsed, scaleArgs);
     this.scales = processScaleArgs(scaleArgsParsed, this.prevOutput, this.categories, this.axes);
     type NewFlags = MixNewFlags<CurrFlags, Flags, { hasConfiguredScale: true }>
     return this as This<M, T, NewFlags>;
   };
+
+  configureTicks(tickArgs: TickArgs[T]) {
+    this.ticks ??= defaultTickConfig(this.prevOutput);
+    deepAssignRecordIfDefined(this.ticks, tickArgs);
+    doXY((axis) => {
+      if (this.ticks?.[axis].numerical.enableMathJax && !this.ticks?.[axis].numerical.formatter) {
+        throw new Error("When MathJax is enabled, a formatter must be provided.");
+      }
+    });
+    return this as This<M, T, Flags>;
+  }
 
   startVisual() {
     if (!this.scales) {
@@ -86,6 +79,7 @@ export class Config<M, T extends ChartType, Flags extends CurrFlags> {
       axes: this.axes,
       categories: this.categories,
       scales: this.scales,
+      ticks: this.ticks ?? defaultTickConfig(this.prevOutput),
     };
     const output = {
       ...this.prevOutput,
