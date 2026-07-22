@@ -14,12 +14,14 @@ import {
 import { CurrFlags as PrevFlags, CurrOutput as PrevOutput } from "../config/types";
 import { Interactive } from "../interactive/Interactive";
 import { AxesLayer } from "./layers/AxesLayer";
+import { TracesLayer } from "./layers/TracesLayer";
 import { getInner } from "../base/utils";
 
 export class Visual<M, T extends ChartType, Flags extends CurrFlags> {
   private coreLayers: CoreLayers;
   private visualLayers: VisualLayers<M> = {
-    [VisualLayer.Axes]: null
+    [VisualLayer.Axes]: null,
+    [VisualLayer.Trace]: null,
   };
 
   private constructor(private prevOutput: PrevOutput<M>) {
@@ -74,7 +76,9 @@ export class Visual<M, T extends ChartType, Flags extends CurrFlags> {
   };
 
   addTraces() {
-    // TODO
+    this.visualLayers[VisualLayer.Trace] = new TracesLayer<M>(
+      this.prevOutput, this.coreLayers
+    );
     type NewFlags = MixNewFlags<CurrFlags, Flags, { hasVisualDataLayer: true }>
     return this as This<M, T, NewFlags>;
   };

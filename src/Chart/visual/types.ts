@@ -2,6 +2,7 @@ import { ChartType, D3Selection, HasAllKeys, Prettify } from "@/types"
 import { CurrFlags as PrevFlags, CurrOutputs as PrevOutputs } from "../config/types"
 import { Visual } from "./Visual"
 import { AxesLayer } from "./layers/AxesLayer"
+import { TracesLayer } from "./layers/TracesLayer"
 
 
 
@@ -37,15 +38,16 @@ export type CoreLayers = HasAllKeys<CoreLayer, {
 
 export enum VisualLayer {
   Axes = "skadiChartAxes",
+  Trace = "skadiChartTrace",
   // TODO
   // Area = "skadiChartArea",
-  // Trace = "skadiChartTrace",
   // Grid = "skadiChartGrid",
   // Scatter = "skadiChartScatter",
   // CustomVisual = "skadiChartCustomVisual",
 }
 export type VisualLayers<M> = HasAllKeys<VisualLayer, {
   [VisualLayer.Axes]: AxesLayer<M> | null
+  [VisualLayer.Trace]: TracesLayer<M> | null
 }>
 
 
