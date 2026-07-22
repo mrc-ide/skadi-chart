@@ -1,6 +1,6 @@
 import { ScatterLayer } from "./layers/ScatterLayer";
 import { TracesLayer } from "./layers/TracesLayer";
-import { LayerArgs, ScaleNumeric, XY, Point, Scales, AxisType, D3Selection, PointWithMetadata } from "./types";
+import { LayerArgs, ScaleNumeric, XY, Point, Scales, AxisType, D3Selection, PointWithMetadata, Lines, ScatterPoints, XorY } from "./types";
 
 const round = (num: number) => Math.floor(num * 10) / 10;
 
@@ -146,5 +146,21 @@ export const iterateOverPoints = <Metadata>(
     for (let j = 0; j < scatterLayer.points.length; j++) {
       callback(scatterLayer.points[j]);
     }
+  }
+};
+
+export const doXY = (callback: (axis: XorY) => void) => {
+  callback("x");
+  callback("y");
+};
+
+export const anyXY = (callback: (axis: XorY) => boolean) => {
+  return callback("x") || callback("y");
+};
+
+export const makeObjXY = <T>(callback: (axis: XorY) => T): XY<T> => {
+  return {
+    x: callback("x"),
+    y: callback("y"),
   }
 };

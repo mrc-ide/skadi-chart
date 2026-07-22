@@ -4,6 +4,9 @@ import { test, expect, Page, Locator } from "@playwright/test";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("http://localhost:5173");
+  await page.locator("details").filter({ hasText: "Legacy Skadi Chart" }).evaluate((element) => {
+    element.setAttribute("open", "");
+  });
 });
 
 class SkadiChartTest {
@@ -149,7 +152,6 @@ class SkadiChartTest {
   };
 };
 
-
 test("basic traces", async ({ page }) => {
   await new SkadiChartTest(page, "chartSparkLines")
     .expectNTraces(10)
@@ -229,7 +231,7 @@ test("categorical y axis", async ({ page }) => {
   await new SkadiChartTest(page, "chartCategoricalYAxis")
     .expectNTraces(10)
     .expectNPoints(1000)
-    .expectAxes({ x: 1, y: 6 }) // 6 = 5 numerical axes within each band, plus 1 main categorical axis
+    .expectAxes({ x: 1, y: 6 }) // 6 = 5 numerical axes (one for each band) plus 1 main categorical axis
     .expectTooltip()
     .expectLabels({ x: "Time", y: "Category" })
     .expectGridlines({ x: 1, y: 0 })
@@ -252,7 +254,7 @@ test("categorical x axis", async ({ page }) => {
 test("categorical y axis with overlapping bands", async ({ page }) => {
   await new SkadiChartTest(page, "chartOverlappingBandsY")
     .expectNTraces(10)
-    .expectAxes({ x: 1, y: 6 }) // 6 = 5 numerical axes within each band, plus 1 main categorical axis
+    .expectAxes({ x: 1, y: 6 }) // 6 = 5 numerical axes (one for each band) plus 1 main categorical axis
     .expectTooltip()
     .expectGridlines({ x: 0, y: 0 })
     .expectLabels({ x: "Time", y: "Category" })

@@ -2,9 +2,99 @@ import { ChartOptions } from "./Chart";
 import * as d3 from "./d3";
 import { LayerType, OptionalLayer } from "./layers/Layer";
 
-export type AxisType = 'x' | 'y';
-export type XY<T> = Record<AxisType, T>;
+
+
+export type XorY = 'x' | 'y';
+export type XY<T> = Record<XorY, T>;
 export type Point = XY<number>
+
+
+
+export type CategoricalChartType = "categoricalX" | "categoricalY" | "categoricalXY"
+export type ChartType = "default" | CategoricalChartType
+
+
+
+export type HasAllKeys<
+  Keys extends string | number | symbol,
+  T extends Record<Keys, any>
+> = T
+
+export type DeepPartialRecord<T extends Record<string, unknown>> = {
+  [K in keyof T]?: T[K] extends Function
+    ? T[K]
+    : T[K] extends Record<string, unknown>
+      ? DeepPartialRecord<T[K]>
+      : T[K];
+};
+
+type EmptyExtensions = { [K in ChartType]: {} }
+type Category<Key extends XorY> = {
+  category: { [K in Key]: string }
+}
+type CategoryExtensions = HasAllKeys<ChartType, {
+  default: {},
+  categoricalX: Category<"x">,
+  categoricalY: Category<"y">,
+  categoricalXY: Category<"x" | "y">,
+}>
+type ChartTypeExtensions = HasAllKeys<ChartType, {
+  default: { chartType: "default" },
+  categoricalX: { chartType: "categoricalX" },
+  categoricalY: { chartType: "categoricalY" },
+  categoricalXY: { chartType: "categoricalXY" },
+}>
+type Extensions = {
+  category: CategoryExtensions,
+  chartType: ChartTypeExtensions,
+}
+
+type MixExtensions<E extends (keyof Extensions)[]> =
+  E extends []
+    ? EmptyExtensions
+    : E extends [infer LastExt]
+      ? LastExt extends keyof Extensions ? Extensions[LastExt] : never
+      : E extends [infer Ext, ...infer Rest]
+        ? Ext extends keyof Extensions
+          ? Rest extends (keyof Extensions)[]
+            ? Extensions[Ext] & MixExtensions<Rest>
+            : never
+          : never
+        : never
+
+export type WithExtensions<
+  Map extends Record<ChartType, any>,
+  E extends (keyof Extensions)[]
+> = {
+  [K in ChartType]: Map[K] & MixExtensions<E>[K]
+}
+
+
+
+export type Prettify<T> = {
+  [K in keyof T]: T[K];
+} & {};
+
+type ValidateNewFlags<FlagsType, F extends Partial<FlagsType>> = {
+  [K in keyof F]: K extends keyof FlagsType ? true : false
+}[keyof F] extends true ? true : false
+
+type Mix<O1, O2> = Prettify<{
+  [K in keyof O1]: K extends keyof O2 ? O2[K] : O1[K]
+}>
+
+export type MixNewFlags<
+  FlagsType,
+  Flags extends FlagsType,
+  F extends Partial<FlagsType>
+> = Prettify<
+  ValidateNewFlags<FlagsType, F> extends true ? Mix<Flags, F> : {}
+>
+
+
+
+export type AxisType = 'x' | 'y';
+
 export type PointWithMetadata<Metadata> = Point & {
   metadata?: Metadata,
   bands?: Partial<XY<string>>
