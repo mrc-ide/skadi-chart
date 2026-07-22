@@ -8,7 +8,6 @@ import { getInner } from "@/Chart/base/utils";
 import { doXY } from "@/helpers";
 
 const animationDuration = 350;
-export const originLineStrokeWidth = 1;
 
 export class AxesLayer<M> extends Layer<M, null> {
   private zoomCallbacks: (() => Promise<void>)[] = [];
@@ -26,17 +25,27 @@ export class AxesLayer<M> extends Layer<M, null> {
 
   draw = () => {
     if (this.prevOutput.chartType === "default") {
-      this.drawNumerical("x", this.prevOutput.configState.scales.x, true);
-      this.drawNumerical("y", this.prevOutput.configState.scales.y, true);
+      const { x: xScale, y: yScale } = this.prevOutput.configState.scales;
+      this.drawNumerical("x", xScale, true);
+      this.drawNumerical("y", yScale, true);
     } else if (this.prevOutput.chartType === "categoricalX") {
-      this.drawCategorical("x", this.prevOutput.configState.scales.x);
-      this.drawNumerical("y", this.prevOutput.configState.scales.y, true);
+      const { x: xScale, y: yScale } = this.prevOutput.configState.scales;
+      this.drawCategorical("x", xScale);
+      this.drawNumerical("y", yScale, true);
+      if (xScale.scale.paddingInner() !== 0) {
+        yScale.domain().forEach(d => this.drawPerpendicularLine("y", yScale, false, d));
+      }
     } else if (this.prevOutput.chartType === "categoricalY") {
-      this.drawNumerical("x", this.prevOutput.configState.scales.x, true);
-      this.drawCategorical("y", this.prevOutput.configState.scales.y);
+      const { x: xScale, y: yScale } = this.prevOutput.configState.scales;
+      this.drawNumerical("x", xScale, true);
+      this.drawCategorical("y", yScale);
+      if (yScale.scale.paddingInner() !== 0) {
+        xScale.domain().forEach(d => this.drawPerpendicularLine("x", xScale, false, d));
+      }
     } else {
-      this.drawCategorical("x", this.prevOutput.configState.scales.x);
-      this.drawCategorical("y", this.prevOutput.configState.scales.y);
+      const { x: xScale, y: yScale } = this.prevOutput.configState.scales;
+      this.drawCategorical("x", xScale);
+      this.drawCategorical("y", yScale);
     }
 
     this.addLabels();
@@ -69,7 +78,8 @@ export class AxesLayer<M> extends Layer<M, null> {
       this.zoomCallbacks.push(zoom);
     }
 
-    this.drawOriginLine(axis, scale, addZoom);
+    // Draw origin line
+    this.drawPerpendicularLine(axis, scale, addZoom, 0);
   };
 
   private drawCategorical = (axis: XorY, scaleCategorical: ScaleCategorical) => {
@@ -81,7 +91,8 @@ export class AxesLayer<M> extends Layer<M, null> {
     const axisConstructor = axis === "x" ? d3.axisBottom : d3.axisLeft;
     const tickPadding = 30; // This will become a configurable option.
     
-    const bandScale = scaleCategorical.scale; // The main, "outer" scale, containing all the bands
+    // Process the main, "outer" scale, containing all the bands
+    const bandScale = scaleCategorical.scale;
     const categoricalAxis = axisConstructor(bandScale).tickPadding(tickPadding);
     const axisGElement = this.coreLayers[CoreLayer.Svg]
       .append("g")
@@ -91,20 +102,30 @@ export class AxesLayer<M> extends Layer<M, null> {
       .call(categoricalAxis);
     axisGElement.select(".domain").style("stroke-opacity", 0);
 
-    const numericalScales = scaleCategorical.categories; // Each band's "inner" scale
-    Object.entries(numericalScales).forEach(([_, scale]) => {
-      this.drawNumerical(axis, scale, false);
+    // Process each band's "inner" scale, which is a numerical scale
+    Object.entries(scaleCategorical.categories).forEach(([_, innerNumScale]) => {
+      this.drawNumerical(axis, innerNumScale, false);
+      if (bandScale.paddingInner() !== 0) {
+        innerNumScale.domain().forEach(d => this.drawPerpendicularLine(axis, innerNumScale, false, d));
+      }
     });
   };
 
-  // Draw a line at the origin (where axis value is 0) of a numerical scale.
+  // Draw a line perpendicular to the specified axis at the given position in data coordinates.
   // This line will be made up of 1 or more segments, since if the other axis is categorical,
   // inter-segment gaps are required for skipping over the padding of the categorical bands.
-  private drawOriginLine = (axis: XorY, numScale: ScaleNumeric, addZoom: boolean) => {
-    const originSC = numScale(0);
+  private drawPerpendicularLine = (
+    axis: XorY,
+    numScale: ScaleNumeric,
+    addZoom: boolean,
+    positionDC: number,
+    strokeWidthPx: number = 1,
+    color: string = "black",
+  ) => {
+    const positionSC = numScale(positionDC);
     const [minSC, maxSC] = numScale.range().sort((a, b) => a - b);
-    // If origin is out of range, don't draw the line. Otherwise we might draw a line onto another band.
-    if (originSC < minSC || originSC > maxSC) return;
+    // If outside of range, don't draw the line. Otherwise we might draw a line onto another band.
+    if (positionSC < minSC || positionSC > maxSC) return;
 
     // Get all the numerical scales for the other axis, termed the 'foreign axis'.
     // Categorical axes contain multiple numerical scales; non-categorical axes contain exactly one.
@@ -117,26 +138,26 @@ export class AxesLayer<M> extends Layer<M, null> {
 
     foreignNumScales.forEach(scale => {
       const lineSegment = this.coreLayers[CoreLayer.BaseLayer].append("g").append("line")
-        .attr(`${axis}1`, originSC)
-        .attr(`${axis}2`, originSC)
+        .attr(`${axis}1`, positionSC)
+        .attr(`${axis}2`, positionSC)
         .attr(`${foreignAxis}1`, scale.range()[0])
         .attr(`${foreignAxis}2`, scale.range()[1])
-        .style("stroke", "darkgrey").style("stroke-width", originLineStrokeWidth);
+        .style("stroke", color).style("stroke-width", strokeWidthPx);
 
       if (addZoom) {
         const zoom = async () => {
-          const newOriginSC = numScale(0);
+          const newPositionSC = numScale(positionDC);
           await lineSegment.transition()
             .duration(animationDuration)
-            .attr(`${axis}1`, newOriginSC)
-            .attr(`${axis}2`, newOriginSC)
-            .style("stroke-width", originLineStrokeWidth)
+            .attr(`${axis}1`, newPositionSC)
+            .attr(`${axis}2`, newPositionSC)
+            .style("stroke-width", strokeWidthPx)
             .end();
         };
         this.zoomCallbacks.push(zoom);
       }
     });
-  }
+  };
 
   private addLabels = () => {
     const { getHtmlId, bounds } = this.prevOutput.baseState;
@@ -164,5 +185,5 @@ export class AxesLayer<M> extends Layer<M, null> {
           .attr("y", inner.y.end + padding)
       }
     });
-  }
+  };
 }
