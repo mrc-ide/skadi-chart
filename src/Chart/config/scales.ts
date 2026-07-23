@@ -126,19 +126,17 @@ export const processScaleArgs = <M>(
 
   // base d3 scales
   const inner = getInner(prevOutput.baseState.bounds);
-  // invert y axis for d3Scale.range(), which takes SC parameters in DC order.
-  const ranges = { ...inner, y: {
-    ...inner.y,
-    start: inner.y.end,
-    end: inner.y.start,
-  } };
+  const ranges = {
+    x: [inner.x.start, inner.x.end],
+    y: [inner.y.end, inner.y.start],
+  };
   const baseScales: XY<ScaleNumeric> = makeObjXY(axis => {
     const d3Scale = args[axis].log ? d3.scaleLog : d3.scaleLinear;
     const axisRange = ranges[axis];
     const axisInitial = initial[axis];
     return d3Scale()
       .domain([ axisInitial.start, axisInitial.end ])
-      .range([ axisRange.start, axisRange.end ]);
+      .range(axisRange);
   });
 
   return makeObjXY(axis => {
@@ -149,7 +147,7 @@ export const processScaleArgs = <M>(
     const axisRange = ranges[axis];
     const d3Scale = d3.scaleBand()
       .domain(categories[axis])
-      .range([ axisRange.start, axisRange.end ])
+      .range(axisRange)
       .paddingInner(axes[axis].innerPadding);
     const categoryWidth = d3Scale.bandwidth();
 
