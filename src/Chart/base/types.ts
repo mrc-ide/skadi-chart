@@ -17,6 +17,7 @@ export type CurrState = {
   getHtmlId: (key: string) => string,
   element: HTMLDivElement,
   bounds: Bounds,
+  clipPathBounds: Bounds,
 }
 
 export type CurrOutputs = {

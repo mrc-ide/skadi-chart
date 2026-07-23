@@ -15,9 +15,9 @@ type Method<M extends AllMethods> = M
 
 
 
-type VisualDataLayers = Method<"addTraces" | "addScatterPoints">
 type RemoveIfNoData<Flags extends CurrFlags> =
-  Flags["hasData"] extends true ? "" : VisualDataLayers
+  (Flags["hasLines"] extends true ? never : Method<"addTraces">) |
+  (Flags["hasPoints"] extends true ? never : Method<"addScatterPoints">)
 type MethodsToRemove<_T extends ChartType, Flags extends CurrFlags> = RemoveIfNoData<Flags>
 
 export type This<M, T extends ChartType, Flags extends CurrFlags> =
