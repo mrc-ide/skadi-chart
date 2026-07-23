@@ -23,18 +23,17 @@ export class Base<M, T extends ChartType> {
     this.bounds = { width, height, margin };
 
     const { x, y } = getInner(this.bounds);
-    console.log("y", y);
     this.clipPathBounds = {
-      width: x.end - x.start + clipPathBuffer * 2,
-      height: y.end - y.start + clipPathBuffer * 2,
+      width: (x.end - x.start) + clipPathBuffer * 2,
+      height: (y.end - y.start) + clipPathBuffer * 2,
       margin: {
         x: {
           start: this.bounds.margin.x.start - clipPathBuffer,
-          end: this.bounds.margin.x.end + clipPathBuffer,
+          end: this.bounds.margin.x.end - clipPathBuffer,
         },
         y: {
           start: this.bounds.margin.y.start - clipPathBuffer,
-          end: this.bounds.margin.y.end + clipPathBuffer,
+          end: this.bounds.margin.y.end - clipPathBuffer,
         },
       },
     };
