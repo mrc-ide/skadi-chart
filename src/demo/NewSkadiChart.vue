@@ -61,6 +61,7 @@ import type { Option } from "vue3-select-component";
 import VueSelect from "vue3-select-component";
 import { onMounted, ref, watch } from "vue";
 import { Base as ChartNew } from "../Chart/base/Base";
+import { LineConfig, Lines } from "@/Chart/data/types";
 
 const numericalAxes = ref<HTMLDivElement | null>(null);
 const categoricalXYAxes = ref<HTMLDivElement | null>(null);
@@ -88,6 +89,26 @@ const chartContainers: Record<ChartType, typeof numericalAxes> = {
   categoricalY: categoricalYAxis,
 };
 
+const xCategories = ["A", "B", "C"];
+const yCategories = ["Category A", "Category B"];
+
+const lines = [
+  {
+    points: [
+      { x: 0, y: 0 },
+      { x: 10, y: 100 },
+      { x: 20, y: -200 },
+      { x: 30, y: 300 },
+      { x: 40, y: -400 },
+    ],
+    style: {
+      strokeColor: "blue",
+      opacity: 1,
+      strokeWidth: 1,
+    }
+  },
+];
+
 const renderMathJaxChart = () => {
   const container = chartMathJax.value;
   if (!container) {
@@ -95,6 +116,7 @@ const renderMathJaxChart = () => {
   }
   new ChartNew("default", container)
     .startData()
+    .registerLines(lines)
     .startConfig()
     .configureAxes({
       x: { label: { text: "Time" } },
@@ -110,6 +132,7 @@ const renderMathJaxChart = () => {
     })
     .startVisual()
     .addAxes()
+    .addTraces()
     .startInteractive()
     .end();
 }
@@ -124,6 +147,7 @@ const renderChart = (chartType: ChartType) => {
   if (chartType === "default") {
     new ChartNew("default", container)
       .startData()
+      .registerLines(lines)
       .startConfig()
       .configureAxes({
         x: { label: { text: "Time" } },
@@ -138,20 +162,28 @@ const renderChart = (chartType: ChartType) => {
       })
       .startVisual()
       .addAxes()
+      .addTraces()
       .startInteractive()
       .end();
     return;
   } else if (chartType === "categoricalXY") {
     new ChartNew("categoricalXY", container)
       .startData()
+      .registerLines(lines.map((line) => ({
+        ...line,
+        category: {
+          x: xCategories[0], // Math.floor(Math.random() * xCategories.length)],
+          y: yCategories[1], // Math.floor(Math.random() * yCategories.length)],
+        },
+      })))
       .startConfig()
       .configureAxes({
         x: { label: { text: "X Category", padding: 70 }, innerPadding: 0.2 },
         y: { label: { text: "Y Category", padding: 50 }, innerPadding: 0.25 },
       })
       .configureCategories({
-        x: ["A", "B", "C"],
-        y: ["Category A", "Category B"],
+        x: xCategories,
+        y: yCategories,
       })
       .configureScales({
         x: { extents: { start: -20, end: 20 } },
@@ -168,18 +200,25 @@ const renderChart = (chartType: ChartType) => {
       })
       .startVisual()
       .addAxes()
+      .addTraces()
       .startInteractive()
       .end();
     return;
   } else if (chartType === "categoricalX") {
     new ChartNew("categoricalX", container)
       .startData()
+      .registerLines(lines.map(line => ({
+        ...line,
+        category: {
+          x: xCategories[0], // Math.floor(Math.random() * xCategories.length)],
+        },
+      })))
       .startConfig()
       .configureAxes({
         x: { label: { text: "X Category", padding: 70 } },
         y: { label: { text: "Value" } },
       })
-      .configureCategories({ x: ["A", "B", "C"] })
+      .configureCategories({ x: xCategories })
       .configureScales({
         x: { extents: { start: 0, end: 40 } },
         y: { extents: { start: -500, end: 500 } },
@@ -189,6 +228,7 @@ const renderChart = (chartType: ChartType) => {
       })
       .startVisual()
       .addAxes()
+      .addTraces()
       .startInteractive()
       .end();
     return;
@@ -196,20 +236,25 @@ const renderChart = (chartType: ChartType) => {
 
   new ChartNew("categoricalY", container)
     .startData()
+    .registerLines(lines.map(line => ({
+      ...line,
+      category: {
+        y: yCategories[0], // Math.floor(Math.random() * yCategories.length)],
+      },
+    })))
     .startConfig()
     .configureAxes({
       x: { label: { text: "Time" } },
       y: { label: { text: "Y Category" }, innerPadding: 0 },
     })
-    .configureCategories({
-      y: ["Category A", "Category B"],
-    })
+    .configureCategories({ y: yCategories })
     .configureScales({
       x: { extents: { start: 0, end: 40 } },
       y: { extents: { start: 0, end: 500 } },
     })
     .startVisual()
     .addAxes()
+    .addTraces()
     .startInteractive()
     .end();
 };
