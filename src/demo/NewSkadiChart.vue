@@ -9,8 +9,14 @@
         placeholder="Select chart types"
       />
     </div>
+    <!-- Toggle log scale for each axis -->
+    <div v-for="axis in ['x', 'y']" :key="axis">
+      <label>
+        <input type="checkbox" v-model="logScale[axis]" />
+        Log scale {{ axis.toUpperCase() }}-axis
+      </label>
+    </div>
   </div>
-  <h1>Axes layer</h1>
   <div class="charts-container">
     <div v-if="selectedChartTypes.includes('default')">
       <h2>Numerical axes (default)</h2>
@@ -33,6 +39,9 @@
     With MathJax (experimental)
   </h1>
   <div class="chart" ref="chartMathJax" id="chartMathJax"></div>
+  <h1>Stress test: 1000 traces</h1>
+  <button @click="drawStressChart">Draw</button>
+  <div class="chart" ref="chartStress" id="chartStress"></div>
 </template>
 
 <style scoped>
@@ -56,18 +65,21 @@
 </style>
 
 <script setup lang="ts">
+import { generateWaveLines } from "@/demo/helpers";
 import type { ChartType } from "@/types";
 import type { Option } from "vue3-select-component";
 import VueSelect from "vue3-select-component";
 import { onMounted, ref, watch } from "vue";
 import { Base as ChartNew } from "../Chart/base/Base";
-import { LineConfig, Lines } from "@/Chart/data/types";
 
 const numericalAxes = ref<HTMLDivElement | null>(null);
 const categoricalXYAxes = ref<HTMLDivElement | null>(null);
 const categoricalXAxis = ref<HTMLDivElement | null>(null);
 const categoricalYAxis = ref<HTMLDivElement | null>(null);
 const chartMathJax = ref<HTMLDivElement | null>(null);
+const chartStress = ref<HTMLDivElement | null>(null);
+
+const logScale = ref({ x: false, y: false });
 
 const chartTypes: readonly ChartType[] = [
   "default",
@@ -92,28 +104,23 @@ const chartContainers: Record<ChartType, typeof numericalAxes> = {
 const xCategories = ["A", "B", "C"];
 const yCategories = ["Category A", "Category B"];
 
-const lines = [
-  {
-    points: [
-      { x: 0, y: 0 },
-      { x: 10, y: 100 },
-      { x: 20, y: -200 },
-      { x: 30, y: 300 },
-      { x: 40, y: -400 },
-    ],
-    style: {
-      strokeColor: "blue",
-      opacity: 1,
-      strokeWidth: 1,
-    }
-  },
-];
-
 const renderMathJaxChart = () => {
   const container = chartMathJax.value;
   if (!container) {
     return;
   }
+  const extents = {
+    x: { start: logScale.value.x ? 1 : 0, end: 40 },
+    y: { start: logScale.value.y ? 1 : -500, end: 500 },
+  };
+  const lines = generateWaveLines({
+    lineCount: 2,
+    pointCount: 300,
+    xRange: extents.x,
+    yRange: extents.y,
+    cycles: 5,
+    amplitude: 0.2,
+  });
   new ChartNew("default", container)
     .startData()
     .registerLines(lines)
@@ -123,8 +130,8 @@ const renderMathJaxChart = () => {
       y: { label: { text: "Value" } },
     })
     .configureScales({
-      x: { extents: { start: 0, end: 40 } },
-      y: { extents: { start: -500, end: 500 } },
+      x: { extents: extents.x, log: logScale.value.x },
+      y: { extents: extents.y, log: logScale.value.y },
     })
     .configureTicks({
       x: { numerical: { formatter: (num) => `$${num}^{1}$`, enableMathJax: true } },
@@ -144,6 +151,25 @@ const renderChart = (chartType: ChartType) => {
     return;
   }
 
+  const extents = {
+    x: { start: logScale.value.x ? 1 : chartType === "categoricalX" ? 0 : -20, end: 20 },
+    y: { start: logScale.value.y ? 1 : chartType === "categoricalY" ? 0 : -500, end: 500 },
+  };
+
+  const scaleArgs = {
+    x: { extents: extents.x, log: logScale.value.x },
+    y: { extents: extents.y, log: logScale.value.y },
+  };
+
+  const lines = generateWaveLines({
+    lineCount: xCategories.length * yCategories.length,
+    pointCount: 200,
+    xRange: extents.x,
+    yRange: extents.y,
+    cycles: 5,
+    amplitude: 0.1,
+  });
+
   if (chartType === "default") {
     new ChartNew("default", container)
       .startData()
@@ -153,10 +179,7 @@ const renderChart = (chartType: ChartType) => {
         x: { label: { text: "Time" } },
         y: { label: { text: "Value" } },
       })
-      .configureScales({
-        x: { extents: { start: 0, end: 40 } },
-        y: { extents: { start: -500, end: 500 } },
-      })
+      .configureScales(scaleArgs)
       .configureTicks({
         y: { numerical: { specifier: ".1f", padding: 2, size: 5, count: 20 } },
       })
@@ -169,11 +192,11 @@ const renderChart = (chartType: ChartType) => {
   } else if (chartType === "categoricalXY") {
     new ChartNew("categoricalXY", container)
       .startData()
-      .registerLines(lines.map((line) => ({
+      .registerLines(lines.map((line, i) => ({
         ...line,
         category: {
-          x: xCategories[0], // Math.floor(Math.random() * xCategories.length)],
-          y: yCategories[1], // Math.floor(Math.random() * yCategories.length)],
+          x: xCategories[i % xCategories.length],
+          y: yCategories[i % yCategories.length],
         },
       })))
       .startConfig()
@@ -185,10 +208,7 @@ const renderChart = (chartType: ChartType) => {
         x: xCategories,
         y: yCategories,
       })
-      .configureScales({
-        x: { extents: { start: -20, end: 20 } },
-        y: { extents: { start: -500, end: 500 } },
-      })
+      .configureScales(scaleArgs)
       .configureTicks({
         x: {
           categorical: { formatter: (v) => v.toLowerCase() },
@@ -207,10 +227,10 @@ const renderChart = (chartType: ChartType) => {
   } else if (chartType === "categoricalX") {
     new ChartNew("categoricalX", container)
       .startData()
-      .registerLines(lines.map(line => ({
+      .registerLines(lines.map((line, i) => ({
         ...line,
         category: {
-          x: xCategories[0], // Math.floor(Math.random() * xCategories.length)],
+          x: xCategories[i % xCategories.length],
         },
       })))
       .startConfig()
@@ -219,10 +239,7 @@ const renderChart = (chartType: ChartType) => {
         y: { label: { text: "Value" } },
       })
       .configureCategories({ x: xCategories })
-      .configureScales({
-        x: { extents: { start: 0, end: 40 } },
-        y: { extents: { start: -500, end: 500 } },
-      })
+      .configureScales(scaleArgs)
       .configureTicks({
         x: { numerical: { count: 2 } },
       })
@@ -236,10 +253,10 @@ const renderChart = (chartType: ChartType) => {
 
   new ChartNew("categoricalY", container)
     .startData()
-    .registerLines(lines.map(line => ({
+    .registerLines(lines.map((line, i) => ({
       ...line,
       category: {
-        y: yCategories[0], // Math.floor(Math.random() * yCategories.length)],
+        y: yCategories[i % yCategories.length],
       },
     })))
     .startConfig()
@@ -248,9 +265,46 @@ const renderChart = (chartType: ChartType) => {
       y: { label: { text: "Y Category" }, innerPadding: 0 },
     })
     .configureCategories({ y: yCategories })
+    .configureScales(scaleArgs)
+    .startVisual()
+    .addAxes()
+    .addTraces()
+    .startInteractive()
+    .end();
+};
+
+const drawStressChart = () => {
+  const container = chartStress.value;
+  if (!container) {
+    return;
+  }
+  const extents = {
+    x: { start: logScale.value.x ? 1 : -20, end: 20 },
+    y: { start: logScale.value.y ? 1 : -500, end: 500 },
+  };
+  const lines = generateWaveLines({
+    lineCount: 1000,
+    pointCount: 1000,
+    xRange: extents.x,
+    yRange: extents.y,
+    cycles: 5,
+    amplitude: 0.2,
+    opacity: 0.1,
+  });
+  new ChartNew("default", container)
+    .startData()
+    .registerLines(lines)
+    .startConfig()
+    .configureAxes({
+      x: { label: { text: "Time" } },
+      y: { label: { text: "Value" } },
+    })
     .configureScales({
-      x: { extents: { start: 0, end: 40 } },
-      y: { extents: { start: 0, end: 500 } },
+      x: { extents: extents.x, log: logScale.value.x },
+      y: { extents: extents.y, log: logScale.value.y },
+    })
+    .configureTicks({
+      y: { numerical: { specifier: ".1f", padding: 2, size: 5, count: 20 } },
     })
     .startVisual()
     .addAxes()
@@ -264,6 +318,11 @@ watch(selectedChartTypes, (newChartTypes) => {
 }, {
   flush: "post", // Ensure v-if container refs update before we attempt to render charts
 });
+
+watch(logScale, () => {
+  renderMathJaxChart();
+  selectedChartTypes.value.forEach(renderChart);
+}, { deep: true });
 
 onMounted(() => {
   selectedChartTypes.value.forEach(renderChart);

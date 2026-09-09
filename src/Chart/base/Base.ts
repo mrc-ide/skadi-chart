@@ -24,8 +24,8 @@ export class Base<M, T extends ChartType> {
 
     const { x, y } = getInner(this.bounds);
     this.clipPathBounds = {
-      width: (x.end - x.start) + clipPathBuffer * 2,
-      height: (y.end - y.start) + clipPathBuffer * 2,
+      width: x.size + clipPathBuffer * 2,
+      height: y.size + clipPathBuffer * 2,
       margin: {
         x: {
           start: this.bounds.margin.x.start - clipPathBuffer,

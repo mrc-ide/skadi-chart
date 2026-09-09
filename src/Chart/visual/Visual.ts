@@ -42,12 +42,12 @@ export class Visual<M, T extends ChartType, Flags extends CurrFlags> {
       .append("svg:clipPath")
       .attr("id", clipPathId) as any as D3Selection<SVGClipPathElement>;
 
-    const { width, height, margin } = this.prevOutput.baseState.clipPathBounds;
+    const clipPathBounds = this.prevOutput.baseState.clipPathBounds;
     clipPath.append("svg:rect")
-      .attr("width", width)
-      .attr("height", height)
-      .attr("x", margin.x.start)
-      .attr("y", margin.y.start);
+      .attr("width", clipPathBounds.width)
+      .attr("height", clipPathBounds.height)
+      .attr("x", clipPathBounds.margin.x.start)
+      .attr("y", clipPathBounds.margin.y.start);
 
     const baseLayer = svg.append('g')
       .attr("id", getHtmlId(CoreLayer.BaseLayer))

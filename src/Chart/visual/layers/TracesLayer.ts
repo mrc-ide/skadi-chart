@@ -1,8 +1,9 @@
 import { Layer } from "./Layer";
 import { CurrOutput as PrevOutput } from "@/Chart/config/types";
 import { CoreLayer, CoreLayers, VisualLayer } from "../types";
-import { D3Selection, Point, ScaleNumeric, XY } from "@/types";
-import { customLineGen, customLineGenerator } from "@/helpers";
+import { ChartType, D3Selection, Point, ScaleNumeric, XY } from "@/types";
+import { customLineGenerator } from "./utils";
+import { Lines } from "@/Chart/data/types";
 
 export type TracesOptions = {
   RDPEpsilon: number | null
@@ -132,7 +133,8 @@ export class TracesLayer<M> extends Layer<M, null> {
   }
 
   private updateLowResLinesSC = () => {
-    const linesSC = this.prevOutput.dataState.lines.map(lDC => {
+    const filteredLinesDC = this.filterLines(this.prevOutput.dataState.lines);
+    const linesSC = filteredLinesDC.map(lDC => {
       const scales = this.prevOutput.configState.scales
       const numScaleX = ("categories" in scales.x && "category" in lDC && "x" in lDC.category)
         ? scales.x.categories[lDC.category.x]
@@ -148,5 +150,54 @@ export class TracesLayer<M> extends Layer<M, null> {
     } else {
       this.lowResLinesSC = linesSC;
     }
+  };
+
+  private filterLines = (lines: Lines<M, ChartType>) => {
+    let filteredLines = lines;
+    if (this.prevOutput.configState.scales.config.x.log) {
+      filteredLines = this.filterLinesForLogAxis(filteredLines, "x");
+    }
+    if (this.prevOutput.configState.scales.config.y.log) {
+      filteredLines = this.filterLinesForLogAxis(filteredLines, "y");
+    }
+    return filteredLines;
+  }
+
+  // Filter lines to exclude points with values <= 0 on a log axis
+  // If there are points in the line with values <= 0 then we split up the line into
+  // segments, missing out the points with values <= 0. Here we create a line
+  // segment and iterate down the points of a line and once we hit a negative
+  // coordinate we push that line segment and start a new one
+  private filterLinesForLogAxis = (lines: Lines<M, ChartType>, axis: "x" | "y") => {
+    let warningMsg = "";
+    const filteredLines: Lines<M, ChartType> = [];
+    for (let i = 0; i < lines.length; i++) {
+      const currLine = lines[i];
+      let isLastCoordinatePositive = currLine.points[0] && currLine.points[0][axis] > 0;
+      let lineSegment: Lines<M, ChartType>[number] = { ...currLine, points: [] };
+
+      for (let j = 0; j < currLine.points.length; j++) {
+        if (currLine.points[j][axis] <= 0) {
+          warningMsg = `You have tried to use ${axis} axis `
+            + `log scale but there are traces with `
+            + `${axis} coordinates that are <= 0`;
+        }
+
+        if (currLine.points[j][axis] > 0) {
+          lineSegment.points.push(currLine.points[j]);
+          isLastCoordinatePositive = true;
+        } else if (isLastCoordinatePositive) {
+          filteredLines.push(lineSegment);
+          lineSegment = { ...currLine, points: [] };
+          isLastCoordinatePositive = false;
+        }
+      }
+
+      if (isLastCoordinatePositive) {
+        filteredLines.push(lineSegment);
+      }
+    }
+    if (warningMsg) console.warn(warningMsg);
+    return filteredLines;
   };
 }
