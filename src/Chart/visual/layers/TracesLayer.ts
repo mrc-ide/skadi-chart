@@ -101,6 +101,7 @@ export class TracesLayer<M> extends Layer<M, null> {
   private zoomCallbacks: (() => Promise<void>)[] = [];
   private traces: D3Selection<SVGPathElement>[] = [];
   private lowResLinesSC: Point[][] = [];
+  private filteredLinesDC: Lines<M, ChartType>;
   
   constructor(
     private prevOutput: PrevOutput<M>,
@@ -108,6 +109,7 @@ export class TracesLayer<M> extends Layer<M, null> {
     private options: TracesOptions,
   ) {
     super();
+    this.filteredLinesDC = this.filterLines(this.prevOutput.dataState.lines);
   };
 
   zoom = async () => {
@@ -118,7 +120,7 @@ export class TracesLayer<M> extends Layer<M, null> {
     this.updateLowResLinesSC();
     const { getHtmlId } = this.prevOutput.baseState;
 
-    this.traces = this.prevOutput.dataState.lines.map((lDC, index) => {
+    this.traces = this.filteredLinesDC.map((lDC, index) => {
       const linePathSC = customLineGenerator(this.lowResLinesSC[index], this.prevOutput.baseState.clipPathBounds).join("");
       return this.coreLayers[CoreLayer.BaseLayer].append("path")
         .attr("id", `${getHtmlId(VisualLayer.Trace)}-${index}`)
@@ -133,8 +135,7 @@ export class TracesLayer<M> extends Layer<M, null> {
   }
 
   private updateLowResLinesSC = () => {
-    const filteredLinesDC = this.filterLines(this.prevOutput.dataState.lines);
-    const linesSC = filteredLinesDC.map(lDC => {
+    const linesSC = this.filteredLinesDC.map(lDC => {
       const scales = this.prevOutput.configState.scales
       const numScaleX = ("categories" in scales.x && "category" in lDC && "x" in lDC.category)
         ? scales.x.categories[lDC.category.x]
