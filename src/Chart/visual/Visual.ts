@@ -78,10 +78,9 @@ export class Visual<M, T extends ChartType, Flags extends CurrFlags> {
     return this as This<M, T, Flags>;
   };
 
-  // TODO: Check this is the most desirable interface. Could move to Data.ts.
-  addTraces(options: TracesOptions = { RDPEpsilon: null }) {
+  addTraces() {
     this.visualLayers[VisualLayer.Trace] = new TracesLayer<M>(
-      this.prevOutput, this.coreLayers, this.linesLayer, options
+      this.prevOutput, this.coreLayers, this.linesLayer
     );
     type NewFlags = MixNewFlags<CurrFlags, Flags, { hasVisualDataLayer: true }>
     return this as This<M, T, NewFlags>;

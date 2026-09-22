@@ -1,26 +1,34 @@
 import { Lines } from "@/Chart/data/types";
 import { LifecycleHooks } from "@/Chart/visual/layers/Layer";
-import { ChartType, ZoomProperties } from "@/types";
+import { ChartType, Point, ScaleNumeric, ZoomProperties } from "@/types";
 import { CurrOutputs as PrevOutputs } from "@/Chart/config/types";
 import { doXY } from "@/helpers";
+import { doRDP } from "./rdp";
 
 // The LinesLayer class handles shared lines data depended upon by TracesLayer and AreaLayer.
 
 // TODO: Hook into zooming lifecycle hooks for
-// (1) applying RDP algorithm and
+// (1) applying RDP algorithm (probably by re-calling updateLowResLinesSC) and
 // (2) filtering lines to the visible viewport.
 export class LinesLayer<M, T extends ChartType> implements Partial<LifecycleHooks> {
   private linesDC: Lines<M, T> = [];
+  private lowResLinesSC: Point[][] = [];
 
   // Readonly version of linesDC
   get lines() {
     return this.linesDC;
   }
 
+  // Readonly version of lowResLinesSC
+  get lowResLines() {
+    return this.lowResLinesSC;
+  }
+
   async zoom(_zoomProperties: ZoomProperties) {};
 
   constructor(private prevOutput: PrevOutputs<M>[T]) {
     this.linesDC = this.filterLines(this.prevOutput.dataState.lines);
+    this.updateLowResLinesSC();
   };
 
   // Filter lines to exclude points with values <= 0 on a log axis.
@@ -67,4 +75,27 @@ export class LinesLayer<M, T extends ChartType> implements Partial<LifecycleHook
     });
     return filteredLines;
   }
+
+  private updateLowResLinesSC = () => {
+    const linesSC = this.lines.map(lDC => {
+      const scales = this.prevOutput.configState.scales
+      const numScaleX = ("categories" in scales.x && "category" in lDC && "x" in lDC.category)
+        ? scales.x.categories[lDC.category.x]
+        : scales.x as ScaleNumeric;
+      const numScaleY = ("categories" in scales.y && "category" in lDC && "y" in lDC.category)
+        ? scales.y.categories[lDC.category.y]
+        : scales.y as ScaleNumeric;
+
+      return lDC.points.map(p => ({ x: numScaleX(p.x), y: numScaleY(p.y) }));
+    });
+    const { RDPEpsilon } = this.prevOutput.configState.lines;
+    if (RDPEpsilon === null) {
+      this.lowResLinesSC = linesSC;
+      return;
+    }
+    this.lowResLinesSC = linesSC.map(l => {
+      const slice = [0, l.length - 1] as [number, number];
+      return doRDP(l, slice, RDPEpsilon);
+    });
+  };
 }
