@@ -1,4 +1,4 @@
-import { ChartType, Point, Prettify, WithExtensions, XY } from "@/types"
+import { ChartType, Point, Prettify, WithExtensions } from "@/types"
 import { Data } from "./Data"
 import { CurrOutputs as PrevOutputs } from "../base/types"
 

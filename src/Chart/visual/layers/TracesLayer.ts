@@ -1,9 +1,8 @@
-import { Layer } from "./Layer";
+import { Layer } from "@/Chart/visual/layers/Layer";
 import { CurrOutput as PrevOutput } from "@/Chart/config/types";
 import { CoreLayer, CoreLayers, VisualLayer } from "../types";
 import { ChartType, D3Selection, Point, ScaleNumeric, XY } from "@/types";
 import { customLineGenerator } from "./utils";
-import { Lines } from "@/Chart/data/types";
 
 export type TracesOptions = {
   RDPEpsilon: number | null
@@ -27,7 +26,9 @@ const roundPoint = (point: Point) => {
 };
 
 /*
-  see https://en.wikipedia.org/wiki/Ramer%E2%80%93Douglas%E2%80%93Peucker_algorithm#Algorithm
+  This is a safe way to lower resolution of a line without losing the important detail.
+
+  See https://en.wikipedia.org/wiki/Ramer%E2%80%93Douglas%E2%80%93Peucker_algorithm#Algorithm
   In a nutshell:
   1. Draw straight line between start point, a, and end point, b, (these change but initially it is the
      start and end of the line)
@@ -39,8 +40,6 @@ const roundPoint = (point: Point) => {
 
   Essentially it deletes points which are approximately in a straight line (approximately being defined
   by epsilon here) and keeps the more interesting spiky points.
-
-  This is a safe way to lower resolution of a line without losing the important detail
 */
 const doRDP = (
   pointsSC: Point[], slice: [number, number], epsilon: number
@@ -101,7 +100,6 @@ export class TracesLayer<M> extends Layer<M, null> {
   private zoomCallbacks: (() => Promise<void>)[] = [];
   private traces: D3Selection<SVGPathElement>[] = [];
   private lowResLinesSC: Point[][] = [];
-  private filteredLinesDC: Lines<M, ChartType>;
   
   constructor(
     private prevOutput: PrevOutput<M>,
@@ -109,7 +107,6 @@ export class TracesLayer<M> extends Layer<M, null> {
     private options: TracesOptions,
   ) {
     super();
-    this.filteredLinesDC = this.filterLines(this.prevOutput.dataState.lines);
   };
 
   zoom = async () => {
@@ -120,7 +117,7 @@ export class TracesLayer<M> extends Layer<M, null> {
     this.updateLowResLinesSC();
     const { getHtmlId } = this.prevOutput.baseState;
 
-    this.traces = this.filteredLinesDC.map((lDC, index) => {
+    this.traces = this.prevOutput.configState.linesDC.map((lDC, index) => {
       const linePathSC = customLineGenerator(this.lowResLinesSC[index], this.prevOutput.baseState.clipPathBounds).join("");
       return this.coreLayers[CoreLayer.BaseLayer].append("path")
         .attr("id", `${getHtmlId(VisualLayer.Trace)}-${index}`)
@@ -135,7 +132,7 @@ export class TracesLayer<M> extends Layer<M, null> {
   }
 
   private updateLowResLinesSC = () => {
-    const linesSC = this.filteredLinesDC.map(lDC => {
+    const linesSC = this.prevOutput.configState.linesDC.map(lDC => {
       const scales = this.prevOutput.configState.scales
       const numScaleX = ("categories" in scales.x && "category" in lDC && "x" in lDC.category)
         ? scales.x.categories[lDC.category.x]
@@ -151,54 +148,5 @@ export class TracesLayer<M> extends Layer<M, null> {
     } else {
       this.lowResLinesSC = linesSC;
     }
-  };
-
-  private filterLines = (lines: Lines<M, ChartType>) => {
-    let filteredLines = lines;
-    if (this.prevOutput.configState.scales.config.x.log) {
-      filteredLines = this.filterLinesForLogAxis(filteredLines, "x");
-    }
-    if (this.prevOutput.configState.scales.config.y.log) {
-      filteredLines = this.filterLinesForLogAxis(filteredLines, "y");
-    }
-    return filteredLines;
-  }
-
-  // Filter lines to exclude points with values <= 0 on a log axis
-  // If there are points in the line with values <= 0 then we split up the line into
-  // segments, missing out the points with values <= 0. Here we create a line
-  // segment and iterate down the points of a line and once we hit a negative
-  // coordinate we push that line segment and start a new one
-  private filterLinesForLogAxis = (lines: Lines<M, ChartType>, axis: "x" | "y") => {
-    let warningMsg = "";
-    const filteredLines: Lines<M, ChartType> = [];
-    for (let i = 0; i < lines.length; i++) {
-      const currLine = lines[i];
-      let isLastCoordinatePositive = currLine.points[0] && currLine.points[0][axis] > 0;
-      let lineSegment: Lines<M, ChartType>[number] = { ...currLine, points: [] };
-
-      for (let j = 0; j < currLine.points.length; j++) {
-        if (currLine.points[j][axis] <= 0) {
-          warningMsg = `You have tried to use ${axis} axis `
-            + `log scale but there are traces with `
-            + `${axis} coordinates that are <= 0`;
-        }
-
-        if (currLine.points[j][axis] > 0) {
-          lineSegment.points.push(currLine.points[j]);
-          isLastCoordinatePositive = true;
-        } else if (isLastCoordinatePositive) {
-          filteredLines.push(lineSegment);
-          lineSegment = { ...currLine, points: [] };
-          isLastCoordinatePositive = false;
-        }
-      }
-
-      if (isLastCoordinatePositive) {
-        filteredLines.push(lineSegment);
-      }
-    }
-    if (warningMsg) console.warn(warningMsg);
-    return filteredLines;
   };
 }

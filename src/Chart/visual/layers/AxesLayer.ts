@@ -1,5 +1,5 @@
 import * as d3 from "@/d3";
-import { Layer } from "./Layer";
+import { Layer } from "@/Chart/visual/layers/Layer";
 import { Point, ScaleNumeric, XorY } from "@/types";
 import { CurrOutput as PrevOutput } from "@/Chart/config/types";
 import { CoreLayer, CoreLayers, VisualLayer } from "../types";
