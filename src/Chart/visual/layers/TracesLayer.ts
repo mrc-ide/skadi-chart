@@ -3,6 +3,7 @@ import { CurrOutput as PrevOutput } from "@/Chart/config/types";
 import { CoreLayer, CoreLayers, VisualLayer } from "../types";
 import { ChartType, D3Selection, Point, ScaleNumeric, XY } from "@/types";
 import { customLineGenerator } from "./utils";
+import { LinesLayer } from "./predraw/LinesLayer";
 
 export type TracesOptions = {
   RDPEpsilon: number | null
@@ -96,7 +97,7 @@ export const RDPAlgorithm = (linesSC: Point[][], epsilon: number) => {
   });
 };
 
-export class TracesLayer<M> extends Layer<M, null> {
+export class TracesLayer<M> extends Layer<M> {
   private zoomCallbacks: (() => Promise<void>)[] = [];
   private traces: D3Selection<SVGPathElement>[] = [];
   private lowResLinesSC: Point[][] = [];
@@ -104,6 +105,7 @@ export class TracesLayer<M> extends Layer<M, null> {
   constructor(
     private prevOutput: PrevOutput<M>,
     private coreLayers: CoreLayers,
+    private linesLayer: LinesLayer<M, ChartType>,
     private options: TracesOptions,
   ) {
     super();
@@ -117,7 +119,7 @@ export class TracesLayer<M> extends Layer<M, null> {
     this.updateLowResLinesSC();
     const { getHtmlId } = this.prevOutput.baseState;
 
-    this.traces = this.prevOutput.configState.linesDC.map((lDC, index) => {
+    this.traces = this.linesLayer.lines.map((lDC, index) => {
       const linePathSC = customLineGenerator(this.lowResLinesSC[index], this.prevOutput.baseState.clipPathBounds).join("");
       return this.coreLayers[CoreLayer.BaseLayer].append("path")
         .attr("id", `${getHtmlId(VisualLayer.Trace)}-${index}`)
@@ -132,7 +134,7 @@ export class TracesLayer<M> extends Layer<M, null> {
   }
 
   private updateLowResLinesSC = () => {
-    const linesSC = this.prevOutput.configState.linesDC.map(lDC => {
+    const linesSC = this.linesLayer.lines.map(lDC => {
       const scales = this.prevOutput.configState.scales
       const numScaleX = ("categories" in scales.x && "category" in lDC && "x" in lDC.category)
         ? scales.x.categories[lDC.category.x]

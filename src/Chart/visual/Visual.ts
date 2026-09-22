@@ -15,6 +15,7 @@ import { CurrFlags as PrevFlags, CurrOutput as PrevOutput } from "../config/type
 import { Interactive } from "../interactive/Interactive";
 import { AxesLayer } from "./layers/AxesLayer";
 import { TracesLayer, TracesOptions } from "./layers/TracesLayer";
+import { LinesLayer } from "./layers/predraw/LinesLayer";
 
 export class Visual<M, T extends ChartType, Flags extends CurrFlags> {
   private coreLayers: CoreLayers;
@@ -22,6 +23,7 @@ export class Visual<M, T extends ChartType, Flags extends CurrFlags> {
     [VisualLayer.Axes]: null,
     [VisualLayer.Trace]: null,
   };
+  private linesLayer: LinesLayer<M, ChartType>;
 
   private constructor(private prevOutput: PrevOutput<M>) {
     const {
@@ -58,6 +60,8 @@ export class Visual<M, T extends ChartType, Flags extends CurrFlags> {
       [CoreLayer.ClipPath]: clipPath,
       [CoreLayer.BaseLayer]: baseLayer,
     };
+
+    this.linesLayer = new LinesLayer<M, ChartType>(prevOutput);
   };
 
   static start<M, T extends ChartType, PFlags extends PrevFlags>(
@@ -77,7 +81,7 @@ export class Visual<M, T extends ChartType, Flags extends CurrFlags> {
   // TODO: Check this is the most desirable interface. Could move to Data.ts.
   addTraces(options: TracesOptions = { RDPEpsilon: null }) {
     this.visualLayers[VisualLayer.Trace] = new TracesLayer<M>(
-      this.prevOutput, this.coreLayers, options
+      this.prevOutput, this.coreLayers, this.linesLayer, options
     );
     type NewFlags = MixNewFlags<CurrFlags, Flags, { hasVisualDataLayer: true }>
     return this as This<M, T, NewFlags>;

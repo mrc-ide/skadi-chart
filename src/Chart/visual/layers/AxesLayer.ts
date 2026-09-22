@@ -11,7 +11,7 @@ import { TickConfigBase, TickFormatter } from "@/Chart/config/ticks";
 const animationDuration = 350;
 declare const MathJax: any;
 
-export class AxesLayer<M> extends Layer<M, null> {
+export class AxesLayer<M> extends Layer<M> {
   private zoomCallbacks: (() => Promise<void>)[] = [];
 
   constructor(

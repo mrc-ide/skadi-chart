@@ -72,16 +72,15 @@ type AxisConfigCategorical = AxisConfigNumerical & { innerPadding: number }
 export type AxisConfig = PerAxisConfigByChartType<AxisConfigNumerical, AxisConfigCategorical>
 
 
-export type CurrState<M, T extends ChartType> = {
+export type CurrState<T extends ChartType> = {
   axes: AxisConfig[T],
   categories: Categories[T],
-  linesDC: Lines<M, ChartType>,
   scales: ScaleOutput[T],
   ticks: TickConfig[T],
 }
 
 export type CurrOutputs<M> = {
-  [K in ChartType]: PrevOutputs<M>[K] & { configState: CurrState<M, K> }
+  [K in ChartType]: PrevOutputs<M>[K] & { configState: CurrState<K> }
 }
 
 export type CurrOutput<M> = CurrOutputs<M>[ChartType]

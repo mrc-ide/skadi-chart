@@ -1,8 +1,6 @@
 import { ZoomProperties } from "@/types";
 
-export abstract class Layer<_M, Returns = null> {
-  returns: Returns | null = null;
-
+export abstract class Layer<_M> {
   constructor() {};
 
   abstract draw(): void;
@@ -17,4 +15,4 @@ export abstract class Layer<_M, Returns = null> {
   afterZoom(_zoomProperties: ZoomProperties | null) {};
 };
 
-export type LifecycleHooks = Omit<Layer<any>, "returns" | "draw">;
+export type LifecycleHooks = Omit<Layer<any>, "draw">;
