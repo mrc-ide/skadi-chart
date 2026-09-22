@@ -185,7 +185,7 @@ const renderChart = (chartType: ChartType) => {
       })
       .startVisual()
       .addAxes()
-      .addTraces()
+      .addTraces({ RDPEpsilon: 1 })
       .startInteractive()
       .end();
     return;
