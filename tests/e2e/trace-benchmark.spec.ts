@@ -1,6 +1,12 @@
 import { expect, test, type CDPSession, type Page } from "@playwright/test";
+import { VisualLayer } from "@/Chart/visual/types";
 import type { BenchmarkResult } from "../../src/demo/traceBenchmark";
 import { hasMeaningfulGap, summarizeBenchmark } from "../../src/demo/traceBenchmark";
+
+test.beforeEach(async ({ page }) => {
+  // These trace-only checks do not need MathJax; a stalled CDN must not block navigation.
+  await page.route("https://cdn.jsdelivr.net/**", route => route.abort());
+});
 
 const checkResults = (result: BenchmarkResult) => {
   expect(result.samples).toHaveLength(result.options.samplePairs * 4);
@@ -40,6 +46,18 @@ test("matched benchmark isolates demos and reports comparable SVG workloads", as
   await expect(page.locator("#trace-benchmark-chart svg")).toHaveAttribute("viewBox", "0 0 1000 500");
   await expect(page.locator("#trace-benchmark-chart svg")).toHaveCount(1);
   await expect(page.locator("tbody tr")).toHaveCount(4);
+});
+
+test("original new-interface stress demo enables simplification", async ({ page }) => {
+  await page.goto("http://localhost:5173/");
+  await page.getByRole("button", { name: "Draw", exact: true }).first().click();
+  const paths = page.locator("#chartStress").first().locator(`path[id^="${VisualLayer.Trace}-"]`);
+  await expect(paths).toHaveCount(1000);
+  const points = await paths.evaluateAll(elements => elements.reduce((sum, path) => {
+    return sum + (path.getAttribute("d")?.match(/[ML]/g)?.length || 0);
+  }, 0));
+  expect(points).toBeGreaterThan(2000);
+  expect(points).toBeLessThan(1_000_000);
 });
 
 type TraceEvent = {

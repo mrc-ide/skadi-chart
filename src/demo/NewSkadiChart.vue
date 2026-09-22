@@ -185,7 +185,7 @@ const renderChart = (chartType: ChartType) => {
       })
       .startVisual()
       .addAxes()
-      .addTraces({ RDPEpsilon: 1 })
+      .addTraces()
       .startInteractive()
       .end();
     return;
@@ -308,7 +308,7 @@ const drawStressChart = () => {
     })
     .startVisual()
     .addAxes()
-    .addTraces()
+    .addTraces({ RDPEpsilon: 1 })
     .startInteractive()
     .end();
 };
