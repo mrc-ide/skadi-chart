@@ -4,8 +4,8 @@ import { CurrOutputs as PrevOutputs } from "../base/types"
 
 
 
-export type CurrFlags = { hasData: boolean }
-export type DefaultCurrFlags = Prettify<{ hasData: false }>
+export type CurrFlags = { hasLines: boolean, hasPoints: boolean }
+export type DefaultCurrFlags = Prettify<{ hasLines: false, hasPoints: false }>
 
 
 

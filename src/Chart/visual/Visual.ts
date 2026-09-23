@@ -9,17 +9,24 @@ import {
   VisualLayer,
   VisualLayers,
   CurrOutput,
-  CurrState
+  CurrState,
+  PredrawLayer,
+  PredrawLayers
 } from "./types";
 import { CurrFlags as PrevFlags, CurrOutput as PrevOutput } from "../config/types";
 import { Interactive } from "../interactive/Interactive";
 import { AxesLayer } from "./layers/AxesLayer";
-import { getInner } from "../base/utils";
+import { TracesLayer } from "./layers/TracesLayer";
+import { LinesLayer } from "./layers/predraw/LinesLayer";
 
 export class Visual<M, T extends ChartType, Flags extends CurrFlags> {
   private coreLayers: CoreLayers;
   private visualLayers: VisualLayers<M> = {
-    [VisualLayer.Axes]: null
+    [VisualLayer.Axes]: null,
+    [VisualLayer.Trace]: null,
+  };
+  private predrawLayers: PredrawLayers<M> = {
+    [PredrawLayer.Lines]: null,
   };
 
   private constructor(private prevOutput: PrevOutput<M>) {
@@ -40,13 +47,13 @@ export class Visual<M, T extends ChartType, Flags extends CurrFlags> {
     const clipPath = svg.append("defs")
       .append("svg:clipPath")
       .attr("id", clipPathId) as any as D3Selection<SVGClipPathElement>;
-    const { x, y } = getInner(bounds);
-    const buffer = 1; // Add a buffer to the clip path to ensure origin lines and band border lines are not clipped
+
+    const clipPathBounds = this.prevOutput.baseState.clipPathBounds;
     clipPath.append("svg:rect")
-      .attr("width", x.end - x.start + buffer * 2)
-      .attr("height", y.end - y.start + buffer * 2)
-      .attr("x", x.start - buffer)
-      .attr("y", y.start - buffer);
+      .attr("width", clipPathBounds.width)
+      .attr("height", clipPathBounds.height)
+      .attr("x", clipPathBounds.margin.x.start)
+      .attr("y", clipPathBounds.margin.y.start);
 
     const baseLayer = svg.append('g')
       .attr("id", getHtmlId(CoreLayer.BaseLayer))
@@ -57,6 +64,10 @@ export class Visual<M, T extends ChartType, Flags extends CurrFlags> {
       [CoreLayer.ClipPath]: clipPath,
       [CoreLayer.BaseLayer]: baseLayer,
     };
+
+    if (this.prevOutput.dataState.lines.length) {
+      this.predrawLayers[PredrawLayer.Lines] = new LinesLayer<M, ChartType>(this.prevOutput);
+    }
   };
 
   static start<M, T extends ChartType, PFlags extends PrevFlags>(
@@ -74,7 +85,9 @@ export class Visual<M, T extends ChartType, Flags extends CurrFlags> {
   };
 
   addTraces() {
-    // TODO
+    this.visualLayers[VisualLayer.Trace] = new TracesLayer<M>(
+      this.prevOutput, this.coreLayers, this.predrawLayers[PredrawLayer.Lines]!
+    );
     type NewFlags = MixNewFlags<CurrFlags, Flags, { hasVisualDataLayer: true }>
     return this as This<M, T, NewFlags>;
   };

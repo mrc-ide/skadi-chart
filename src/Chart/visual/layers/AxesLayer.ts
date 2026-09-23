@@ -1,5 +1,5 @@
 import * as d3 from "@/d3";
-import { Layer } from "./Layer";
+import { Layer } from "@/Chart/visual/layers/Layer";
 import { Point, ScaleNumeric, XorY } from "@/types";
 import { CurrOutput as PrevOutput } from "@/Chart/config/types";
 import { CoreLayer, CoreLayers, VisualLayer } from "../types";
@@ -11,7 +11,7 @@ import { TickConfigBase, TickFormatter } from "@/Chart/config/ticks";
 const animationDuration = 350;
 declare const MathJax: any;
 
-export class AxesLayer<M> extends Layer<M, null> {
+export class AxesLayer<M> extends Layer<M> {
   private zoomCallbacks: (() => Promise<void>)[] = [];
 
   constructor(
@@ -196,6 +196,11 @@ export class AxesLayer<M> extends Layer<M, null> {
     strokeWidthPx: number = 1,
     color: string = "black",
   ) => {
+    if (this.prevOutput.configState.scales.config[axis].log && positionDC <= 0) {
+      // Cannot draw a line at a non-positive position on a log scale.
+      return;
+    }
+
     const positionSC = numScale(positionDC);
     const [minSC, maxSC] = numScale.range().sort((a, b) => a - b);
     // If outside of range, don't draw the line. Otherwise we might draw a line onto another band.

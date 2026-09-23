@@ -23,13 +23,13 @@ export class Data<M, T extends ChartType, Flags extends CurrFlags> {
 
   registerLines = (lines: Lines<M, T>) => {
     this.lines.push(...lines);
-    type NewFlags = MixNewFlags<CurrFlags, Flags, { hasData: true }>;
+    type NewFlags = MixNewFlags<CurrFlags, Flags, { hasLines: true }>;
     return this as This<M, T, NewFlags>;
   };
 
   registerPoints = (scatterPoints: ScatterPoints<M, T>) => {
     this.scatterPoints.push(...scatterPoints);
-    type NewFlags = MixNewFlags<CurrFlags, Flags, { hasData: true }>;
+    type NewFlags = MixNewFlags<CurrFlags, Flags, { hasPoints: true }>;
     return this as This<M, T, NewFlags>;
   };
 

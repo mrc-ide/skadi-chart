@@ -7,10 +7,11 @@ import {
   CurrOutput,
   CurrState,
   DefaultCurrFlags,
+  LinesArgs,
   This,
 } from "./types";
 import { TickArgs, TickConfig } from "./ticks";
-import { CurrFlags as PrevFlags, CurrOutput as PrevOutput } from "../data/types";
+import { CurrFlags as PrevFlags, CurrOutput as PrevOutput } from "@/Chart/data/types";
 import { Visual } from "../visual/Visual";
 import { categoricalChartTypes, processScaleArgs, ScaleArgs, ScaleArgsParsed, ScaleOutput } from "./scales";
 import { doXY, makeObjXY } from "@/helpers";
@@ -18,6 +19,7 @@ import { defaultTickConfig } from "./ticks";
 import { deepAssignRecordIfDefined } from "./utils";
 
 export class Config<M, T extends ChartType, Flags extends CurrFlags> {
+  private lines: LinesArgs = { RDPEpsilon: null };
   private axes: AxisConfig["categoricalXY"] = {
     x: { label: { text: "", padding: 50 }, innerPadding: 0.1, drawOrigin: true },
     y: { label: { text: "", padding: 40 }, innerPadding: 0.1, drawOrigin: true },
@@ -73,6 +75,11 @@ export class Config<M, T extends ChartType, Flags extends CurrFlags> {
     return this as This<M, T, NewFlags>;
   };
 
+  configureLines(linesArgs: LinesArgs) {
+    this.lines = linesArgs;
+    return this as This<M, T, Flags>;
+  };
+
   configureTicks(tickArgs: TickArgs[T]) {
     this.ticks ??= defaultTickConfig(this.prevOutput);
     deepAssignRecordIfDefined(this.ticks, tickArgs);
@@ -88,9 +95,11 @@ export class Config<M, T extends ChartType, Flags extends CurrFlags> {
     if (!this.scales) {
       throw new Error("Scales must be configured before going into startVisual")
     }
+
     const configState: CurrState<ChartType> = {
       axes: this.axes,
       categories: this.categories,
+      lines: this.lines,
       scales: this.scales,
       ticks: this.ticks ?? defaultTickConfig(this.prevOutput),
     };
