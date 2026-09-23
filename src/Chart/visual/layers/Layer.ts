@@ -1,18 +1,5 @@
-import { ZoomProperties } from "@/types";
+import { PredrawLayer } from "./predraw/PredrawLayer";
 
-export abstract class Layer<_M> {
-  constructor() {};
-
+export abstract class Layer<_M> extends PredrawLayer<_M> {
   abstract draw(): void;
-
-  // brush lifecycle hooks
-  // note: brushEnd is the same as beforeZoom
-  brushStart() {};
-
-  // zoom lifecycle hooks
-  beforeZoom(_zoomProperties: ZoomProperties) {};
-  async zoom(_zoomProperties: ZoomProperties) {};
-  afterZoom(_zoomProperties: ZoomProperties | null) {};
 };
-
-export type LifecycleHooks = Omit<Layer<any>, "draw">;

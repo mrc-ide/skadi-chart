@@ -1,16 +1,16 @@
 import { Lines } from "@/Chart/data/types";
-import { LifecycleHooks } from "@/Chart/visual/layers/Layer";
 import { ChartType, Point, ScaleNumeric, ZoomProperties } from "@/types";
 import { CurrOutputs as PrevOutputs } from "@/Chart/config/types";
 import { doXY } from "@/helpers";
 import { doRDP } from "./rdp";
+import { PredrawLayer } from "./PredrawLayer";
 
 // The LinesLayer class handles shared lines data depended upon by TracesLayer and AreaLayer.
 
 // TODO: Hook into zooming lifecycle hooks for
 // (1) applying RDP algorithm (probably by re-calling updateLowResLinesSC) and
 // (2) filtering lines to the visible viewport.
-export class LinesLayer<M, T extends ChartType> implements Partial<LifecycleHooks> {
+export class LinesLayer<M, T extends ChartType> extends PredrawLayer<M> {
   private linesDC: Lines<M, T> = [];
   private lowResLinesSC: Point[][] = [];
 
@@ -27,6 +27,7 @@ export class LinesLayer<M, T extends ChartType> implements Partial<LifecycleHook
   async zoom(_zoomProperties: ZoomProperties) {};
 
   constructor(private prevOutput: PrevOutputs<M>[T]) {
+    super();
     this.linesDC = this.filterLines(this.prevOutput.dataState.lines);
     this.updateLowResLinesSC();
   };

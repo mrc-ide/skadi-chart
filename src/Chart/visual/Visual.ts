@@ -9,12 +9,14 @@ import {
   VisualLayer,
   VisualLayers,
   CurrOutput,
-  CurrState
+  CurrState,
+  PredrawLayer,
+  PredrawLayers
 } from "./types";
 import { CurrFlags as PrevFlags, CurrOutput as PrevOutput } from "../config/types";
 import { Interactive } from "../interactive/Interactive";
 import { AxesLayer } from "./layers/AxesLayer";
-import { TracesLayer, TracesOptions } from "./layers/TracesLayer";
+import { TracesLayer } from "./layers/TracesLayer";
 import { LinesLayer } from "./layers/predraw/LinesLayer";
 
 export class Visual<M, T extends ChartType, Flags extends CurrFlags> {
@@ -23,7 +25,9 @@ export class Visual<M, T extends ChartType, Flags extends CurrFlags> {
     [VisualLayer.Axes]: null,
     [VisualLayer.Trace]: null,
   };
-  private linesLayer: LinesLayer<M, ChartType>;
+  private predrawLayers: PredrawLayers<M> = {
+    [PredrawLayer.Lines]: null,
+  };
 
   private constructor(private prevOutput: PrevOutput<M>) {
     const {
@@ -61,7 +65,9 @@ export class Visual<M, T extends ChartType, Flags extends CurrFlags> {
       [CoreLayer.BaseLayer]: baseLayer,
     };
 
-    this.linesLayer = new LinesLayer<M, ChartType>(prevOutput);
+    if (this.prevOutput.dataState.lines.length) {
+      this.predrawLayers[PredrawLayer.Lines] = new LinesLayer<M, ChartType>(this.prevOutput);
+    }
   };
 
   static start<M, T extends ChartType, PFlags extends PrevFlags>(
@@ -80,7 +86,7 @@ export class Visual<M, T extends ChartType, Flags extends CurrFlags> {
 
   addTraces() {
     this.visualLayers[VisualLayer.Trace] = new TracesLayer<M>(
-      this.prevOutput, this.coreLayers, this.linesLayer
+      this.prevOutput, this.coreLayers, this.predrawLayers[PredrawLayer.Lines]!
     );
     type NewFlags = MixNewFlags<CurrFlags, Flags, { hasVisualDataLayer: true }>
     return this as This<M, T, NewFlags>;
