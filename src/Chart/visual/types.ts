@@ -3,6 +3,7 @@ import { CurrFlags as PrevFlags, CurrOutputs as PrevOutputs } from "../config/ty
 import { Visual } from "./Visual"
 import { AxesLayer } from "./layers/AxesLayer"
 import { TracesLayer } from "./layers/TracesLayer"
+import { LinesLayer } from "./layers/predraw/LinesLayer"
 
 
 
@@ -15,10 +16,11 @@ type Method<M extends AllMethods> = M
 
 
 
-type RemoveIfNoData<Flags extends CurrFlags> =
-  (Flags["hasLines"] extends true ? never : Method<"addTraces">) |
+type RemoveIfNoPoints<Flags extends CurrFlags> =
   (Flags["hasPoints"] extends true ? never : Method<"addScatterPoints">)
-type MethodsToRemove<_T extends ChartType, Flags extends CurrFlags> = RemoveIfNoData<Flags>
+type RemoveIfNoLines<Flags extends CurrFlags> =
+  (Flags["hasLines"] extends true ? never : Method<"addTraces">)
+type MethodsToRemove<_T extends ChartType, Flags extends CurrFlags> = RemoveIfNoPoints<Flags> | RemoveIfNoLines<Flags>
 
 export type This<M, T extends ChartType, Flags extends CurrFlags> =
   Omit<Visual<M, T, Flags>, MethodsToRemove<T, Flags>>
@@ -49,6 +51,13 @@ export type VisualLayers<M> = HasAllKeys<VisualLayer, {
   [VisualLayer.Axes]: AxesLayer<M> | null
   [VisualLayer.Trace]: TracesLayer<M> | null
 }>
+
+export enum PredrawLayer {
+  Lines = "skadiChartLines",
+}
+export type PredrawLayers<M> = {
+  [PredrawLayer.Lines]: LinesLayer<M, ChartType> | null
+}
 
 
 

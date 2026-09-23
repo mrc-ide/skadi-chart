@@ -32,10 +32,13 @@ type RemoveIfNotConfiguredCategories<T extends ChartType, Flags extends CurrFlag
       : Method<"configureScales">
 type BlockIfNotConfiguredScale<Flags extends CurrFlags> =
   Flags["hasConfiguredScale"] extends true ? "" : Method<"startVisual">
+type BlockIfNotRegisteredLines<Flags extends CurrFlags> =
+  Flags["hasLines"] extends true ? "" : Method<"configureLines">
 type MethodsToRemove<T extends ChartType, Flags extends CurrFlags> = 
   | RemoveIfNotCategorical<T>
   | RemoveIfNotConfiguredCategories<T, Flags>
   | BlockIfNotConfiguredScale<Flags>
+  | BlockIfNotRegisteredLines<Flags>
 
 export type This<M, T extends ChartType, Flags extends CurrFlags> =
   Omit<Config<M, T, Flags>, MethodsToRemove<T, Flags>>
@@ -62,6 +65,9 @@ export type PerAxisConfigByChartType<
 
 export type Categories = PerAxisConfigByChartType<never, string[]>
 
+export type LinesArgs = {
+  RDPEpsilon: number | null
+}
 
 type AxisArgsNumerical = { label?: { text: string, padding?: number }, drawOrigin?: boolean }
 type AxisArgsCategorical = AxisArgsNumerical & { innerPadding?: number }
@@ -72,16 +78,16 @@ type AxisConfigCategorical = AxisConfigNumerical & { innerPadding: number }
 export type AxisConfig = PerAxisConfigByChartType<AxisConfigNumerical, AxisConfigCategorical>
 
 
-export type CurrState<M, T extends ChartType> = {
+export type CurrState<T extends ChartType> = {
   axes: AxisConfig[T],
   categories: Categories[T],
-  linesDC: Lines<M, ChartType>,
+  lines: LinesArgs,
   scales: ScaleOutput[T],
   ticks: TickConfig[T],
 }
 
 export type CurrOutputs<M> = {
-  [K in ChartType]: PrevOutputs<M>[K] & { configState: CurrState<M, K> }
+  [K in ChartType]: PrevOutputs<M>[K] & { configState: CurrState<K> }
 }
 
 export type CurrOutput<M> = CurrOutputs<M>[ChartType]

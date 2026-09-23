@@ -299,6 +299,7 @@ const drawStressChart = () => {
       x: { label: { text: "Time" } },
       y: { label: { text: "Value" } },
     })
+    .configureLines({ RDPEpsilon: 1 })
     .configureScales({
       x: { extents: extents.x, log: logScale.value.x },
       y: { extents: extents.y, log: logScale.value.y },

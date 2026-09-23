@@ -9,18 +9,24 @@ import {
   VisualLayer,
   VisualLayers,
   CurrOutput,
-  CurrState
+  CurrState,
+  PredrawLayer,
+  PredrawLayers
 } from "./types";
 import { CurrFlags as PrevFlags, CurrOutput as PrevOutput } from "../config/types";
 import { Interactive } from "../interactive/Interactive";
 import { AxesLayer } from "./layers/AxesLayer";
-import { TracesLayer, TracesOptions } from "./layers/TracesLayer";
+import { TracesLayer } from "./layers/TracesLayer";
+import { LinesLayer } from "./layers/predraw/LinesLayer";
 
 export class Visual<M, T extends ChartType, Flags extends CurrFlags> {
   private coreLayers: CoreLayers;
   private visualLayers: VisualLayers<M> = {
     [VisualLayer.Axes]: null,
     [VisualLayer.Trace]: null,
+  };
+  private predrawLayers: PredrawLayers<M> = {
+    [PredrawLayer.Lines]: null,
   };
 
   private constructor(private prevOutput: PrevOutput<M>) {
@@ -58,6 +64,10 @@ export class Visual<M, T extends ChartType, Flags extends CurrFlags> {
       [CoreLayer.ClipPath]: clipPath,
       [CoreLayer.BaseLayer]: baseLayer,
     };
+
+    if (this.prevOutput.dataState.lines.length) {
+      this.predrawLayers[PredrawLayer.Lines] = new LinesLayer<M, ChartType>(this.prevOutput);
+    }
   };
 
   static start<M, T extends ChartType, PFlags extends PrevFlags>(
@@ -74,10 +84,9 @@ export class Visual<M, T extends ChartType, Flags extends CurrFlags> {
     return this as This<M, T, Flags>;
   };
 
-  // TODO: Check this is the most desirable interface. Could move to Data.ts.
-  addTraces(options: TracesOptions = { RDPEpsilon: null }) {
+  addTraces() {
     this.visualLayers[VisualLayer.Trace] = new TracesLayer<M>(
-      this.prevOutput, this.coreLayers, options
+      this.prevOutput, this.coreLayers, this.predrawLayers[PredrawLayer.Lines]!
     );
     type NewFlags = MixNewFlags<CurrFlags, Flags, { hasVisualDataLayer: true }>
     return this as This<M, T, NewFlags>;
