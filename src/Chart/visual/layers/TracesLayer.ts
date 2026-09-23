@@ -24,8 +24,8 @@ export class TracesLayer<M> extends Layer<M> {
   draw = () => {
     const { getHtmlId } = this.prevOutput.baseState;
 
-    this.traces = this.linesLayer.lines.map((lDC, index) => {
-      const linePathSC = customLineGenerator(this.linesLayer.lowResLines[index], this.prevOutput.baseState.clipPathBounds).join("");
+    this.traces = this.linesLayer.linesDC.map((lDC, index) => {
+      const linePathSC = customLineGenerator(this.linesLayer.currLinesSC[index], this.prevOutput.baseState.clipPathBounds).join("");
       return this.coreLayers[CoreLayer.BaseLayer].append("path")
         .attr("id", `${getHtmlId(VisualLayer.Trace)}-${index}`)
         .attr("pointer-events", "none")

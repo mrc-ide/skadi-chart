@@ -11,16 +11,16 @@ import { PredrawLayer } from "./PredrawLayer";
 // (1) applying RDP algorithm (probably by re-calling updateLowResLinesSC) and
 // (2) filtering lines to the visible viewport.
 export class LinesLayer<M, T extends ChartType> extends PredrawLayer<M> {
-  private linesDC: Lines<M, T> = [];
+  private lines: Lines<M, T> = [];
   private lowResLinesSC: Point[][] = [];
 
   // Readonly version of linesDC
-  get lines() {
-    return this.linesDC;
+  get linesDC() {
+    return this.lines;
   }
 
   // Readonly version of lowResLinesSC
-  get lowResLines() {
+  get currLinesSC() {
     return this.lowResLinesSC;
   }
 
@@ -28,7 +28,7 @@ export class LinesLayer<M, T extends ChartType> extends PredrawLayer<M> {
 
   constructor(private prevOutput: PrevOutputs<M>[T]) {
     super();
-    this.linesDC = this.filterLines(this.prevOutput.dataState.lines);
+    this.lines = this.filterLines(this.prevOutput.dataState.lines);
     this.updateLowResLinesSC();
   };
 
@@ -78,7 +78,7 @@ export class LinesLayer<M, T extends ChartType> extends PredrawLayer<M> {
   }
 
   private updateLowResLinesSC = () => {
-    const linesSC = this.lines.map(lDC => {
+    const linesSC = this.linesDC.map(lDC => {
       const scales = this.prevOutput.configState.scales
       const numScaleX = ("categories" in scales.x && "category" in lDC && "x" in lDC.category)
         ? scales.x.categories[lDC.category.x]
