@@ -196,6 +196,11 @@ export class AxesLayer<M> extends Layer<M> {
     strokeWidthPx: number = 1,
     color: string = "black",
   ) => {
+    if (this.prevOutput.configState.scales.config[axis].log && positionDC <= 0) {
+      // Cannot draw a line at a non-positive position on a log scale.
+      return;
+    }
+
     const positionSC = numScale(positionDC);
     const [minSC, maxSC] = numScale.range().sort((a, b) => a - b);
     // If outside of range, don't draw the line. Otherwise we might draw a line onto another band.
