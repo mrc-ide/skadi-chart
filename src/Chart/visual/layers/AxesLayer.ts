@@ -7,8 +7,8 @@ import { ScaleCategorical } from "@/Chart/config/scales";
 import { getInner } from "@/Chart/base/utils";
 import { doXY } from "@/helpers";
 import { TickConfigBase, TickFormatter } from "@/Chart/config/ticks";
+import { animationDuration } from "@/Chart/interactive/constants";
 
-const animationDuration = 350;
 declare const MathJax: any;
 
 export class AxesLayer<M> extends Layer<M> {

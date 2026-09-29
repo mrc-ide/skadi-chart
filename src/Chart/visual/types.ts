@@ -63,7 +63,8 @@ export type PredrawLayers<M> = {
 
 export type CurrState<M> = {
   coreLayers: CoreLayers,
-  visualLayers: VisualLayers<M>
+  visualLayers: VisualLayers<M>,
+  predrawLayers: PredrawLayers<M>,
 }
 
 export type CurrOutputs<M> = {

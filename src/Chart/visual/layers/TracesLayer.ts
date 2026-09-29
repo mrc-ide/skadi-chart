@@ -1,12 +1,12 @@
 import { Layer } from "@/Chart/visual/layers/Layer";
 import { CurrOutput as PrevOutput } from "@/Chart/config/types";
 import { CoreLayer, CoreLayers, VisualLayer } from "../types";
-import { ChartType, D3Selection, Point, ScaleNumeric, XY } from "@/types";
-import { customLineGenerator } from "./utils";
+import { ChartType, D3Selection, Point, ZoomProperties } from "@/types";
+import { customLineGenerator } from "./helpers/lines";
 import { LinesLayer } from "./predraw/LinesLayer";
+import { animationDuration } from "@/Chart/interactive/constants";
 
 export class TracesLayer<M> extends Layer<M> {
-  private zoomCallbacks: (() => Promise<void>)[] = [];
   private traces: D3Selection<SVGPathElement>[] = [];
   
   constructor(
@@ -16,16 +16,12 @@ export class TracesLayer<M> extends Layer<M> {
   ) {
     super();
   };
-
-  zoom = async () => {
-    // Implementation for zooming traces goes here
-  }
   
   draw = () => {
     const { getHtmlId } = this.prevOutput.baseState;
 
     this.traces = this.linesLayer.linesDC.map((lDC, index) => {
-      const linePathSC = customLineGenerator(this.linesLayer.currLinesSC[index], this.prevOutput.baseState.clipPathBounds).join("");
+      const linePathSC = this.toPath(this.linesLayer.currLinesSC[index]);
       return this.coreLayers[CoreLayer.BaseLayer].append("path")
         .attr("id", `${getHtmlId(VisualLayer.Trace)}-${index}`)
         .attr("pointer-events", "none")
@@ -36,5 +32,38 @@ export class TracesLayer<M> extends Layer<M> {
         .attr("stroke-dasharray", lDC.style.strokeDasharray || "")
         .attr("d", linePathSC);
     });
+  };
+
+  zoom = async () => {
+    const promises: Promise<void>[] = [];
+    for (let i = 0; i < this.linesLayer.linesDC.length; i++) {
+      const promise = this.traces[i]
+        .transition()
+        .duration(animationDuration)
+        // we do a custom animation because it is faster than d3's default
+        .attrTween("d", () => this.customTween(i))
+        .end();
+      promises.push(promise);
+    };
+    await Promise.all(promises);
+  };
+
+  // After zoom animation, LinesLayer re-calculates lines at appropriate resolution.
+  // Replace traces using newly re-calculated lines, without the user knowing.
+  afterZoom = () => {
+    this.traces.forEach((t, index) => {
+      t.attr("d", this.toPath(this.linesLayer.currLinesSC[index]))
+    });
+  };
+
+  // d3 feeds the function we return from this function with t, which goes from
+  // 0 to 1 with different jumps based on your ease.
+  private customTween = (index: number): ((t: number) => string) => {
+    return (t: number) => this.linesLayer.getNewLineSC(index, t);
+  };
+
+  // TODO: consider moving this into LinesLayer if it is duplicated in AreaLayer
+  private toPath = (lineSC: Point[]) => {
+    return customLineGenerator(lineSC, this.prevOutput.baseState.clipPathBounds).join("");
   };
 }

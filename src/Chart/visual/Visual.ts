@@ -102,6 +102,7 @@ export class Visual<M, T extends ChartType, Flags extends CurrFlags> {
     const visualState: CurrState<M> = {
       coreLayers: this.coreLayers,
       visualLayers: this.visualLayers,
+      predrawLayers: this.predrawLayers,
     };
     const output = {
       ...this.prevOutput,
