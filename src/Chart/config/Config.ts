@@ -28,7 +28,7 @@ export class Config<M, T extends ChartType, Flags extends CurrFlags> {
   private categories: Categories["categoricalXY"] = { x: [], y: [] };
   private scales: ScaleOutput[ChartType] | null = null;
   private ticks: TickConfig[ChartType] | null = null;
-  private zoom: ZoomArgs = { lockAxis: null };
+  private zoom: ZoomArgs = { lockAxis: null, animationDuration: 350 };
 
   private constructor(private prevOutput: PrevOutput<M>) {};
 
@@ -94,7 +94,7 @@ export class Config<M, T extends ChartType, Flags extends CurrFlags> {
   }
 
   configureZoom(zoomArgs: ZoomArgs) {
-    this.zoom = zoomArgs;
+    deepAssignRecordIfDefined(this.zoom, zoomArgs);
     return this as This<M, T, Flags>;
   }
 

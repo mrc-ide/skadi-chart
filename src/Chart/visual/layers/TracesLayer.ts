@@ -4,7 +4,6 @@ import { CoreLayer, CoreLayers, VisualLayer } from "../types";
 import { ChartType, D3Selection, Point, ZoomProperties } from "@/types";
 import { customLineGenerator } from "./helpers/lines";
 import { LinesLayer } from "./predraw/LinesLayer";
-import { animationDuration } from "@/Chart/interactive/constants";
 
 export class TracesLayer<M> extends Layer<M> {
   private traces: D3Selection<SVGPathElement>[] = [];
@@ -39,7 +38,7 @@ export class TracesLayer<M> extends Layer<M> {
     for (let i = 0; i < this.linesLayer.linesDC.length; i++) {
       const promise = this.traces[i]
         .transition()
-        .duration(animationDuration)
+        .duration(this.prevOutput.configState.zoom.animationDuration)
         // we do a custom animation because it is faster than d3's default
         .attrTween("d", () => this.customTween(i))
         .end();
