@@ -141,6 +141,7 @@ const renderMathJaxChart = () => {
     .addAxes()
     .addTraces()
     .startInteractive()
+    .addZoom()
     .end();
 }
 
@@ -192,10 +193,12 @@ const renderChart = (chartType: ChartType) => {
       .configureTicks({
         y: { numerical: { specifier: ".1f", padding: 2, size: 5, count: 20 } },
       })
+      .configureZoom({ lockAxis: "y" })
       .startVisual()
       .addAxes()
       .addTraces()
       .startInteractive()
+      .addZoom()
       .end();
     return;
   } else if (chartType === "categoricalXY") {
@@ -231,6 +234,7 @@ const renderChart = (chartType: ChartType) => {
       .addAxes()
       .addTraces()
       .startInteractive()
+      .addZoom()
       .end();
     return;
   } else if (chartType === "categoricalX") {
@@ -256,6 +260,7 @@ const renderChart = (chartType: ChartType) => {
       .addAxes()
       .addTraces()
       .startInteractive()
+      .addZoom()
       .end();
     return;
   }
@@ -279,6 +284,7 @@ const renderChart = (chartType: ChartType) => {
     .addAxes()
     .addTraces()
     .startInteractive()
+    .addZoom()
     .end();
 };
 
@@ -320,6 +326,7 @@ const drawStressChart = () => {
     .addAxes()
     .addTraces()
     .startInteractive()
+    .addZoom()
     .end();
 };
 
