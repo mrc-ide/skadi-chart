@@ -1,6 +1,7 @@
+import { Bounds } from "./Chart/base/types";
 import { ScatterLayer } from "./layers/ScatterLayer";
 import { TracesLayer } from "./layers/TracesLayer";
-import { LayerArgs, ScaleNumeric, XY, Point, Scales, AxisType, D3Selection, PointWithMetadata, Lines, ScatterPoints, XorY } from "./types";
+import { LayerArgs, ScaleNumeric, XY, Point, Scales, AxisType, D3Selection, PointWithMetadata, XorY } from "./types";
 
 const round = (num: number) => Math.floor(num * 10) / 10;
 

@@ -1,6 +1,6 @@
 import { CategoricalChartType, ChartType, HasAllKeys, Prettify, XorY, XY } from "@/types"
 import { Config } from "./Config"
-import { CurrFlags as PrevFlags, CurrOutputs as PrevOutputs } from "../data/types"
+import { Lines, CurrFlags as PrevFlags, CurrOutputs as PrevOutputs } from "../data/types"
 import { ScaleOutput } from "./scales"
 import { TickConfig } from "./ticks"
 
@@ -32,10 +32,13 @@ type RemoveIfNotConfiguredCategories<T extends ChartType, Flags extends CurrFlag
       : Method<"configureScales">
 type BlockIfNotConfiguredScale<Flags extends CurrFlags> =
   Flags["hasConfiguredScale"] extends true ? "" : Method<"startVisual">
+type BlockIfNotRegisteredLines<Flags extends CurrFlags> =
+  Flags["hasLines"] extends true ? "" : Method<"configureLines">
 type MethodsToRemove<T extends ChartType, Flags extends CurrFlags> = 
   | RemoveIfNotCategorical<T>
   | RemoveIfNotConfiguredCategories<T, Flags>
   | BlockIfNotConfiguredScale<Flags>
+  | BlockIfNotRegisteredLines<Flags>
 
 export type This<M, T extends ChartType, Flags extends CurrFlags> =
   Omit<Config<M, T, Flags>, MethodsToRemove<T, Flags>>
@@ -62,6 +65,9 @@ export type PerAxisConfigByChartType<
 
 export type Categories = PerAxisConfigByChartType<never, string[]>
 
+export type LinesArgs = {
+  RDPEpsilon: number | null
+}
 
 type AxisArgsNumerical = { label?: { text: string, padding?: number }, drawOrigin?: boolean }
 type AxisArgsCategorical = AxisArgsNumerical & { innerPadding?: number }
@@ -75,6 +81,7 @@ export type AxisConfig = PerAxisConfigByChartType<AxisConfigNumerical, AxisConfi
 export type CurrState<T extends ChartType> = {
   axes: AxisConfig[T],
   categories: Categories[T],
+  lines: LinesArgs,
   scales: ScaleOutput[T],
   ticks: TickConfig[T],
 }

@@ -67,11 +67,12 @@ export type ScaleCategorical = {
   categories: Record<string, ScaleNumeric> // The numerical scales within each category
 }
 
+type ScaleConfig = { config: XY<{ log: boolean }> };
 export type ScaleOutput = HasAllKeys<ChartType, {
-  default: XY<ScaleNumeric>,
-  categoricalX: { x: ScaleCategorical } & { y: ScaleNumeric },
-  categoricalY: { x: ScaleNumeric } & { y: ScaleCategorical },
-  categoricalXY: { x: ScaleCategorical } & { y: ScaleCategorical },
+  default: XY<ScaleNumeric> & ScaleConfig,
+  categoricalX: { x: ScaleCategorical } & { y: ScaleNumeric } & ScaleConfig,
+  categoricalY: { x: ScaleNumeric } & { y: ScaleCategorical } & ScaleConfig,
+  categoricalXY: { x: ScaleCategorical } & { y: ScaleCategorical } & ScaleConfig,
 }>
 
 export const categoricalChartTypes: XY<ChartType[]> = {
@@ -125,17 +126,22 @@ export const processScaleArgs = <M>(
   }
 
   // base d3 scales
-  const ranges = getInner(prevOutput.baseState.bounds);
+  const inner = getInner(prevOutput.baseState.bounds);
+  const ranges = {
+    x: [inner.x.start, inner.x.end],
+    y: [inner.y.end, inner.y.start],
+  };
   const baseScales: XY<ScaleNumeric> = makeObjXY(axis => {
-    const d3Scale = args[axis].log ? d3.scaleLog : d3.scaleLinear;
+    const log = !!args[axis].log;
+    const scaleConstructor = log ? d3.scaleLog : d3.scaleLinear;
     const axisRange = ranges[axis];
     const axisInitial = initial[axis];
-    return d3Scale()
+    return scaleConstructor()
       .domain([ axisInitial.start, axisInitial.end ])
-      .range([ axisRange.start, axisRange.end ]);
+      .range(axisRange);
   });
 
-  return makeObjXY(axis => {
+  const scales = makeObjXY(axis => {
     if (!categoricalChartTypes[axis].includes(prevOutput.chartType)) {
       return baseScales[axis];
     };
@@ -143,7 +149,7 @@ export const processScaleArgs = <M>(
     const axisRange = ranges[axis];
     const d3Scale = d3.scaleBand()
       .domain(categories[axis])
-      .range([ axisRange.start, axisRange.end ])
+      .range(axisRange)
       .paddingInner(axes[axis].innerPadding);
     const categoryWidth = d3Scale.bandwidth();
 
@@ -157,5 +163,10 @@ export const processScaleArgs = <M>(
     }, {} as Record<string, ScaleNumeric>)
 
     return { scale: d3Scale, categories: categoriesScales };
-  }) as ScaleOutput[ChartType];
+  });
+
+  return {
+    ...scales,
+    config: makeObjXY(axis => ({ log: !!args[axis].log })),
+  } as ScaleOutput[ChartType];
 }
