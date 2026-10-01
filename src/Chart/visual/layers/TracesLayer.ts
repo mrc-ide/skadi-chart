@@ -1,7 +1,7 @@
 import { Layer } from "@/Chart/visual/layers/Layer";
 import { CurrOutput as PrevOutput } from "@/Chart/config/types";
 import { CoreLayer, CoreLayers, VisualLayer } from "../types";
-import { ChartType, D3Selection, Point, ZoomProperties } from "@/types";
+import { ChartType, D3Selection, Point } from "@/types";
 import { customLineGenerator } from "./helpers/lines";
 import { LinesLayer } from "./predraw/LinesLayer";
 import { animationDuration } from "@/Chart/interactive/constants";
