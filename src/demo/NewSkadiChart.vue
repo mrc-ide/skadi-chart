@@ -16,6 +16,13 @@
         Log scale {{ axis.toUpperCase() }}-axis
       </label>
     </div>
+    <!-- Toggle line fill (use of area layer) -->
+    <div>
+      <label>
+        <input type="checkbox" v-model="useAreaLayer" />
+        Use area layer
+      </label>
+    </div>
   </div>
   <div class="charts-container">
     <div v-if="selectedChartTypes.includes('default')">
@@ -80,6 +87,7 @@ const chartMathJax = ref<HTMLDivElement | null>(null);
 const chartStress = ref<HTMLDivElement | null>(null);
 
 const logScale = ref({ x: false, y: false });
+const useAreaLayer = ref(false);
 
 const chartTypes: readonly ChartType[] = [
   "default",
@@ -114,6 +122,7 @@ const renderMathJaxChart = () => {
     y: { start: logScale.value.y ? 1 : -500, end: 500 },
   };
   const lines = generateWaveLines({
+    fill: useAreaLayer.value,
     lineCount: 2,
     pointCount: 300,
     xRange: extents.x,
@@ -140,6 +149,7 @@ const renderMathJaxChart = () => {
     .startVisual()
     .addAxes()
     .addTraces()
+    .addArea()
     .startInteractive()
     .end();
 }
@@ -162,6 +172,7 @@ const renderChart = (chartType: ChartType) => {
   };
 
   const lineProps = {
+    fill: useAreaLayer.value,
     lineCount: xCategories.length * yCategories.length,
     pointCount: 200,
     xRange: extents.x,
@@ -195,6 +206,7 @@ const renderChart = (chartType: ChartType) => {
       .startVisual()
       .addAxes()
       .addTraces()
+      .addArea()
       .startInteractive()
       .end();
     return;
@@ -230,6 +242,7 @@ const renderChart = (chartType: ChartType) => {
       .startVisual()
       .addAxes()
       .addTraces()
+      .addArea()
       .startInteractive()
       .end();
     return;
@@ -255,6 +268,7 @@ const renderChart = (chartType: ChartType) => {
       .startVisual()
       .addAxes()
       .addTraces()
+      .addArea()
       .startInteractive()
       .end();
     return;
@@ -278,6 +292,7 @@ const renderChart = (chartType: ChartType) => {
     .startVisual()
     .addAxes()
     .addTraces()
+    .addArea()
     .startInteractive()
     .end();
 };
@@ -292,6 +307,7 @@ const drawStressChart = () => {
     y: { start: logScale.value.y ? 1 : -500, end: 500 },
   };
   const lines = generateWaveLines({
+    fill: useAreaLayer.value,
     lineCount: 1000,
     pointCount: 1000,
     xRange: extents.x,
@@ -333,6 +349,11 @@ watch(logScale, () => {
   renderMathJaxChart();
   selectedChartTypes.value.forEach(renderChart);
 }, { deep: true });
+
+watch(useAreaLayer, () => {
+  renderMathJaxChart();
+  selectedChartTypes.value.forEach(renderChart);
+});
 
 onMounted(() => {
   selectedChartTypes.value.forEach(renderChart);

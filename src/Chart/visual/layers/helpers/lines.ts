@@ -1,5 +1,8 @@
 import { Bounds } from "@/Chart/base/types";
-import { Point } from "@/types";
+import { ScaleOutput } from "@/Chart/config/scales";
+import { ChartType, Point, ScaleNumeric } from "@/types";
+import { LineConfig } from "@/Chart/data/types";
+
 
 const round = (num: number) => Math.floor(num * 10) / 10;
 
@@ -48,3 +51,16 @@ export const customLineGenerator = (lineSC: Point[], clipPathBounds: Bounds) => 
 
   return lineSegmentPaths;
 };
+
+export const getNumScaleForLine = <M, T extends ChartType>(
+  scales: ScaleOutput[T],
+  line: LineConfig<M, T>,
+) => {
+  const numScaleX = ("categories" in scales.x && "category" in line && "x" in line.category)
+    ? scales.x.categories[line.category.x]
+    : scales.x as ScaleNumeric;
+  const numScaleY = ("categories" in scales.y && "category" in line && "y" in line.category)
+    ? scales.y.categories[line.category.y]
+    : scales.y as ScaleNumeric;
+  return { x: numScaleX, y: numScaleY };
+}

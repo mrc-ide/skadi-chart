@@ -10,6 +10,7 @@ type GenerateWaveLinesOptions = {
   randomizeAmplitude?: boolean;
   opacity?: number;
   strokeWidth?: number;
+  fill?: boolean;
 };
 
 export const generateWaveLines = ({
@@ -23,6 +24,7 @@ export const generateWaveLines = ({
   randomizeAmplitude,
   opacity = 0.7,
   strokeWidth = 1.5,
+  fill = true,
 }: GenerateWaveLinesOptions) => {
   if (pointCount < 2) {
     throw new Error("pointCount must be >= 2");
@@ -63,13 +65,17 @@ export const generateWaveLines = ({
       return { x, y };
     });
 
+    const color = palette[lineIndex % palette.length];
+
     return {
       points,
       style: {
-        strokeColor: palette[lineIndex % palette.length],
+        strokeColor: color,
+        fillColor: color,
         opacity,
         strokeWidth,
       },
+      fill,
     };
   });
 };

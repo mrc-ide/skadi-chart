@@ -7,6 +7,7 @@ export class End<M, _T extends ChartType, _Flags extends PrevFlags> {
     this.prevOutput.baseState.element.childNodes.forEach(n => n.remove());
     this.prevOutput.visualState.visualLayers[VisualLayer.Axes]?.draw();
     this.prevOutput.visualState.visualLayers[VisualLayer.Trace]?.draw();
+    this.prevOutput.visualState.visualLayers[VisualLayer.Area]?.draw();
     this.prevOutput.baseState.element.append(
       this.prevOutput.visualState.coreLayers[CoreLayer.Svg].node()!
     );
@@ -42,7 +43,7 @@ export class End<M, _T extends ChartType, _Flags extends PrevFlags> {
       const zoomPromises: Promise<void>[] = [];
       Object.values(this.prevOutput.visualState.visualLayers).forEach((layer) => {
         if (!layer) return;
-        zoomPromises.push(layer.zoom());
+        zoomPromises.push(layer.zoom(zoomProps));
       });
 
       await Promise.all(predrawZoomPromises);

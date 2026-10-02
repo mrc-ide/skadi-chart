@@ -59,7 +59,7 @@ export class TracesLayer<M> extends Layer<M> {
   // d3 feeds the function we return from this function with t, which goes from
   // 0 to 1 with different jumps based on your ease.
   private customTween = (index: number): ((t: number) => string) => {
-    return (t: number) => this.linesLayer.getNewLineSC(index, t);
+    return (t: number) => this.linesLayer.getNewLineSC(index, t).join("");
   };
 
   // TODO: consider moving this into LinesLayer if it is duplicated in AreaLayer
