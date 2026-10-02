@@ -5,13 +5,13 @@ import { CurrState as PrevState } from "@/Chart/config/types";
 import { doXY } from "@/helpers";
 import { doRDP } from "../helpers/rdp";
 import { PredrawLayer } from "./PredrawLayer";
-import { customLineGenerator } from "../helpers/lines";
+import { customLineGenerator, getNumScaleForLine } from "../helpers/lines";
 
 // The LinesLayer class handles shared lines data and logic depended upon by TracesLayer and AreaLayer.
 export class LinesLayer<M, T extends ChartType> extends PredrawLayer<M> {
   private lines: Lines<M, T> = [];
   private lowResLinesSC: Point[][] = [];
-  private getNewPoint: null | ((x: number, y: number, t: number) => Point) = null;
+  getNewPoint: null | ((x: number, y: number, t: number) => Point) = null;
   getNewPointInverse: null | ((x: number, y: number, t: number) => Point) = null;
 
   // Readonly version of linesDC
@@ -77,15 +77,9 @@ export class LinesLayer<M, T extends ChartType> extends PredrawLayer<M> {
 
   private updateLowResLinesSC = () => {
     const linesSC = this.linesDC.map(lDC => {
-      const scales = this.prevOutput.configState.scales
-      const numScaleX = ("categories" in scales.x && "category" in lDC && "x" in lDC.category)
-        ? scales.x.categories[lDC.category.x]
-        : scales.x as ScaleNumeric;
-      const numScaleY = ("categories" in scales.y && "category" in lDC && "y" in lDC.category)
-        ? scales.y.categories[lDC.category.y]
-        : scales.y as ScaleNumeric;
+      const scales = getNumScaleForLine(this.prevOutput.configState.scales, lDC);
 
-      return lDC.points.map(p => ({ x: numScaleX(p.x), y: numScaleY(p.y) }));
+      return lDC.points.map(p => ({ x: scales.x(p.x), y: scales.y(p.y) }));
     });
     const { RDPEpsilon } = this.prevOutput.configState.lines;
     if (RDPEpsilon === null) {
@@ -155,6 +149,6 @@ export class LinesLayer<M, T extends ChartType> extends PredrawLayer<M> {
   // with variable jumps based on your ease.
   getNewLineSC = (lineIdx: number, t: number) => {
     const intermediateLineSC = this.lowResLinesSC[lineIdx].map(({x, y}) => this.getNewPoint!(x, y, t));
-    return customLineGenerator(intermediateLineSC, this.prevOutput.baseState.clipPathBounds).join("");
+    return customLineGenerator(intermediateLineSC, this.prevOutput.baseState.clipPathBounds);
   };
 }

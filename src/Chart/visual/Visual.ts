@@ -18,12 +18,14 @@ import { Interactive } from "../interactive/Interactive";
 import { AxesLayer } from "./layers/AxesLayer";
 import { TracesLayer } from "./layers/TracesLayer";
 import { LinesLayer } from "./layers/predraw/LinesLayer";
+import { AreaLayer } from "./layers/AreaLayer";
 
 export class Visual<M, T extends ChartType, Flags extends CurrFlags> {
   private coreLayers: CoreLayers;
   private visualLayers: VisualLayers<M> = {
     [VisualLayer.Axes]: null,
     [VisualLayer.Trace]: null,
+    [VisualLayer.Area]: null,
   };
   private predrawLayers: PredrawLayers<M> = {
     [PredrawLayer.Lines]: null,
@@ -86,6 +88,14 @@ export class Visual<M, T extends ChartType, Flags extends CurrFlags> {
 
   addTraces() {
     this.visualLayers[VisualLayer.Trace] = new TracesLayer<M>(
+      this.prevOutput, this.coreLayers, this.predrawLayers[PredrawLayer.Lines]!
+    );
+    type NewFlags = MixNewFlags<CurrFlags, Flags, { hasVisualDataLayer: true }>
+    return this as This<M, T, NewFlags>;
+  };
+
+  addArea() {
+    this.visualLayers[VisualLayer.Area] = new AreaLayer<M, ChartType>(
       this.prevOutput, this.coreLayers, this.predrawLayers[PredrawLayer.Lines]!
     );
     type NewFlags = MixNewFlags<CurrFlags, Flags, { hasVisualDataLayer: true }>
