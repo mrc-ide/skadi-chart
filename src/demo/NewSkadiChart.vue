@@ -121,27 +121,24 @@ const renderMathJaxChart = () => {
     cycles: 5,
     amplitude: 0.2,
   });
-  new ChartNew("default", container)
+  new ChartNew("catNumXNumY", container)
     .startData()
-    .registerLines(lines)
+    // .registerLines(lines)
     .startConfig()
-    .configureAxes({
-      x: { label: { text: "Time" } },
-      y: { label: { text: "Value" } },
-    })
-    .configureScales({
-      x: { extents: extents.x, log: logScale.value.x },
-      y: { extents: extents.y, log: logScale.value.y },
-    })
-    .configureTicks({
-      x: { numerical: { formatter: (num) => `$${num}^{1}$`, enableMathJax: true } },
-      y: { numerical: { specifier: ".1f", padding: 2, size: 5, count: 20 } },
-    })
-    .startVisual()
-    .addAxes()
-    .addTraces()
-    .startInteractive()
-    .end();
+  console.log("DOne")
+    // .configureScales({
+    //   x: { extents: extents.x, log: logScale.value.x },
+    //   y: { extents: extents.y, log: logScale.value.y },
+    // })
+    // .configureTicks({
+    //   x: { numerical: { formatter: (num) => `$${num}^{1}$`, enableMathJax: true } },
+    //   y: { numerical: { specifier: ".1f", padding: 2, size: 5, count: 20 } },
+    // })
+    // .startVisual()
+    // .addAxes()
+    // .addTraces()
+    // .startInteractive()
+    // .end();
 }
 
 const renderChart = (chartType: ChartType) => {
@@ -169,6 +166,33 @@ const renderChart = (chartType: ChartType) => {
     cycles: 5,
     amplitude: 0.1,
   });
+
+    new ChartNew("catNumXCatNumY", container)
+      .startData()
+      .startConfig()
+      .configureAxes({
+        x: { axis1: [{ translate: 10 }, { translate: 40 }] }
+      })
+      .configureDomain({
+        x: { axis1: [{ domain: ["A", "B"] }, { domain: [0, 100] }] },
+        y: { axis1: [{ domain: ["A", "B"] }, { domain: [0, 100] }] },
+      })
+      .startVisual()
+      .addAxes()
+      .startInteractive()
+      .end()
+  console.log("DOne")
+  return
+      // .configureCategories({ x: xCategories })
+      // .configureScales(scaleArgs)
+      // .configureTicks({
+      //   x: { numerical: { count: 2 } },
+      // })
+      // .startVisual()
+      // .addAxes()
+      // .addTraces()
+      // .startInteractive()
+      // .end();
 
   if (chartType === "default") {
     new ChartNew("default", container)

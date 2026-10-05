@@ -1,5 +1,5 @@
 import * as d3 from "@/d3";
-import { ChartType, D3Selection, MixNewFlags } from "@/types";
+import { D3Selection, MixNewFlags } from "@/types";
 import {
   CoreLayer,
   CoreLayers,
@@ -18,6 +18,8 @@ import { Interactive } from "../interactive/Interactive";
 import { AxesLayer } from "./layers/AxesLayer";
 import { TracesLayer } from "./layers/TracesLayer";
 import { LinesLayer } from "./layers/predraw/LinesLayer";
+import { ChartType } from "../base/chartTypes";
+import { ScalesLayer } from "./layers/predraw/ScalesLayer";
 
 export class Visual<M, T extends ChartType, Flags extends CurrFlags> {
   private coreLayers: CoreLayers;
@@ -26,6 +28,7 @@ export class Visual<M, T extends ChartType, Flags extends CurrFlags> {
     [VisualLayer.Trace]: null,
   };
   private predrawLayers: PredrawLayers<M> = {
+    [PredrawLayer.Scales]: null,
     [PredrawLayer.Lines]: null,
   };
 
@@ -65,8 +68,11 @@ export class Visual<M, T extends ChartType, Flags extends CurrFlags> {
       [CoreLayer.BaseLayer]: baseLayer,
     };
 
+    this.predrawLayers[PredrawLayer.Scales] = new ScalesLayer<M, ChartType>(this.prevOutput);
     if (this.prevOutput.dataState.lines.length) {
-      this.predrawLayers[PredrawLayer.Lines] = new LinesLayer<M, ChartType>(this.prevOutput);
+      this.predrawLayers[PredrawLayer.Lines] = new LinesLayer<M, ChartType>(
+        this.prevOutput, this.predrawLayers[PredrawLayer.Scales]
+      );
     }
   };
 
@@ -79,7 +85,7 @@ export class Visual<M, T extends ChartType, Flags extends CurrFlags> {
 
   addAxes() {
     this.visualLayers[VisualLayer.Axes] = new AxesLayer<M>(
-      this.prevOutput, this.coreLayers
+      this.prevOutput, this.predrawLayers, this.coreLayers
     );
     return this as This<M, T, Flags>;
   };

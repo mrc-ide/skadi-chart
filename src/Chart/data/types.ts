@@ -1,6 +1,7 @@
-import { ChartType, Point, Prettify, WithExtensions } from "@/types"
+import { Prettify, SkadiPoint } from "@/types"
 import { Data } from "./Data"
 import { CurrOutputs as PrevOutputs } from "../base/types"
+import { ChartType } from "../base/chartTypes"
 
 
 
@@ -22,14 +23,14 @@ type LineStyle = {
   fillOpacity?: number
 }
 type LineConfigBase<M> = {
-  points: Point[],
+  points: SkadiPoint[],
   style: LineStyle,
   metadata?: M,
   fill?: boolean
 }
-type ChartTypeToLineConfig<M> = WithExtensions<{
+type ChartTypeToLineConfig<M> = {
   [K in ChartType]: LineConfigBase<M>
-}, ["category"]>
+}
 export type LineConfig<M, T extends ChartType> = ChartTypeToLineConfig<M>[T]
 export type Lines<M, T extends ChartType> = LineConfig<M, T>[]
 
@@ -43,10 +44,10 @@ export type ScatterPointStyle = {
 type ScatterPointConfigBase<M> = {
   style: ScatterPointStyle,
   metadata?: M
-} & Point
-type ChartTypeToScatterPointConfig<M> = WithExtensions<{
+} & SkadiPoint
+type ChartTypeToScatterPointConfig<M> = {
   [K in ChartType]: ScatterPointConfigBase<M>
-}, ["category"]>
+}
 type ScatterPointConfig<M, T extends ChartType> =
   ChartTypeToScatterPointConfig<M>[T]
 export type ScatterPoints<M, T extends ChartType> = ScatterPointConfig<M, T>[];

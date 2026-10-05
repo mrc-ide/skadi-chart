@@ -1,4 +1,9 @@
+import { DeepWriteable } from "@/types";
 import { Bounds } from "./types"
+
+export const deepCopy = <T>(x: T): DeepWriteable<T> => {
+  return JSON.parse(JSON.stringify(x));
+}
 
 export const getInner = ({ width, height, margin }: Bounds) => {
   return {

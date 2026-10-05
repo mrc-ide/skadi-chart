@@ -1,9 +1,11 @@
-import { ChartType, D3Selection, HasAllKeys, Prettify } from "@/types"
+import { D3Selection, HasAllKeys, Prettify } from "@/types"
 import { CurrFlags as PrevFlags, CurrOutputs as PrevOutputs } from "../config/types"
 import { Visual } from "./Visual"
 import { AxesLayer } from "./layers/AxesLayer"
 import { TracesLayer } from "./layers/TracesLayer"
 import { LinesLayer } from "./layers/predraw/LinesLayer"
+import { ChartType } from "../base/chartTypes"
+import { ScalesLayer } from "./layers/predraw/ScalesLayer"
 
 
 
@@ -20,7 +22,9 @@ type RemoveIfNoPoints<Flags extends CurrFlags> =
   (Flags["hasPoints"] extends true ? never : Method<"addScatterPoints">)
 type RemoveIfNoLines<Flags extends CurrFlags> =
   (Flags["hasLines"] extends true ? never : Method<"addTraces">)
-type MethodsToRemove<_T extends ChartType, Flags extends CurrFlags> = RemoveIfNoPoints<Flags> | RemoveIfNoLines<Flags>
+type MethodsToRemove<_T extends ChartType, Flags extends CurrFlags> =
+  | RemoveIfNoPoints<Flags>
+  | RemoveIfNoLines<Flags>
 
 export type This<M, T extends ChartType, Flags extends CurrFlags> =
   Omit<Visual<M, T, Flags>, MethodsToRemove<T, Flags>>
@@ -53,9 +57,11 @@ export type VisualLayers<M> = HasAllKeys<VisualLayer, {
 }>
 
 export enum PredrawLayer {
+  Scales = "skadiChartScales",
   Lines = "skadiChartLines",
 }
 export type PredrawLayers<M> = {
+  [PredrawLayer.Scales]: ScalesLayer<M, ChartType> | null
   [PredrawLayer.Lines]: LinesLayer<M, ChartType> | null
 }
 

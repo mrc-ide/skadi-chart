@@ -2,11 +2,167 @@ import { ChartOptions } from "./Chart";
 import * as d3 from "./d3";
 import { LayerType, OptionalLayer } from "./layers/Layer";
 
+type Axess = "categorical"[]
+  | [..."categorical"[], "numerical"]
+const chartTypeObj = {
+  x: ["categorical", "categorical", "numerical"],
+  y: ["numerical"]
+} as const satisfies XY<Axess>
+
+type PointType<T extends Axess> =
+  T extends "categorical"[] ? string[] :
+  T extends ["numerical"] ? number[] :
+  (string | number)[]
+
+type Point2 = {
+  x: PointType<(typeof chartTypeObj)["x"]>,
+  y: PointType<(typeof chartTypeObj)["y"]>
+}
+const p: Point2 = {
+  x: ["foo", 2],
+  y: [2]
+}
+
+// Probably put this with the chatTypeObj and also need to include
+// visibility of scale
+const ranges2 = {
+  x: [
+    ["A", "B", "C"],
+    ["X", "Y", "Z"],
+    [0, 100],
+  ],
+  y: [
+    [-500, 500]
+  ]
+}
+
+
+type ChartObj = XY<{
+  type: "categorical" | "numerical",
+  domain: string[] | number[],
+  show: boolean
+}[]>
+
+export const chartObj = {
+  x: {
+    shared: [
+      {
+        type: "categorical",
+        domain: ["A", "B", "C"],
+        show: true
+      },
+      {
+        type: "categorical",
+        domain: ["X", "Y", "Z"],
+        show: true
+      }
+    ],
+    shared2: {
+      axisLevels: [
+        {
+          type: "categorical",
+          domain: ["A", "B", "C"],
+          show: true
+        },
+        {
+          type: "categorical",
+          domain: ["X", "Y", "Z"],
+          show: true
+        }
+      ]
+    },
+  },
+  y: {
+    bar: [
+      {
+        type: "numerical",
+        domain: [-500, 500],
+        show: true
+      }
+    ],
+    trace: [
+      {
+        type: "numerical",
+        domain: [0, 100],
+        show: true
+      }
+    ]
+  },
+};
+
+
+
+export class Scales2 {
+  scaleXY: XY<any>
+  constructor(chartObj: ChartObj) {
+    this.scaleXY = {
+      x: this.makeScaleFromChartArray(chartObj.x),
+      y: this.makeScaleFromChartArray(chartObj.y),
+    };
+    console.log(this.scaleXY);
+  }
+
+  private makeScaleFromChartArray(arr: ChartObj["x"]) {
+    const recurse = (
+      remainingArr: ChartObj["x"],
+      scaleObj: Record<string, any>,
+      range: number[]
+    ) => {
+      const firstEl = remainingArr.at(0);
+      if (firstEl?.type === "numerical") {
+        scaleObj.scale = d3.scaleLinear()
+          .domain(firstEl.domain as number[])
+          .range(range);
+      } else if (firstEl?.type === "categorical") {
+        const categoricalScale = d3.scaleBand()
+          .domain(firstEl.domain as string[])
+          .range(range);
+        scaleObj.scale = categoricalScale;
+        scaleObj.categories = {};
+        const width = categoricalScale.bandwidth();
+        categoricalScale.domain().forEach(c => {
+          const start = categoricalScale(c)!;
+          const range = [start, start + width];
+          scaleObj.categories[c] = {};
+          recurse(
+            remainingArr.slice(1),
+            scaleObj.categories[c],
+            range
+          );
+        });
+      }
+    };
+
+    const ret = {};
+    recurse(arr, ret, [0, 9000]);
+    return ret;
+  }
+
+  scale(...args: string[]) {
+    const scaleXOrY = (this.scaleXY as any)[args[0]];
+    return (point: (string | number)[]) => {
+      let currScaleObj = scaleXOrY;
+      let ret = 0;
+      point.forEach((p, idx) => {
+        if (args[idx + 1] === "categorical") {
+          const currScale = currScaleObj.scale as d3.ScaleBand<string>;
+          ret = currScale(p as string)! + currScale.bandwidth() / 2;
+          currScaleObj = currScaleObj.categories[p];
+        } else if (args[idx + 1] === "numerical") {
+          ret = (currScaleObj.scale as ScaleNumeric)(p as number);
+        }
+      });
+      return ret;
+    }
+  }
+};
+
 
 
 export type XorY = 'x' | 'y';
 export type XY<T> = Record<XorY, T>;
 export type Point = XY<number>
+export type SkadiPoint = XY<(string | number)[]>
 
 
 
@@ -28,46 +184,7 @@ export type DeepPartialRecord<T extends Record<string, unknown>> = {
       : T[K];
 };
 
-type EmptyExtensions = { [K in ChartType]: {} }
-type Category<Key extends XorY> = {
-  category: { [K in Key]: string }
-}
-type CategoryExtensions = HasAllKeys<ChartType, {
-  default: {},
-  categoricalX: Category<"x">,
-  categoricalY: Category<"y">,
-  categoricalXY: Category<"x" | "y">,
-}>
-type ChartTypeExtensions = HasAllKeys<ChartType, {
-  default: { chartType: "default" },
-  categoricalX: { chartType: "categoricalX" },
-  categoricalY: { chartType: "categoricalY" },
-  categoricalXY: { chartType: "categoricalXY" },
-}>
-type Extensions = {
-  category: CategoryExtensions,
-  chartType: ChartTypeExtensions,
-}
-
-type MixExtensions<E extends (keyof Extensions)[]> =
-  E extends []
-    ? EmptyExtensions
-    : E extends [infer LastExt]
-      ? LastExt extends keyof Extensions ? Extensions[LastExt] : never
-      : E extends [infer Ext, ...infer Rest]
-        ? Ext extends keyof Extensions
-          ? Rest extends (keyof Extensions)[]
-            ? Extensions[Ext] & MixExtensions<Rest>
-            : never
-          : never
-        : never
-
-export type WithExtensions<
-  Map extends Record<ChartType, any>,
-  E extends (keyof Extensions)[]
-> = {
-  [K in ChartType]: Map[K] & MixExtensions<E>[K]
-}
+export type DeepWriteable<T> = Prettify<{ -readonly [P in keyof T]: DeepWriteable<T[P]> }>;
 
 
 
@@ -118,19 +235,7 @@ export type D3Selection<Element extends d3.BaseType> = d3.Selection<Element, Poi
 export type AllOptionalLayers = OptionalLayer<any>;
 
 export type ScaleNumeric = d3.ScaleContinuousNumeric<number, number, never>
-export type CategoricalScaleConfig = {
-  main: d3.ScaleBand<string>, // The main categorical scale
-  bands: Record<string, ScaleNumeric> // Numerical scales within each category for banded data
-}
-export type TickConfig<Domain> = {
-  padding?: number,
-  size?: number,
-  formatter?: (domainValue: Domain, index: number) => string,
-  enableMathJax?: boolean
-} & (Domain extends number ? {
-  count?: number,
-  specifier?: string,
-} : {});
+export type ScaleCategorical = d3.ScaleBand<string>
 
 /*
   LayerArgs are passed into each Layer in the draw

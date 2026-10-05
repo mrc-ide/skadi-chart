@@ -1,32 +1,28 @@
-import { ChartType, MixNewFlags } from "@/types";
+import { MixNewFlags } from "@/types";
 import {
-  AxisArgs,
-  AxisConfig,
+    AxesArgs,
   Categories,
   CurrFlags,
   CurrOutput,
   CurrState,
   DefaultCurrFlags,
+  DomainArgs,
   LinesArgs,
   This,
+  TicksArgs,
 } from "./types";
-import { TickArgs, TickConfig } from "./ticks";
+import { TickArgs } from "./ticks";
 import { CurrFlags as PrevFlags, CurrOutput as PrevOutput } from "@/Chart/data/types";
 import { Visual } from "../visual/Visual";
 import { categoricalChartTypes, processScaleArgs, ScaleArgs, ScaleArgsParsed, ScaleOutput } from "./scales";
 import { doXY, makeObjXY } from "@/helpers";
 import { defaultTickConfig } from "./ticks";
-import { deepAssignRecordIfDefined } from "./utils";
+import { deepAssignRecordIfDefined, mergeChartArgs, objForEach } from "./utils";
+import { ChartType } from "../base/chartTypes";
+import { SingleChartSatisfies } from "../base/types";
 
 export class Config<M, T extends ChartType, Flags extends CurrFlags> {
   private lines: LinesArgs = { RDPEpsilon: null };
-  private axes: AxisConfig["categoricalXY"] = {
-    x: { label: { text: "", padding: 50 }, innerPadding: 0.1, drawOrigin: true },
-    y: { label: { text: "", padding: 40 }, innerPadding: 0.1, drawOrigin: true },
-  };
-  private categories: Categories["categoricalXY"] = { x: [], y: [] };
-  private scales: ScaleOutput[ChartType] | null = null;
-  private ticks: TickConfig[ChartType] | null = null;
 
   private constructor(private prevOutput: PrevOutput<M>) {};
 
@@ -37,71 +33,56 @@ export class Config<M, T extends ChartType, Flags extends CurrFlags> {
     return new Config<M, T, NewFlags>(prevOutput) as This<M, T, NewFlags>;
   };
 
-  configureAxes(args: AxisArgs[T] = {}) {
-    doXY(axis => {
-      if (args[axis]?.label) {
-        this.axes[axis].label.text = args[axis].label.text;
-        if (args[axis].label.padding !== undefined) {
-          this.axes[axis].label.padding = args[axis].label.padding;
-        }
-      }
-      if (args[axis]?.drawOrigin !== undefined) {
-        this.axes[axis].drawOrigin = args[axis].drawOrigin!;
-      }
-      if (args[axis] && "innerPadding" in args[axis] && args[axis].innerPadding !== undefined) {
-        this.axes[axis].innerPadding = args[axis].innerPadding;
-      }
-    });
-    return this as This<M, T, Flags>;
-  }
-
-  configureCategories(args: Categories[T]) {
-    deepAssignRecordIfDefined(this.categories, args);
-    type NewFlags = MixNewFlags<CurrFlags, Flags, { hasConfiguredCategories: true }>
-    return this as This<M, T, NewFlags>;
-  };
-
-  configureScales(scaleArgs: ScaleArgs = {}) {
-    doXY(axis => {
-      if (categoricalChartTypes[axis].includes(this.prevOutput.chartType) && !this.categories[axis].length) {
-        throw new Error("Categories must be configured before scales")
-      }
-    });
-    const scaleArgsParsed: ScaleArgsParsed =
-      makeObjXY(() => ({ extents: { start: "auto", end: "auto" } }));
-    deepAssignRecordIfDefined(scaleArgsParsed, scaleArgs);
-    this.scales = processScaleArgs(scaleArgsParsed, this.prevOutput, this.categories, this.axes);
-    type NewFlags = MixNewFlags<CurrFlags, Flags, { hasConfiguredScale: true }>
-    return this as This<M, T, NewFlags>;
-  };
-
   configureLines(linesArgs: LinesArgs) {
-    this.lines = linesArgs;
+    this.lines.RDPEpsilon = linesArgs.RDPEpsilon;
     return this as This<M, T, Flags>;
   };
 
-  configureTicks(tickArgs: TickArgs[T]) {
-    this.ticks ??= defaultTickConfig(this.prevOutput);
-    deepAssignRecordIfDefined(this.ticks, tickArgs);
-    doXY((axis) => {
-      if (this.ticks?.[axis].numerical.enableMathJax && !this.ticks?.[axis].numerical.formatter) {
-        throw new Error("When MathJax is enabled, a formatter must be provided.");
-      }
+  configureAxes(args: AxesArgs<T>) {
+    mergeChartArgs(this.prevOutput.chart, args);
+    return this as This<M, T, Flags>;
+  };
+
+  configureDomain(args: DomainArgs<T>) {
+    mergeChartArgs(this.prevOutput.chart, args);
+    type NewFlags = MixNewFlags<CurrFlags, Flags, { hasConfiguredDomain: true }>
+    return this as This<M, T, NewFlags>;
+  };
+
+  configureTicks(args: TicksArgs<T>) {
+    mergeChartArgs(this.prevOutput.chart, args);
+    doXY(axis => {
+      const chartAxis = this.prevOutput.chart[axis] as SingleChartSatisfies["x"];
+      objForEach(chartAxis, (_, levels) => {
+        const lastLevel = levels.at(-1);
+        if (
+          lastLevel && lastLevel.type === "numerical"
+          && lastLevel.tick.enableMathJax && !lastLevel.tick.formatter
+        ) {
+          throw new Error("When MathJax is enabled, a formatter must be provided.");
+        }
+      });
     });
     return this as This<M, T, Flags>;
-  }
+  };
+
+  // configureScales(scaleArgs: ScaleArgs = {}) {
+  //   doXY(axis => {
+  //     if (categoricalChartTypes[axis].includes(this.prevOutput.chartType) && !this.categories[axis].length) {
+  //       throw new Error("Categories must be configured before scales")
+  //     }
+  //   });
+  //   const scaleArgsParsed: ScaleArgsParsed =
+  //     makeObjXY(() => ({ extents: { start: "auto", end: "auto" } }));
+  //   deepAssignRecordIfDefined(scaleArgsParsed, scaleArgs);
+  //   this.scales = processScaleArgs(scaleArgsParsed, this.prevOutput, this.categories, this.axes);
+  //   type NewFlags = MixNewFlags<CurrFlags, Flags, { hasConfiguredScale: true }>
+  //   return this as This<M, T, NewFlags>;
+  // };
 
   startVisual() {
-    if (!this.scales) {
-      throw new Error("Scales must be configured before going into startVisual")
-    }
-
-    const configState: CurrState<ChartType> = {
-      axes: this.axes,
-      categories: this.categories,
+    const configState: CurrState = {
       lines: this.lines,
-      scales: this.scales,
-      ticks: this.ticks ?? defaultTickConfig(this.prevOutput),
     };
     const output = {
       ...this.prevOutput,

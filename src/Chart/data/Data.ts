@@ -1,4 +1,4 @@
-import { ChartType, MixNewFlags } from "@/types";
+import { MixNewFlags } from "@/types";
 import {
   CurrFlags,
   CurrOutput,
@@ -10,6 +10,7 @@ import {
 } from "./types";
 import { Config } from "../config/Config";
 import { CurrOutput as PrevOutput } from "../base/types";
+import { ChartType } from "../base/chartTypes";
 
 export class Data<M, T extends ChartType, Flags extends CurrFlags> {
   private lines: Lines<M, T> = [];

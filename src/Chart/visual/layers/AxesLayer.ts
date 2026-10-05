@@ -2,11 +2,13 @@ import * as d3 from "@/d3";
 import { Layer } from "@/Chart/visual/layers/Layer";
 import { Point, ScaleNumeric, XorY } from "@/types";
 import { CurrOutput as PrevOutput } from "@/Chart/config/types";
-import { CoreLayer, CoreLayers, VisualLayer } from "../types";
+import { CoreLayer, CoreLayers, PredrawLayer, PredrawLayers, VisualLayer } from "../types";
 import { ScaleCategorical } from "@/Chart/config/scales";
 import { getInner } from "@/Chart/base/utils";
 import { doXY } from "@/helpers";
 import { TickConfigBase, TickFormatter } from "@/Chart/config/ticks";
+import { AxisConfiguration, SingleChartSatisfies } from "@/Chart/base/types";
+import { Scales } from "./predraw/ScalesLayer";
 
 const animationDuration = 350;
 declare const MathJax: any;
@@ -16,6 +18,7 @@ export class AxesLayer<M> extends Layer<M> {
 
   constructor(
     private prevOutput: PrevOutput<M>,
+    private predrawLayers: PredrawLayers<M>,
     private coreLayers: CoreLayers,
   ) {
     super();
@@ -26,35 +29,80 @@ export class AxesLayer<M> extends Layer<M> {
   };
 
   draw = () => {
-    if (this.prevOutput.chartType === "default") {
-      const { x: xScale, y: yScale } = this.prevOutput.configState.scales;
-      const { x: xTickConfig, y: yTickConfig } = this.prevOutput.configState.ticks;
-      this.drawNumerical("x", xScale, xTickConfig.numerical, true);
-      this.drawNumerical("y", yScale, yTickConfig.numerical, true);
-    } else if (this.prevOutput.chartType === "categoricalX") {
-      const { x: xScale, y: yScale } = this.prevOutput.configState.scales;
-      const { x: xTickConfig, y: yTickConfig } = this.prevOutput.configState.ticks;
-      this.drawCategorical("x", xScale, xTickConfig);
-      this.drawNumerical("y", yScale, yTickConfig.numerical, true);
-      if (xScale.scale.paddingInner() !== 0) {
-        yScale.domain().forEach(d => this.drawPerpendicularLine("y", yScale, false, d));
-      }
-    } else if (this.prevOutput.chartType === "categoricalY") {
-      const { x: xScale, y: yScale } = this.prevOutput.configState.scales;
-      const { x: xTickConfig, y: yTickConfig } = this.prevOutput.configState.ticks;
-      this.drawNumerical("x", xScale, xTickConfig.numerical, true);
-      this.drawCategorical("y", yScale, yTickConfig);
-      if (yScale.scale.paddingInner() !== 0) {
-        xScale.domain().forEach(d => this.drawPerpendicularLine("x", xScale, false, d));
-      }
-    } else {
-      const { x: xScale, y: yScale } = this.prevOutput.configState.scales;
-      const { x: xTickConfig, y: yTickConfig } = this.prevOutput.configState.ticks;
-      this.drawCategorical("x", xScale, xTickConfig);
-      this.drawCategorical("y", yScale, yTickConfig);
-    }
+    const chart = this.prevOutput.chart as SingleChartSatisfies;
+    const scales = this.predrawLayers[PredrawLayer.Scales];
+    const inner = getInner(this.prevOutput.baseState.bounds);
+    const { getHtmlId } = this.prevOutput.baseState;
+    const translation = {
+      x: { axis1: inner.y.end, axis2: inner.y.start },
+      y: { axis1: inner.x.start, axis2: inner.x.end },
+    };
+    const axisConstructors = {
+      x: { axis1: d3.axisBottom, axis2: d3.axisTop },
+      y: { axis1: d3.axisLeft, axis2: d3.axisRight },
+    };
+    
+    const recurseDraw = (
+      axis: XorY,
+      axisName: "axis1" | "axis2",
+      scale: Scales,
+      axisCfg: AxisConfiguration[],
+    ) => {
+      const cons = axisConstructors[axis][axisName];
+      const tr = translation[axis][axisName];
+      const axisCall = cons(scale.scale as any);
+      const otherAxis = axis === "x" ? "y" : "x";
+      const [currAxis, ...restAxis] = axisCfg;
 
-    this.addLabels();
+      const axisGElement = this.coreLayers[CoreLayer.Svg]
+        .append("g")
+        .attr("id", `${axis}-${getHtmlId(VisualLayer.Axes)}`)
+        .style("font-size", "0.75rem")
+        .style("transform", `translate${otherAxis.toUpperCase()}(${tr + currAxis.translate}px)`)
+        .call(axisCall);
+      axisGElement.select(".domain").style("stroke-opacity", 0);
+
+      if (currAxis.type === "categorical" && "categories" in scale && restAxis.length !== 0) {
+        Object.values(scale.categories).forEach(s => {
+          recurseDraw(axis, axisName, s, restAxis);
+        });
+      }
+    };
+
+    recurseDraw("x", "axis1", scales!.scales.x.axis1, chart.x.axis1);
+    if (chart.x.axis2) recurseDraw("x", "axis2", scales!.scales.x.axis2, chart.x.axis2);
+    recurseDraw("y", "axis1", scales!.scales.y.axis1, chart.y.axis1);
+    if (chart.y.axis2) recurseDraw("y", "axis2", scales!.scales.y.axis2, chart.y.axis2);
+    //
+    // if (this.prevOutput.chartType === "default") {
+    //   const { x: xScale, y: yScale } = this.prevOutput.configState.scales;
+    //   const { x: xTickConfig, y: yTickConfig } = this.prevOutput.configState.ticks;
+    //   this.drawNumerical("x", xScale, xTickConfig.numerical, true);
+    //   this.drawNumerical("y", yScale, yTickConfig.numerical, true);
+    // } else if (this.prevOutput.chartType === "categoricalX") {
+    //   const { x: xScale, y: yScale } = this.prevOutput.configState.scales;
+    //   const { x: xTickConfig, y: yTickConfig } = this.prevOutput.configState.ticks;
+    //   this.drawCategorical("x", xScale, xTickConfig);
+    //   this.drawNumerical("y", yScale, yTickConfig.numerical, true);
+    //   if (xScale.scale.paddingInner() !== 0) {
+    //     yScale.domain().forEach(d => this.drawPerpendicularLine("y", yScale, false, d));
+    //   }
+    // } else if (this.prevOutput.chartType === "categoricalY") {
+    //   const { x: xScale, y: yScale } = this.prevOutput.configState.scales;
+    //   const { x: xTickConfig, y: yTickConfig } = this.prevOutput.configState.ticks;
+    //   this.drawNumerical("x", xScale, xTickConfig.numerical, true);
+    //   this.drawCategorical("y", yScale, yTickConfig);
+    //   if (yScale.scale.paddingInner() !== 0) {
+    //     xScale.domain().forEach(d => this.drawPerpendicularLine("x", xScale, false, d));
+    //   }
+    // } else {
+    //   const { x: xScale, y: yScale } = this.prevOutput.configState.scales;
+    //   const { x: xTickConfig, y: yTickConfig } = this.prevOutput.configState.ticks;
+    //   this.drawCategorical("x", xScale, xTickConfig);
+    //   this.drawCategorical("y", yScale, yTickConfig);
+    // }
+    //
+    // this.addLabels();
   };
 
   private drawNumerical = (

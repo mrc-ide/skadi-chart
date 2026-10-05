@@ -1,7 +1,7 @@
-import { ChartType } from "@/types";
 import { CurrOutput, CurrState, Bounds } from "./types";
 import { Data } from "../data/Data";
-import { getInner } from "./utils";
+import { deepCopy, getInner } from "./utils";
+import { charts, ChartType } from "./chartTypes";
 
 const clipPathBuffer = 1; // Add a buffer to the clip path to ensure origin lines and band border lines are not clipped
 
@@ -49,6 +49,7 @@ export class Base<M, T extends ChartType> {
     };
     const output = {
       chartType: this.chartType,
+      chart: deepCopy(charts[this.chartType]),
       baseState,
     } as CurrOutput;
     return Data.start<M, T>(output);
