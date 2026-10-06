@@ -78,12 +78,19 @@ type AxisConfigCategorical = AxisConfigNumerical & { innerPadding: number }
 export type AxisConfig = PerAxisConfigByChartType<AxisConfigNumerical, AxisConfigCategorical>
 
 
+export type ZoomArgs = {
+  lockAxis: XorY | null,
+  animationDuration: number
+}
+
+
 export type CurrState<T extends ChartType> = {
   axes: AxisConfig[T],
   categories: Categories[T],
   lines: LinesArgs,
   scales: ScaleOutput[T],
   ticks: TickConfig[T],
+  zoom: ZoomArgs,
 }
 
 export type CurrOutputs<M> = {

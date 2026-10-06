@@ -7,7 +7,6 @@ import { ScaleCategorical } from "@/Chart/config/scales";
 import { getInner } from "@/Chart/base/utils";
 import { doXY } from "@/helpers";
 import { TickConfigBase, TickFormatter } from "@/Chart/config/ticks";
-import { animationDuration } from "@/Chart/interactive/constants";
 
 declare const MathJax: any;
 
@@ -102,7 +101,7 @@ export class AxesLayer<M> extends Layer<M> {
     if (addZoom) {
       const zoom = async () => {
         await axisGElement.transition()
-          .duration(animationDuration)
+          .duration(this.prevOutput.configState.zoom.animationDuration)
           .call(numericalAxis)
           .end();
       };
@@ -227,7 +226,7 @@ export class AxesLayer<M> extends Layer<M> {
         const zoom = async () => {
           const newPositionSC = numScale(positionDC);
           await lineSegment.transition()
-            .duration(animationDuration)
+            .duration(this.prevOutput.configState.zoom.animationDuration)
             .attr(`${axis}1`, newPositionSC)
             .attr(`${axis}2`, newPositionSC)
             .style("stroke-width", strokeWidthPx)

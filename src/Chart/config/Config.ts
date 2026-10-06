@@ -9,6 +9,7 @@ import {
   DefaultCurrFlags,
   LinesArgs,
   This,
+  ZoomArgs,
 } from "./types";
 import { TickArgs, TickConfig } from "./ticks";
 import { CurrFlags as PrevFlags, CurrOutput as PrevOutput } from "@/Chart/data/types";
@@ -27,6 +28,7 @@ export class Config<M, T extends ChartType, Flags extends CurrFlags> {
   private categories: Categories["categoricalXY"] = { x: [], y: [] };
   private scales: ScaleOutput[ChartType] | null = null;
   private ticks: TickConfig[ChartType] | null = null;
+  private zoom: ZoomArgs = { lockAxis: null, animationDuration: 350 };
 
   private constructor(private prevOutput: PrevOutput<M>) {};
 
@@ -91,6 +93,11 @@ export class Config<M, T extends ChartType, Flags extends CurrFlags> {
     return this as This<M, T, Flags>;
   }
 
+  configureZoom(zoomArgs: ZoomArgs) {
+    deepAssignRecordIfDefined(this.zoom, zoomArgs);
+    return this as This<M, T, Flags>;
+  }
+
   startVisual() {
     if (!this.scales) {
       throw new Error("Scales must be configured before going into startVisual")
@@ -102,6 +109,7 @@ export class Config<M, T extends ChartType, Flags extends CurrFlags> {
       lines: this.lines,
       scales: this.scales,
       ticks: this.ticks ?? defaultTickConfig(this.prevOutput),
+      zoom: this.zoom,
     };
     const output = {
       ...this.prevOutput,
