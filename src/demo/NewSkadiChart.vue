@@ -70,7 +70,8 @@ import type { ChartType } from "@/types";
 import type { Option } from "vue3-select-component";
 import VueSelect from "vue3-select-component";
 import { onMounted, ref, watch } from "vue";
-import { Base as ChartNew } from "../Chart/base/Base";
+import { Axes as ChartNew } from "../Chart/axes/Axes";
+import { Lines } from "@/Chart/data/types";
 
 const numericalAxes = ref<HTMLDivElement | null>(null);
 const categoricalXYAxes = ref<HTMLDivElement | null>(null);
@@ -161,24 +162,94 @@ const renderChart = (chartType: ChartType) => {
   const lines = generateWaveLines({
     lineCount: xCategories.length * yCategories.length,
     pointCount: 200,
-    xRange: extents.x,
-    yRange: extents.y,
+    xRange: { start: 0, end: 20 },
+    yRange: { start: 0, end: 500 },
     cycles: 5,
     amplitude: 0.1,
+  }) as any as Lines;
+
+  lines.forEach((l, i) => {
+    console.log(i);
+    const cat = [
+      {x: "A", y: "A"},
+      {x: "B", y: "A"},
+      {x: "A", y: "B"},
+      {x: "B", y: "B"},
+    ][i % 4];
+    l.points = l.points.map(p => {
+      return {
+        x: [cat.x, p.x],
+        y: [cat.y, p.y]
+      }
+    }) as any
+    l.axisName = [
+      undefined,
+      { x: "xBottom", y: "yRight" } as const,
+      { x: "xTop", y: "yLeft" } as const,
+      { x: "xTop", y: "yRight" } as const,
+    ][i % 4];
   });
 
-    new ChartNew("catNumXCatNumY", container)
+  console.log(lines)
+
+// TODO traces should filter lines that are for it?
+// need an interface for this??
+    ChartNew.start()
+      .xTop().categorical().numerical()
+      .xBottom().categorical().numerical()
+      .yLeft().categorical().numerical()
+      .yRight().categorical().numerical()
+      .startHtml()
+      .addElement(container)
       .startData()
+      .registerLines(lines)
       .startConfig()
       .configureAxes({
-        x: { axis1: [{ translate: 10 }, { translate: 40 }] }
+        x: {
+          start: [
+            { label: { text: "CatLabel1X" }, innerPadding: 0.15, translate: 40 },
+            { label: { text: "NumLabel1X", translate: -5 }, }
+          ],
+          end: [
+            { label: { text: "CatLabel2X", translate: -20 }, innerPadding: 0.5 },
+            { label: { text: "NumLabel2X", translate: -10 }, translate: 40 }
+          ],
+        },
+        y: {
+          // TODO disable borders if padding dont match between axis
+          start: [
+            { label: { text: "CatLabel1Y", translate: -30 }, innerPadding: 0.4, translate: 50 },
+            { label: { text: "NumLabel1Y", translate: -7 } }
+          ],
+          end: [
+            { label: { text: "CatLabel2Y", translate: -20 }, innerPadding: 0.2 },
+            { label: { text: "NumLabel2Y" }, translate: 50 }
+          ],
+        },
       })
       .configureDomain({
-        x: { axis1: [{ domain: ["A", "B"] }, { domain: [0, 100] }] },
-        y: { axis1: [{ domain: ["A", "B"] }, { domain: [0, 100] }] },
+        x: {
+          start: [{ domain: ["A", "B"] }, { domain: [0, 20] }],
+          end: [{ domain: ["A", "B"] }, { domain: [0, 20] }]
+        },
+        y: {
+          start: [{ domain: ["A", "B"] }, { domain: [0, 500] }],
+          end: [{ domain: ["A", "B"] }, { domain: [0, 500] }]
+        },
+      })
+      .configureTicks({
+        x: {
+          start: [{ tick: { size: 10, translate: 10 } }, { tick: { translate: 0 } }],
+          end: [{ tick: { size: 10, translate: 10 } }, { tick: { translate: 5 } }],
+        },
+        y: {
+          start: [{ tick: { size: 10, translate: 10 } }, { tick: { translate: 5 } }],
+          end: [{ tick: { size: 10, translate: 10 } }, { tick: { translate: 5 } }],
+        }
       })
       .startVisual()
       .addAxes()
+      // .addTraces()
       .startInteractive()
       .end()
   console.log("DOne")

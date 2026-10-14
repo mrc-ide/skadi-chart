@@ -1,7 +1,6 @@
 import { MixNewFlags } from "@/types";
 import {
-    AxesArgs,
-  Categories,
+  AxesArgs,
   CurrFlags,
   CurrOutput,
   CurrState,
@@ -11,74 +10,43 @@ import {
   This,
   TicksArgs,
 } from "./types";
-import { TickArgs } from "./ticks";
 import { CurrFlags as PrevFlags, CurrOutput as PrevOutput } from "@/Chart/data/types";
 import { Visual } from "../visual/Visual";
-import { categoricalChartTypes, processScaleArgs, ScaleArgs, ScaleArgsParsed, ScaleOutput } from "./scales";
-import { doXY, makeObjXY } from "@/helpers";
-import { defaultTickConfig } from "./ticks";
-import { deepAssignRecordIfDefined, mergeChartArgs, objForEach } from "./utils";
-import { ChartType } from "../base/chartTypes";
-import { SingleChartSatisfies } from "../base/types";
+import { mergeChartArgs } from "./utils";
+import { ChartType } from "../axes/types";
 
-export class Config<M, T extends ChartType, Flags extends CurrFlags> {
+export class Config<CType extends ChartType, Flags extends CurrFlags> {
   private lines: LinesArgs = { RDPEpsilon: null };
 
-  private constructor(private prevOutput: PrevOutput<M>) {};
+  private constructor(private prevOutput: PrevOutput) {};
 
-  static start = <M, T extends ChartType, PFlags extends PrevFlags>(
-    prevOutput: PrevOutput<M>
+  static start = <CType extends ChartType, PFlags extends PrevFlags>(
+    prevOutput: PrevOutput
   ) => {
     type NewFlags = DefaultCurrFlags<PFlags>
-    return new Config<M, T, NewFlags>(prevOutput) as This<M, T, NewFlags>;
+    return new Config<CType, NewFlags>(prevOutput) as This<CType, NewFlags>;
   };
 
   configureLines(linesArgs: LinesArgs) {
     this.lines.RDPEpsilon = linesArgs.RDPEpsilon;
-    return this as This<M, T, Flags>;
+    return this as This<CType, Flags>;
   };
 
-  configureAxes(args: AxesArgs<T>) {
-    mergeChartArgs(this.prevOutput.chart, args);
-    return this as This<M, T, Flags>;
+  configureAxes(args: AxesArgs<CType>) {
+    mergeChartArgs(this.prevOutput.chartCfg, args);
+    return this as This<CType, Flags>;
   };
 
-  configureDomain(args: DomainArgs<T>) {
-    mergeChartArgs(this.prevOutput.chart, args);
+  configureDomain(args: DomainArgs<CType>) {
+    mergeChartArgs(this.prevOutput.chartCfg, args);
     type NewFlags = MixNewFlags<CurrFlags, Flags, { hasConfiguredDomain: true }>
-    return this as This<M, T, NewFlags>;
+    return this as This<CType, NewFlags>;
   };
 
-  configureTicks(args: TicksArgs<T>) {
-    mergeChartArgs(this.prevOutput.chart, args);
-    doXY(axis => {
-      const chartAxis = this.prevOutput.chart[axis] as SingleChartSatisfies["x"];
-      objForEach(chartAxis, (_, levels) => {
-        const lastLevel = levels.at(-1);
-        if (
-          lastLevel && lastLevel.type === "numerical"
-          && lastLevel.tick.enableMathJax && !lastLevel.tick.formatter
-        ) {
-          throw new Error("When MathJax is enabled, a formatter must be provided.");
-        }
-      });
-    });
-    return this as This<M, T, Flags>;
+  configureTicks(args: TicksArgs<CType>) {
+    mergeChartArgs(this.prevOutput.chartCfg, args);
+    return this as This<CType, Flags>;
   };
-
-  // configureScales(scaleArgs: ScaleArgs = {}) {
-  //   doXY(axis => {
-  //     if (categoricalChartTypes[axis].includes(this.prevOutput.chartType) && !this.categories[axis].length) {
-  //       throw new Error("Categories must be configured before scales")
-  //     }
-  //   });
-  //   const scaleArgsParsed: ScaleArgsParsed =
-  //     makeObjXY(() => ({ extents: { start: "auto", end: "auto" } }));
-  //   deepAssignRecordIfDefined(scaleArgsParsed, scaleArgs);
-  //   this.scales = processScaleArgs(scaleArgsParsed, this.prevOutput, this.categories, this.axes);
-  //   type NewFlags = MixNewFlags<CurrFlags, Flags, { hasConfiguredScale: true }>
-  //   return this as This<M, T, NewFlags>;
-  // };
 
   startVisual() {
     const configState: CurrState = {
@@ -87,7 +55,7 @@ export class Config<M, T extends ChartType, Flags extends CurrFlags> {
     const output = {
       ...this.prevOutput,
       configState,
-    } as CurrOutput<M>;
-    return Visual.start<M, T, Flags>(output);
+    } as CurrOutput;
+    return Visual.start<CType, Flags>(output);
   };
 };

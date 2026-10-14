@@ -1,6 +1,6 @@
 import { ZoomProperties } from "@/types";
 
-export abstract class PredrawLayer<_M> {
+export abstract class PredrawLayer {
   constructor() {};
 
   // brush lifecycle hooks

@@ -1,7 +1,7 @@
 import { Prettify, SkadiPoint } from "@/types"
 import { Data } from "./Data"
-import { CurrOutputs as PrevOutputs } from "../base/types"
-import { ChartType } from "../base/chartTypes"
+import { CurrOutput as PrevOutput } from "../base/types"
+import { ChartType, ExtendsAxis } from "../axes/types"
 
 
 
@@ -10,7 +10,7 @@ export type DefaultCurrFlags = Prettify<{ hasLines: false, hasPoints: false }>
 
 
 
-export type This<M, T extends ChartType, Flags extends CurrFlags> = Data<M, T, Flags>
+export type This<T extends ChartType, Flags extends CurrFlags> = Data<T, Flags>
 
 
 
@@ -22,17 +22,17 @@ type LineStyle = {
   fillColor?: string,
   fillOpacity?: number
 }
-type LineConfigBase<M> = {
+type LineConfig = {
   points: SkadiPoint[],
   style: LineStyle,
-  metadata?: M,
-  fill?: boolean
+  metadata?: any,
+  fill?: boolean,
+  axisName?: Partial<{
+    x: ExtendsAxis<"xBottom" | "xTop">,
+    y: ExtendsAxis<"yLeft" | "yRight">,
+  }>,
 }
-type ChartTypeToLineConfig<M> = {
-  [K in ChartType]: LineConfigBase<M>
-}
-export type LineConfig<M, T extends ChartType> = ChartTypeToLineConfig<M>[T]
-export type Lines<M, T extends ChartType> = LineConfig<M, T>[]
+export type Lines = LineConfig[]
 
 
 
@@ -41,26 +41,19 @@ export type ScatterPointStyle = {
   color?: string,
   opacity?: number,
 }
-type ScatterPointConfigBase<M> = {
+type ScatterPointConfig = {
   style: ScatterPointStyle,
-  metadata?: M
+  metadata?: any
 } & SkadiPoint
-type ChartTypeToScatterPointConfig<M> = {
-  [K in ChartType]: ScatterPointConfigBase<M>
-}
-type ScatterPointConfig<M, T extends ChartType> =
-  ChartTypeToScatterPointConfig<M>[T]
-export type ScatterPoints<M, T extends ChartType> = ScatterPointConfig<M, T>[];
+export type ScatterPoints = ScatterPointConfig[];
 
 
 
-export type CurrState<M, T extends ChartType> = {
-  lines: Lines<M, T>,
-  scatterPoints: ScatterPoints<M, T>
+export type CurrState = {
+  lines: Lines,
+  scatterPoints: ScatterPoints
 }
 
-export type CurrOutputs<M> = {
-  [K in ChartType]: PrevOutputs[K] & { dataState: CurrState<M, K> }
-}
-
-export type CurrOutput<M> = CurrOutputs<M>[ChartType]
+export type CurrOutput = {
+  dataState: CurrState
+} & PrevOutput

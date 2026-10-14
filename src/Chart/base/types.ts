@@ -1,55 +1,24 @@
-import { DeepWriteable, XY } from "@/types"
-import { Charts, ChartType } from "./chartTypes"
+import { CurrOutput as PrevOutput } from "../axes/types";
+import { Prettify, XY } from "@/types"
+import { Base } from "./Base"
+import { ChartType } from "../axes/types"
 
 
 
-export type BaseTickConfig = {
-  translate: number,
-  size: number,
-}
-export type NumericalTickConfig = {
-  count: number,
-  specifier: string,
-  enableMathJax: boolean,
-}
-export type TickConfig<T> = (
-  T extends number ? NumericalTickConfig : {}
-) & {
-  formatter?: (val: T, idx: number) => string
-} & BaseTickConfig
+export type CurrFlags = { hasElement: boolean }
+export type DefaultCurrFlags = Prettify<{ hasElement: false }>
+type AllMethods = keyof Base<any, any>
+type Method<M extends AllMethods> = M
 
 
 
-export type BaseAxisConfiguration = {
-  show: boolean,
-  label: { text: string, translate: number },
-  translate: number,
-}
+type BlockIfNoElem<Flags extends CurrFlags> =
+  Flags["hasElement"] extends false ? Method<"startData"> : ""
+type MethodsToRemove<Flags extends CurrFlags> = 
+  | BlockIfNoElem<Flags>
 
-export type ConfigurableNumAxis = {
-  drawOrigin: boolean,
-  domain: number[],
-  tick: TickConfig<number>,
-} & BaseAxisConfiguration
-
-export type ConfigurableCatAxis = {
-  innerPadding: number,
-  domain: string[],
-  tick: TickConfig<string>,
-} & BaseAxisConfiguration
-
-export type AxisConfiguration = 
-  | { type: "numerical" } & ConfigurableNumAxis
-  | { type: "categorical" } & ConfigurableCatAxis
-
-
-
-export type AxesLevels = AxisConfiguration[]
-export type SingleChartSatisfies = XY<{
-  axis1: AxesLevels,
-  axis2?: AxesLevels,
-}>
-export type ChartsSatisfies = Record<string, SingleChartSatisfies>
+export type This<CType extends ChartType, Flags extends CurrFlags> =
+  Omit<Base<CType, Flags>, MethodsToRemove<Flags>>
 
 
 
@@ -71,12 +40,6 @@ export type CurrState = {
   clipPathBounds: Bounds,
 }
 
-export type CurrOutputs = {
-  [K in ChartType]: {
-    chartType: K,
-    chart: DeepWriteable<Charts[K]>,
-    baseState: CurrState,
-  }
-}
-
-export type CurrOutput = CurrOutputs[ChartType]
+export type CurrOutput = {
+  baseState: CurrState
+} & PrevOutput

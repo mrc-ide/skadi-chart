@@ -1,12 +1,10 @@
 import * as d3 from "@/d3";
-import { ChartType } from "@/Chart/base/chartTypes";
 import { PredrawLayer } from "./PredrawLayer";
-import { CurrOutput as PrevOutputs } from "@/Chart/config/types";
-import { AxisConfiguration, SingleChartSatisfies } from "@/Chart/base/types";
+import { CurrOutput as PrevOutput } from "@/Chart/config/types";
 import { ScaleCategorical, ScaleNumeric, SkadiPoint, XorY, XY, ZoomProperties } from "@/types";
 import { getInner } from "@/Chart/base/utils";
-import { doXY, makeObjXY } from "@/helpers";
-import { objForEach, objMap } from "@/Chart/config/utils";
+import { doXYStartEnd, makeObjXYStartEnd } from "@/helpers";
+import { AxisConfiguration, AxisType, StartEnd, StartOrEnd } from "@/Chart/axes/types";
 
 export type Scales =
   | { scale: ScaleNumeric }
@@ -18,44 +16,35 @@ export type Scales =
 export type CatScales = Extract<Scales, { scale: ScaleCategorical }>
 export type NumScales = Extract<Scales, { scale: ScaleNumeric }>
 
-export class ScalesLayer<M, _T extends ChartType> extends PredrawLayer<M> {
-  scales: XY<Record<string, Scales>>;
+export class ScalesLayer extends PredrawLayer {
+  scales: XY<StartEnd<Scales>>;
 
-  constructor(private prevOutputs: PrevOutputs<M>) {
+  constructor(private prevOutput: PrevOutput) {
     super();
-    const { x, y } = getInner(prevOutputs.baseState.bounds);
+    const { x, y } = getInner(prevOutput.baseState.bounds);
     const ranges = {
       x: [x.start, x.end],
       y: [y.end, y.start],
     };
-    this.scales = makeObjXY(axis => {
-      return objMap(
-        prevOutputs.chart[axis],
-        k => k,
-        (_, cfgArr) => this.makeScaleFromChartArray(cfgArr, ranges[axis]),
-      );
+    this.scales = makeObjXYStartEnd((ax, pos) => {
+      return this.makeScaleFromChartArray(prevOutput.chartCfg[ax][pos], ranges[ax]);
     });
+    console.log(this.scales)
   };
 
   zoom(zoomProperties: ZoomProperties) {
-    doXY(axis => {
-      if (zoomProperties[axis]) {
-        const axisLevels = this.prevOutputs.chart[axis];
-        objForEach(axisLevels, (axisName, cfgArr) => {
-          if (cfgArr.length === 1 && cfgArr[0].type === "numerical") {
-            this.scales[axis][axisName].scale.domain(zoomProperties[axis]);
-          }
-        });
+    doXYStartEnd((ax, pos) => {
+      if (!zoomProperties[ax]) return;
+      
+      const cfgArr = this.prevOutput.chartCfg[ax][pos];
+      if (cfgArr.length === 1 && cfgArr[0].type === "numerical") {
+        this.scales[ax][pos].scale.domain(zoomProperties[ax]);
       }
     });
   };
 
-  scale(
-    axis: XorY,
-    axisName: "axis1" | "axis2",
-    ...args: AxisConfiguration["type"][]
-  ) {
-    const nestedScale = this.scales[axis][axisName];
+  scale(ax: XorY, pos: StartOrEnd, ...args: AxisType[]) {
+    const nestedScale = this.scales[ax][pos];
     if (!nestedScale) throw new Error("Scale does not exist");
 
     return (point: SkadiPoint["x"]) => {
@@ -79,14 +68,13 @@ export class ScalesLayer<M, _T extends ChartType> extends PredrawLayer<M> {
     };
   };
 
-  scaleNum(axis: XorY, axisName: "axis1" | "axis2") {
-    const config = (this.prevOutputs.chart as SingleChartSatisfies)[axis][axisName];
-    if (!config) throw new Error(`axisName, "${axisName}", does not exist`);
+  scaleNum(ax: XorY, pos: StartOrEnd) {
+    const config = this.prevOutput.chartCfg[ax][pos];
 
     const lastCfg = config.at(-1)!;
     if (lastCfg.type !== "numerical") throw new Error("Numerical scale does not exist");
 
-    return this.scale(axis, axisName, ...config.map(c => c.type));
+    return this.scale(ax, pos, ...config.map(c => c.type));
   };
 
   private makeScaleFromChartArray(
@@ -108,7 +96,8 @@ export class ScalesLayer<M, _T extends ChartType> extends PredrawLayer<M> {
       } else if (firstEl.type === "categorical") {
         const categoricalScale = d3.scaleBand()
           .domain(firstEl.domain)
-          .range(range);
+          .range(range)
+          .paddingInner(firstEl.innerPadding);
 
         const catScales = scales as CatScales;
         catScales.scale = categoricalScale;

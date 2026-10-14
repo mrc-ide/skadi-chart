@@ -1,18 +1,18 @@
 import { Layer } from "@/Chart/visual/layers/Layer";
 import { CurrOutput as PrevOutput } from "@/Chart/config/types";
 import { CoreLayer, CoreLayers, VisualLayer } from "../types";
-import { ChartType, D3Selection, Point, ScaleNumeric, XY } from "@/types";
+import { D3Selection } from "@/types";
 import { customLineGenerator } from "./utils";
 import { LinesLayer } from "./predraw/LinesLayer";
 
-export class TracesLayer<M> extends Layer<M> {
+export class TracesLayer extends Layer {
   private zoomCallbacks: (() => Promise<void>)[] = [];
   private traces: D3Selection<SVGPathElement>[] = [];
   
   constructor(
-    private prevOutput: PrevOutput<M>,
+    private prevOutput: PrevOutput,
     private coreLayers: CoreLayers,
-    private linesLayer: LinesLayer<M, ChartType>,
+    private linesLayer: LinesLayer,
   ) {
     super();
   };

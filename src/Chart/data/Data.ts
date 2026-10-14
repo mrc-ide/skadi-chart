@@ -10,39 +10,39 @@ import {
 } from "./types";
 import { Config } from "../config/Config";
 import { CurrOutput as PrevOutput } from "../base/types";
-import { ChartType } from "../base/chartTypes";
+import { ChartType } from "../axes/types";
 
-export class Data<M, T extends ChartType, Flags extends CurrFlags> {
-  private lines: Lines<M, T> = [];
-  private scatterPoints: ScatterPoints<M, T> = [];
+export class Data<CType extends ChartType, Flags extends CurrFlags> {
+  private lines: Lines = [];
+  private scatterPoints: ScatterPoints = [];
   
   private constructor(private prevOutput: PrevOutput) {};
 
-  static start = <M, T extends ChartType>(prevOutput: PrevOutput) => {
-    return new Data<M, T, DefaultCurrFlags>(prevOutput) as This<M, T, DefaultCurrFlags>;
+  static start = <T extends ChartType>(prevOutput: PrevOutput) => {
+    return new Data<T, DefaultCurrFlags>(prevOutput) as This<T, DefaultCurrFlags>;
   };
 
-  registerLines = (lines: Lines<M, T>) => {
+  registerLines = (lines: Lines) => {
     this.lines.push(...lines);
     type NewFlags = MixNewFlags<CurrFlags, Flags, { hasLines: true }>;
-    return this as This<M, T, NewFlags>;
+    return this as This<CType, NewFlags>;
   };
 
-  registerPoints = (scatterPoints: ScatterPoints<M, T>) => {
+  registerPoints = (scatterPoints: ScatterPoints) => {
     this.scatterPoints.push(...scatterPoints);
     type NewFlags = MixNewFlags<CurrFlags, Flags, { hasPoints: true }>;
-    return this as This<M, T, NewFlags>;
+    return this as This<CType, NewFlags>;
   };
 
   startConfig = () => {
-    const dataState: CurrState<M, ChartType> = {
+    const dataState: CurrState = {
       lines: this.lines,
       scatterPoints: this.scatterPoints,
     };
     const output = {
       ...this.prevOutput,
       dataState,
-    } as CurrOutput<M>;
-    return Config.start<M, T, Flags>(output);
+    } as CurrOutput;
+    return Config.start<CType, Flags>(output);
   };
 };

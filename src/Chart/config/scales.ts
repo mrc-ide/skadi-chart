@@ -7,6 +7,8 @@ import { SingleRange } from "../base/types";
 import { AxisConfig, Categories } from "./types";
 import { getInner } from "../base/utils";
 
+// TODO discuss how important auto scaling is and add iterateAllPoints here
+
 type SingleAutoScale = { start: number | "auto", end: number | "auto" }
 
 type ScaleArgsOptional = {

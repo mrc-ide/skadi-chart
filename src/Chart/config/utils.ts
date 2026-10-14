@@ -1,7 +1,6 @@
-import { DeepPartialRecord, Prettify } from "@/types";
-import { Charts, ChartType, IsAxesFunc, MakeChartArgs } from "../base/chartTypes";
-import { AxisConfiguration } from "../base/types";
-import { doXY } from "@/helpers";
+import { DeepPartialRecord, Prettify, XY } from "@/types";
+import { doXYStartEnd } from "@/helpers";
+import { ChartConfig, StartEnd } from "../axes/types";
 
 type Dict = Record<string, unknown>
 
@@ -69,29 +68,23 @@ export const deepAssignRecordIfDefined = <Obj extends Dict>(
   });
 }
 
-type AnyFunc = IsAxesFunc<{
-  numerical: any,
-  categorical: any,
-}>
+type PartialObj = Partial<XY<
+  Partial<StartEnd<any[]>>
+>>
 
-export const mergeChartArgs = <
-  T extends ChartType,
-  Chart extends Charts[T],
-  PartialObj extends DeepPartialRecord<MakeChartArgs<T, AnyFunc>>,
->(
-  chart: Chart,
+export const mergeChartArgs = (
+  chart: ChartConfig,
   partial: PartialObj,
-): Chart => {
-  doXY(axis => {
-    if (!partial[axis]) return;
-    const axisCfg = partial[axis];
-    const chartAxisCfg = chart[axis];
-    objForEach(axisCfg, k => {
-      if (!axisCfg[k]) return;
-      const cfg = chartAxisCfg[k as keyof typeof chartAxisCfg];
-      (axisCfg[k] as AxisConfiguration[])
-        .forEach((c, idx) => deepAssignRecordIfDefined(cfg[idx], c as any))
-    });
+) => {
+  doXYStartEnd((ax, pos) => {
+    const axCfg = partial[ax];
+    if (!axCfg) return;
+    
+    const posCfg = axCfg[pos];
+    if (!posCfg) return;
+
+    posCfg.forEach(
+      (cfg, i) => deepAssignRecordIfDefined(chart[ax][pos][i], cfg)
+    );
   });
-  return chart;
-}
+};
