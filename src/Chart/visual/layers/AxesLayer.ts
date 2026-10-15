@@ -9,9 +9,7 @@ import { Scales } from "./predraw/ScalesLayer";
 import { AxisConfiguration } from "@/Chart/axes/types";
 
 // TODO perpendicular lines with categorical borders and draw origins
-
 // TODO remove when adding mathjax and zoom layer
-// const animationDuration = 350;
 // declare const MathJax: any;
 
 export class AxesLayer extends Layer {

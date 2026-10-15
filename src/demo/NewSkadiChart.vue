@@ -159,14 +159,17 @@ const renderChart = (chartType: ChartType) => {
     y: { extents: extents.y, log: logScale.value.y },
   };
 
-  const lines = generateWaveLines({
+  const lineProps = {
     lineCount: xCategories.length * yCategories.length,
     pointCount: 200,
     xRange: { start: 0, end: 20 },
     yRange: { start: 0, end: 500 },
     cycles: 5,
     amplitude: 0.1,
-  }) as any as Lines;
+  };
+
+
+  const lines = generateWaveLines(lineProps) as any as Lines;
 
   lines.forEach((l, i) => {
     console.log(i);
@@ -249,7 +252,7 @@ const renderChart = (chartType: ChartType) => {
       })
       .startVisual()
       .addAxes()
-      // .addTraces()
+      .addTraces()
       .startInteractive()
       .end()
   console.log("DOne")
@@ -266,9 +269,16 @@ const renderChart = (chartType: ChartType) => {
       // .end();
 
   if (chartType === "default") {
+    // Use lines that will need to have negative values filtered when y-axis has log scale.
+    const logFilterableLines = generateWaveLines({
+      ...lineProps,
+      yRange: { ...extents.y, start: extents.y.start - 200 },
+      xRange: { ...extents.x, end: extents.x.end + 10 }
+    });
+
     new ChartNew("default", container)
       .startData()
-      .registerLines(lines)
+      .registerLines(logFilterableLines)
       .startConfig()
       .configureAxes({
         x: { label: { text: "Time" } },

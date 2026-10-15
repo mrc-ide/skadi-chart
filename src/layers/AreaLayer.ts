@@ -148,6 +148,7 @@ export class AreaLayer<Metadata> extends OptionalLayer {
     const { yCoordForXAxisSC, xMinSC, xMaxSC } = lineBoundaryInfo;
 
     return (t: number) => {
+      // TODO: reuse LinesLayer.getNewLineSC here.
       const tLineSC = currLineSC.map(({x, y}) => traceLayer.getNewPoint!(x, y, t));
       const tLineSegmentsSC = customLineGen(tLineSC, layerArgs);
 

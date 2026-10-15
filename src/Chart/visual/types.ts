@@ -70,6 +70,7 @@ export type PredrawLayers = {
 export type CurrState = {
   coreLayers: CoreLayers,
   visualLayers: VisualLayers
+  predrawLayers: PredrawLayers,
 }
 
 export type CurrOutput = {
