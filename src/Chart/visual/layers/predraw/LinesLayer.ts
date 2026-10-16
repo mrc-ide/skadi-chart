@@ -103,6 +103,10 @@ export class LinesLayer extends PredrawLayer {
 
   private updateLowResLinesSC = () => {
     const linesSC = this.linesDC.map(lDC => {
+
+      // TODO base the depth of the scale on the first point of the line
+      // get rid of scaleNum and instead just use the scale function inside
+      // scales layer
       const { position: xPos } = userAxisToAxPos(lDC.axisName?.x || "xBottom");
       const numScaleX = this.scalesLayer.scaleNum("x", xPos);
       const { position: yPos } = userAxisToAxPos(lDC.axisName?.y || "yLeft");

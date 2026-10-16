@@ -27,9 +27,8 @@ export class ScalesLayer extends PredrawLayer {
       y: [y.end, y.start],
     };
     this.scales = makeObjXYStartEnd((ax, pos) => {
-      return this.makeScaleFromChartArray(prevOutput.chartCfg[ax][pos], ranges[ax]);
+      return this.makeScalesFromChartArray(prevOutput.chartCfg[ax][pos], ranges[ax]);
     });
-    console.log(this.scales)
   };
 
   zoom(zoomProperties: ZoomProperties) {
@@ -57,6 +56,7 @@ export class ScalesLayer extends PredrawLayer {
         if (args[i] === "categorical") {
           if (!("categories" in currScale)) throw new Error("Scale is not categorical");
           const currS = currScale.scale as d3.ScaleBand<string>;
+          // TODO does this work for y axis? or is it reversed
           ret = currS(p as string)! + currS.bandwidth() / 2;
           currScale = currScale.categories[p];
         } else if (args[i] === "numerical") {
@@ -68,6 +68,7 @@ export class ScalesLayer extends PredrawLayer {
     };
   };
 
+  // TODO: this doesnt need to exist if traces layer is fully generic
   scaleNum(ax: XorY, pos: StartOrEnd) {
     const config = this.prevOutput.chartCfg[ax][pos];
 
@@ -77,7 +78,7 @@ export class ScalesLayer extends PredrawLayer {
     return this.scale(ax, pos, ...config.map(c => c.type));
   };
 
-  private makeScaleFromChartArray(
+  private makeScalesFromChartArray(
     arr: AxisConfiguration[],
     initialRange: number[],
   ): Scales {

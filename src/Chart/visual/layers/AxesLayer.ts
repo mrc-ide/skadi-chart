@@ -42,13 +42,13 @@ export class AxesLayer extends Layer {
     };
     
     const recurseDraw = (
-      axis: AxisUtil, axisName: PositionUtil, path: string,
+      axis: AxisUtil, position: PositionUtil, path: string,
       scale: Scales, axisCfg: AxisConfiguration[] | undefined,
     ) => {
       if (!axisCfg) return;
       const [currAxisCfg, ...restAxisCfg] = axisCfg;
 
-      const axisCons = axisName.pick(axis.pick(axisConstructors));
+      const axisCons = position.pick(axis.pick(axisConstructors));
       let axisCall: d3.Axis<string> | d3.Axis<d3.NumberValue>
       if (currAxisCfg.type === "categorical") {
         axisCall = axisCons(scale.scale as ScaleCategorical);
@@ -63,8 +63,8 @@ export class AxesLayer extends Layer {
         .tickSize(currAxisCfg.tick.size)
         .tickPadding(currAxisCfg.tick.translate)
 
-      const tr = axisName.pick(axis.pick(translation));
-      const otherAxisTr = tr + axis.sign() * axisName.sign() * currAxisCfg.translate;
+      const tr = position.pick(axis.pick(translation));
+      const otherAxisTr = tr + axis.sign() * position.sign() * currAxisCfg.translate;
       const axisTr = makeObjXY(
         a => a === axis.other() ? otherAxisTr : 0
       );
@@ -85,19 +85,19 @@ export class AxesLayer extends Layer {
         .attr(axis.curr(), inner[axis.curr()].center)
         .text(currAxisCfg.label.text);
 
-      const lTr = axisName.sign() * axis.sign() * (40 + currAxisCfg.label.translate);
+      const lTr = position.sign() * axis.sign() * (40 + currAxisCfg.label.translate);
       if (axis.curr() === "x") {
         label
           .attr("transform", `translate(0, ${lTr})`);
       } else {
         label
-          .attr("transform", `translate(${lTr}, 0) rotate(${axisName.negSign() * 90})`)
+          .attr("transform", `translate(${lTr}, 0) rotate(${position.negSign() * 90})`)
           .attr("transform-origin", `${otherAxisTr} ${inner.y.center}`)
       }
 
       if ("categories" in scale && restAxisCfg.length !== 0) {
         Object.entries(scale.categories).forEach(([k, s]) => {
-          recurseDraw(axis, axisName, `${path}-${k}`, s, restAxisCfg);
+          recurseDraw(axis, position, `${path}-${k}`, s, restAxisCfg);
         });
       }
     };
