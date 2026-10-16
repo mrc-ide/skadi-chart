@@ -1,5 +1,5 @@
 import * as d3 from "@/d3";
-import { ChartType, D3Selection, MixNewFlags } from "@/types";
+import { D3Selection, MixNewFlags } from "@/types";
 import {
   CoreLayer,
   CoreLayers,
@@ -18,18 +18,21 @@ import { Interactive } from "../interactive/Interactive";
 import { AxesLayer } from "./layers/AxesLayer";
 import { TracesLayer } from "./layers/TracesLayer";
 import { LinesLayer } from "./layers/predraw/LinesLayer";
+import { ScalesLayer } from "./layers/predraw/ScalesLayer";
+import { ChartType } from "../axes/types";
 
-export class Visual<M, T extends ChartType, Flags extends CurrFlags> {
+export class Visual<CType extends ChartType, Flags extends CurrFlags> {
   private coreLayers: CoreLayers;
-  private visualLayers: VisualLayers<M> = {
+  private visualLayers: VisualLayers = {
     [VisualLayer.Axes]: null,
     [VisualLayer.Trace]: null,
   };
-  private predrawLayers: PredrawLayers<M> = {
+  private predrawLayers: PredrawLayers = {
+    [PredrawLayer.Scales]: null,
     [PredrawLayer.Lines]: null,
   };
 
-  private constructor(private prevOutput: PrevOutput<M>) {
+  private constructor(private prevOutput: PrevOutput) {
     const {
       getHtmlId,
       bounds,
@@ -65,41 +68,44 @@ export class Visual<M, T extends ChartType, Flags extends CurrFlags> {
       [CoreLayer.BaseLayer]: baseLayer,
     };
 
+    this.predrawLayers[PredrawLayer.Scales] = new ScalesLayer(this.prevOutput);
     if (this.prevOutput.dataState.lines.length) {
-      this.predrawLayers[PredrawLayer.Lines] = new LinesLayer<M, ChartType>(this.prevOutput);
+      this.predrawLayers[PredrawLayer.Lines] = new LinesLayer(
+        this.prevOutput, this.predrawLayers[PredrawLayer.Scales]
+      );
     }
   };
 
-  static start<M, T extends ChartType, PFlags extends PrevFlags>(
-    prevOutput: PrevOutput<M>
+  static start<CType extends ChartType, PFlags extends PrevFlags>(
+    prevOutput: PrevOutput
   ) {
     type NewFlags = DefaultCurrFlags<PFlags>
-    return new Visual<M, T, NewFlags>(prevOutput) as This<M, T, NewFlags>
+    return new Visual<CType, NewFlags>(prevOutput) as This<CType, NewFlags>
   };
 
   addAxes() {
-    this.visualLayers[VisualLayer.Axes] = new AxesLayer<M>(
-      this.prevOutput, this.coreLayers
+    this.visualLayers[VisualLayer.Axes] = new AxesLayer(
+      this.prevOutput, this.predrawLayers, this.coreLayers
     );
-    return this as This<M, T, Flags>;
+    return this as This<CType, Flags>;
   };
 
   addTraces() {
-    this.visualLayers[VisualLayer.Trace] = new TracesLayer<M>(
+    this.visualLayers[VisualLayer.Trace] = new TracesLayer(
       this.prevOutput, this.coreLayers, this.predrawLayers[PredrawLayer.Lines]!
     );
     type NewFlags = MixNewFlags<CurrFlags, Flags, { hasVisualDataLayer: true }>
-    return this as This<M, T, NewFlags>;
+    return this as This<CType, NewFlags>;
   };
 
   addScatterPoints() {
     // TODO
     type NewFlags = MixNewFlags<CurrFlags, Flags, { hasVisualDataLayer: true }>
-    return this as This<M, T, NewFlags>;
+    return this as This<CType, NewFlags>;
   };
 
   startInteractive() {
-    const visualState: CurrState<M> = {
+    const visualState: CurrState = {
       coreLayers: this.coreLayers,
       visualLayers: this.visualLayers,
       predrawLayers: this.predrawLayers,
@@ -107,7 +113,7 @@ export class Visual<M, T extends ChartType, Flags extends CurrFlags> {
     const output = {
       ...this.prevOutput,
       visualState,
-    } as CurrOutput<M>;
-    return Interactive.start<M, T, Flags>(output);
+    } as CurrOutput;
+    return Interactive.start<CType, Flags>(output);
   };
 }

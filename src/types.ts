@@ -7,6 +7,7 @@ import { LayerType, OptionalLayer } from "./layers/Layer";
 export type XorY = 'x' | 'y';
 export type XY<T> = Record<XorY, T>;
 export type Point = XY<number>
+export type SkadiPoint = XY<(string | number)[]>
 
 
 
@@ -28,46 +29,7 @@ export type DeepPartialRecord<T extends Record<string, unknown>> = {
       : T[K];
 };
 
-type EmptyExtensions = { [K in ChartType]: {} }
-type Category<Key extends XorY> = {
-  category: { [K in Key]: string }
-}
-type CategoryExtensions = HasAllKeys<ChartType, {
-  default: {},
-  categoricalX: Category<"x">,
-  categoricalY: Category<"y">,
-  categoricalXY: Category<"x" | "y">,
-}>
-type ChartTypeExtensions = HasAllKeys<ChartType, {
-  default: { chartType: "default" },
-  categoricalX: { chartType: "categoricalX" },
-  categoricalY: { chartType: "categoricalY" },
-  categoricalXY: { chartType: "categoricalXY" },
-}>
-type Extensions = {
-  category: CategoryExtensions,
-  chartType: ChartTypeExtensions,
-}
-
-type MixExtensions<E extends (keyof Extensions)[]> =
-  E extends []
-    ? EmptyExtensions
-    : E extends [infer LastExt]
-      ? LastExt extends keyof Extensions ? Extensions[LastExt] : never
-      : E extends [infer Ext, ...infer Rest]
-        ? Ext extends keyof Extensions
-          ? Rest extends (keyof Extensions)[]
-            ? Extensions[Ext] & MixExtensions<Rest>
-            : never
-          : never
-        : never
-
-export type WithExtensions<
-  Map extends Record<ChartType, any>,
-  E extends (keyof Extensions)[]
-> = {
-  [K in ChartType]: Map[K] & MixExtensions<E>[K]
-}
+export type DeepWriteable<T> = Prettify<{ -readonly [P in keyof T]: DeepWriteable<T[P]> }>;
 
 
 
@@ -118,19 +80,7 @@ export type D3Selection<Element extends d3.BaseType> = d3.Selection<Element, Poi
 export type AllOptionalLayers = OptionalLayer<any>;
 
 export type ScaleNumeric = d3.ScaleContinuousNumeric<number, number, never>
-export type CategoricalScaleConfig = {
-  main: d3.ScaleBand<string>, // The main categorical scale
-  bands: Record<string, ScaleNumeric> // Numerical scales within each category for banded data
-}
-export type TickConfig<Domain> = {
-  padding?: number,
-  size?: number,
-  formatter?: (domainValue: Domain, index: number) => string,
-  enableMathJax?: boolean
-} & (Domain extends number ? {
-  count?: number,
-  specifier?: string,
-} : {});
+export type ScaleCategorical = d3.ScaleBand<string>
 
 /*
   LayerArgs are passed into each Layer in the draw

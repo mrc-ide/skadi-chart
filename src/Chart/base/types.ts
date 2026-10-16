@@ -1,4 +1,24 @@
-import { ChartType, XY } from "@/types"
+import { CurrOutput as PrevOutput } from "../axes/types";
+import { Prettify, XY } from "@/types"
+import { Base } from "./Base"
+import { ChartType } from "../axes/types"
+
+
+
+export type CurrFlags = { hasElement: boolean }
+export type DefaultCurrFlags = Prettify<{ hasElement: false }>
+type AllMethods = keyof Base<any, any>
+type Method<M extends AllMethods> = M
+
+
+
+type BlockIfNoElem<Flags extends CurrFlags> =
+  Flags["hasElement"] extends false ? Method<"startData"> : ""
+type MethodsToRemove<Flags extends CurrFlags> = 
+  | BlockIfNoElem<Flags>
+
+export type This<CType extends ChartType, Flags extends CurrFlags> =
+  Omit<Base<CType, Flags>, MethodsToRemove<Flags>>
 
 
 
@@ -20,11 +40,6 @@ export type CurrState = {
   clipPathBounds: Bounds,
 }
 
-export type CurrOutputs = {
-  [K in ChartType]: {
-    chartType: K,
-    baseState: CurrState,
-  }
-}
-
-export type CurrOutput = CurrOutputs[ChartType]
+export type CurrOutput = {
+  baseState: CurrState
+} & PrevOutput

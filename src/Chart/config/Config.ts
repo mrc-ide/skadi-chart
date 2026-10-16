@@ -1,112 +1,61 @@
-import { ChartType, MixNewFlags } from "@/types";
+import { MixNewFlags } from "@/types";
 import {
-  AxisArgs,
-  AxisConfig,
-  Categories,
+  AxesArgs,
   CurrFlags,
   CurrOutput,
   CurrState,
   DefaultCurrFlags,
+  DomainArgs,
   LinesArgs,
   This,
+  TicksArgs,
 } from "./types";
-import { TickArgs, TickConfig } from "./ticks";
 import { CurrFlags as PrevFlags, CurrOutput as PrevOutput } from "@/Chart/data/types";
 import { Visual } from "../visual/Visual";
-import { categoricalChartTypes, processScaleArgs, ScaleArgs, ScaleArgsParsed, ScaleOutput } from "./scales";
-import { doXY, makeObjXY } from "@/helpers";
-import { defaultTickConfig } from "./ticks";
-import { deepAssignRecordIfDefined } from "./utils";
+import { mergeChartArgs } from "./utils";
+import { ChartType } from "../axes/types";
 
-export class Config<M, T extends ChartType, Flags extends CurrFlags> {
+export class Config<CType extends ChartType, Flags extends CurrFlags> {
   private lines: LinesArgs = { RDPEpsilon: null };
-  private axes: AxisConfig["categoricalXY"] = {
-    x: { label: { text: "", padding: 50 }, innerPadding: 0.1, drawOrigin: true },
-    y: { label: { text: "", padding: 40 }, innerPadding: 0.1, drawOrigin: true },
-  };
-  private categories: Categories["categoricalXY"] = { x: [], y: [] };
-  private scales: ScaleOutput[ChartType] | null = null;
-  private ticks: TickConfig[ChartType] | null = null;
 
-  private constructor(private prevOutput: PrevOutput<M>) {};
+  private constructor(private prevOutput: PrevOutput) {};
 
-  static start = <M, T extends ChartType, PFlags extends PrevFlags>(
-    prevOutput: PrevOutput<M>
+  static start = <CType extends ChartType, PFlags extends PrevFlags>(
+    prevOutput: PrevOutput
   ) => {
     type NewFlags = DefaultCurrFlags<PFlags>
-    return new Config<M, T, NewFlags>(prevOutput) as This<M, T, NewFlags>;
-  };
-
-  configureAxes(args: AxisArgs[T] = {}) {
-    doXY(axis => {
-      if (args[axis]?.label) {
-        this.axes[axis].label.text = args[axis].label.text;
-        if (args[axis].label.padding !== undefined) {
-          this.axes[axis].label.padding = args[axis].label.padding;
-        }
-      }
-      if (args[axis]?.drawOrigin !== undefined) {
-        this.axes[axis].drawOrigin = args[axis].drawOrigin!;
-      }
-      if (args[axis] && "innerPadding" in args[axis] && args[axis].innerPadding !== undefined) {
-        this.axes[axis].innerPadding = args[axis].innerPadding;
-      }
-    });
-    return this as This<M, T, Flags>;
-  }
-
-  configureCategories(args: Categories[T]) {
-    deepAssignRecordIfDefined(this.categories, args);
-    type NewFlags = MixNewFlags<CurrFlags, Flags, { hasConfiguredCategories: true }>
-    return this as This<M, T, NewFlags>;
-  };
-
-  configureScales(scaleArgs: ScaleArgs = {}) {
-    doXY(axis => {
-      if (categoricalChartTypes[axis].includes(this.prevOutput.chartType) && !this.categories[axis].length) {
-        throw new Error("Categories must be configured before scales")
-      }
-    });
-    const scaleArgsParsed: ScaleArgsParsed =
-      makeObjXY(() => ({ extents: { start: "auto", end: "auto" } }));
-    deepAssignRecordIfDefined(scaleArgsParsed, scaleArgs);
-    this.scales = processScaleArgs(scaleArgsParsed, this.prevOutput, this.categories, this.axes);
-    type NewFlags = MixNewFlags<CurrFlags, Flags, { hasConfiguredScale: true }>
-    return this as This<M, T, NewFlags>;
+    return new Config<CType, NewFlags>(prevOutput) as This<CType, NewFlags>;
   };
 
   configureLines(linesArgs: LinesArgs) {
-    this.lines = linesArgs;
-    return this as This<M, T, Flags>;
+    this.lines.RDPEpsilon = linesArgs.RDPEpsilon;
+    return this as This<CType, Flags>;
   };
 
-  configureTicks(tickArgs: TickArgs[T]) {
-    this.ticks ??= defaultTickConfig(this.prevOutput);
-    deepAssignRecordIfDefined(this.ticks, tickArgs);
-    doXY((axis) => {
-      if (this.ticks?.[axis].numerical.enableMathJax && !this.ticks?.[axis].numerical.formatter) {
-        throw new Error("When MathJax is enabled, a formatter must be provided.");
-      }
-    });
-    return this as This<M, T, Flags>;
-  }
+  configureAxes(args: AxesArgs<CType>) {
+    mergeChartArgs(this.prevOutput.chartCfg, args);
+    return this as This<CType, Flags>;
+  };
+
+  configureDomain(args: DomainArgs<CType>) {
+    mergeChartArgs(this.prevOutput.chartCfg, args);
+    type NewFlags = MixNewFlags<CurrFlags, Flags, { hasConfiguredDomain: true }>
+    return this as This<CType, NewFlags>;
+  };
+
+  configureTicks(args: TicksArgs<CType>) {
+    mergeChartArgs(this.prevOutput.chartCfg, args);
+    return this as This<CType, Flags>;
+  };
 
   startVisual() {
-    if (!this.scales) {
-      throw new Error("Scales must be configured before going into startVisual")
-    }
-
-    const configState: CurrState<ChartType> = {
-      axes: this.axes,
-      categories: this.categories,
+    const configState: CurrState = {
       lines: this.lines,
-      scales: this.scales,
-      ticks: this.ticks ?? defaultTickConfig(this.prevOutput),
     };
     const output = {
       ...this.prevOutput,
       configState,
-    } as CurrOutput<M>;
-    return Visual.start<M, T, Flags>(output);
+    } as CurrOutput;
+    return Visual.start<CType, Flags>(output);
   };
 };
