@@ -9,7 +9,7 @@ import {
   This,
 } from "./types";
 import { Config } from "../config/Config";
-import { CurrOutput as PrevOutput } from "../base/types";
+import { CurrOutput as PrevOutput } from "../html/types";
 import { ChartType } from "../axes/types";
 
 export class Data<CType extends ChartType, Flags extends CurrFlags> {

@@ -3,7 +3,7 @@ import { Layer } from "@/Chart/visual/layers/Layer";
 import { ScaleCategorical, ScaleNumeric } from "@/types";
 import { CurrOutput as PrevOutput } from "@/Chart/config/types";
 import { CoreLayer, CoreLayers, PredrawLayer, PredrawLayers, VisualLayer } from "../types";
-import { getInner } from "@/Chart/base/utils";
+import { getInner } from "@/Chart/html/utils";
 import { AxisUtil, doXYStartEnd, makeObjXY, PositionUtil } from "@/helpers";
 import { Scales } from "./predraw/ScalesLayer";
 import { AxisConfiguration } from "@/Chart/axes/types";

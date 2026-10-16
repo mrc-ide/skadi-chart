@@ -13,7 +13,7 @@ import {
   CurrAxisNoNone
 } from "./types";
 import { chartCfgDefs } from "./defaults";
-import { Base } from "../base/Base";
+import { Html } from "../html/Html";
 import { deepCopy, userAxisToAxPos } from "./utils";
 
 export class Axes<Flags extends CurrFlags, CType extends ChartType> {
@@ -74,6 +74,6 @@ export class Axes<Flags extends CurrFlags, CType extends ChartType> {
     const output: CurrOutput = {
       chartCfg: this.chartCfg
     };
-    return Base.start<CType>(output);
+    return Html.start<CType>(output);
   }
 };

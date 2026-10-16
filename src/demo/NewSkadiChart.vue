@@ -123,10 +123,9 @@ const renderMathJaxChart = () => {
     amplitude: 0.2,
   });
   new ChartNew("catNumXNumY", container)
-    .startData()
+    // .startData()
     // .registerLines(lines)
-    .startConfig()
-  console.log("DOne")
+    // .startConfig()
     // .configureScales({
     //   x: { extents: extents.x, log: logScale.value.x },
     //   y: { extents: extents.y, log: logScale.value.y },

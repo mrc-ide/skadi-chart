@@ -1,6 +1,6 @@
 import { Prettify, SkadiPoint } from "@/types"
 import { Data } from "./Data"
-import { CurrOutput as PrevOutput } from "../base/types"
+import { CurrOutput as PrevOutput } from "../html/types"
 import { ChartType, ExtendsAxis } from "../axes/types"
 
 
