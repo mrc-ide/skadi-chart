@@ -1,13 +1,13 @@
 import { CurrOutput as PrevOutput } from "../axes/types";
 import { Prettify, XY } from "@/types"
-import { Base } from "./Base"
+import { Html } from "./Html"
 import { ChartType } from "../axes/types"
 
 
 
 export type CurrFlags = { hasElement: boolean }
 export type DefaultCurrFlags = Prettify<{ hasElement: false }>
-type AllMethods = keyof Base<any, any>
+type AllMethods = keyof Html<any, any>
 type Method<M extends AllMethods> = M
 
 
@@ -18,7 +18,7 @@ type MethodsToRemove<Flags extends CurrFlags> =
   | BlockIfNoElem<Flags>
 
 export type This<CType extends ChartType, Flags extends CurrFlags> =
-  Omit<Base<CType, Flags>, MethodsToRemove<Flags>>
+  Omit<Html<CType, Flags>, MethodsToRemove<Flags>>
 
 
 

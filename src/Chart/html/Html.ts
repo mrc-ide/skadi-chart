@@ -8,7 +8,7 @@ import { MixNewFlags } from "@/types";
 
 const clipPathBuffer = 1; // Add a buffer to the clip path to ensure origin lines and band border lines are not clipped
 
-export class Base<CType extends ChartType, Flags extends CurrFlags> {
+export class Html<CType extends ChartType, Flags extends CurrFlags> {
   private id: string;
   private getHtmlId: (key: string) => string;
   private element: HTMLDivElement | null = null;
@@ -16,7 +16,7 @@ export class Base<CType extends ChartType, Flags extends CurrFlags> {
   private clipPathBounds: Bounds | null = null;
 
   static start = <CType extends ChartType>(prevOutput: PrevOutput) => {
-    return new Base<CType, DefaultCurrFlags>(prevOutput) as This<CType, DefaultCurrFlags>;
+    return new Html<CType, DefaultCurrFlags>(prevOutput) as This<CType, DefaultCurrFlags>;
   }
 
   private constructor(private prevOutput: PrevOutput) {
