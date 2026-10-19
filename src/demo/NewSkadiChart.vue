@@ -70,7 +70,8 @@ import type { ChartType } from "@/types";
 import type { Option } from "vue3-select-component";
 import VueSelect from "vue3-select-component";
 import { onMounted, ref, watch } from "vue";
-import { Base as ChartNew } from "../Chart/base/Base";
+import { Axes as ChartNew } from "../Chart/axes/Axes";
+import { Lines } from "@/Chart/data/types";
 
 const numericalAxes = ref<HTMLDivElement | null>(null);
 const categoricalXYAxes = ref<HTMLDivElement | null>(null);
@@ -121,27 +122,23 @@ const renderMathJaxChart = () => {
     cycles: 5,
     amplitude: 0.2,
   });
-  new ChartNew("default", container)
-    .startData()
-    .registerLines(lines)
-    .startConfig()
-    .configureAxes({
-      x: { label: { text: "Time" } },
-      y: { label: { text: "Value" } },
-    })
-    .configureScales({
-      x: { extents: extents.x, log: logScale.value.x },
-      y: { extents: extents.y, log: logScale.value.y },
-    })
-    .configureTicks({
-      x: { numerical: { formatter: (num) => `$${num}^{1}$`, enableMathJax: true } },
-      y: { numerical: { specifier: ".1f", padding: 2, size: 5, count: 20 } },
-    })
-    .startVisual()
-    .addAxes()
-    .addTraces()
-    .startInteractive()
-    .end();
+  new ChartNew("catNumXNumY", container)
+    // .startData()
+    // .registerLines(lines)
+    // .startConfig()
+    // .configureScales({
+    //   x: { extents: extents.x, log: logScale.value.x },
+    //   y: { extents: extents.y, log: logScale.value.y },
+    // })
+    // .configureTicks({
+    //   x: { numerical: { formatter: (num) => `$${num}^{1}$`, enableMathJax: true } },
+    //   y: { numerical: { specifier: ".1f", padding: 2, size: 5, count: 20 } },
+    // })
+    // .startVisual()
+    // .addAxes()
+    // .addTraces()
+    // .startInteractive()
+    // .end();
 }
 
 const renderChart = (chartType: ChartType) => {
@@ -164,13 +161,111 @@ const renderChart = (chartType: ChartType) => {
   const lineProps = {
     lineCount: xCategories.length * yCategories.length,
     pointCount: 200,
-    xRange: extents.x,
-    yRange: extents.y,
+    xRange: { start: 0, end: 20 },
+    yRange: { start: 0, end: 500 },
     cycles: 5,
     amplitude: 0.1,
   };
 
-  const lines = generateWaveLines(lineProps);
+
+  const lines = generateWaveLines(lineProps) as any as Lines;
+
+  lines.forEach((l, i) => {
+    console.log(i);
+    const cat = [
+      {x: "A", y: "A"},
+      {x: "B", y: "A"},
+      {x: "A", y: "B"},
+      {x: "B", y: "B"},
+    ][i % 4];
+    l.points = l.points.map(p => {
+      return {
+        x: [cat.x, p.x],
+        y: [cat.y, p.y]
+      }
+    }) as any
+    l.axisName = [
+      undefined,
+      { x: "xBottom", y: "yRight" } as const,
+      { x: "xTop", y: "yLeft" } as const,
+      { x: "xTop", y: "yRight" } as const,
+    ][i % 4];
+  });
+
+  console.log(lines)
+
+// TODO traces should filter lines that are for it?
+// need an interface for this??
+    ChartNew.start()
+      .xTop().categorical().numerical()
+      .xBottom().categorical().numerical()
+      .yLeft().categorical().numerical()
+      .yRight().categorical().numerical()
+      .startHtml()
+      .addElement(container)
+      .startData()
+      .registerLines(lines)
+      .startConfig()
+      .configureAxes({
+        x: {
+          start: [
+            { label: { text: "CatLabel1X" }, innerPadding: 0.15, translate: 40 },
+            { label: { text: "NumLabel1X", translate: -5 }, }
+          ],
+          end: [
+            { label: { text: "CatLabel2X", translate: -20 }, innerPadding: 0.5 },
+            { label: { text: "NumLabel2X", translate: -10 }, translate: 40 }
+          ],
+        },
+        y: {
+          // TODO disable borders if padding dont match between axis
+          start: [
+            { label: { text: "CatLabel1Y", translate: -30 }, innerPadding: 0.4, translate: 50 },
+            { label: { text: "NumLabel1Y", translate: -7 } }
+          ],
+          end: [
+            { label: { text: "CatLabel2Y", translate: -20 }, innerPadding: 0.2 },
+            { label: { text: "NumLabel2Y" }, translate: 50 }
+          ],
+        },
+      })
+      .configureDomain({
+        x: {
+          start: [{ domain: ["A", "B"] }, { domain: [0, 20] }],
+          end: [{ domain: ["A", "B"] }, { domain: [0, 20] }]
+        },
+        y: {
+          start: [{ domain: ["A", "B"] }, { domain: [0, 500] }],
+          end: [{ domain: ["A", "B"] }, { domain: [0, 500] }]
+        },
+      })
+      .configureTicks({
+        x: {
+          start: [{ tick: { size: 10, translate: 10 } }, { tick: { translate: 0 } }],
+          end: [{ tick: { size: 10, translate: 10 } }, { tick: { translate: 5 } }],
+        },
+        y: {
+          start: [{ tick: { size: 10, translate: 10 } }, { tick: { translate: 5 } }],
+          end: [{ tick: { size: 10, translate: 10 } }, { tick: { translate: 5 } }],
+        }
+      })
+      .startVisual()
+      .addAxes()
+      .addTraces()
+      .startInteractive()
+      .end()
+  console.log("DOne")
+  return
+      // .configureCategories({ x: xCategories })
+      // .configureScales(scaleArgs)
+      // .configureTicks({
+      //   x: { numerical: { count: 2 } },
+      // })
+      // .startVisual()
+      // .addAxes()
+      // .addTraces()
+      // .startInteractive()
+      // .end();
 
   if (chartType === "default") {
     // Use lines that will need to have negative values filtered when y-axis has log scale.

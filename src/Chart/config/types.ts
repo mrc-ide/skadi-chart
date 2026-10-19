@@ -1,93 +1,107 @@
-import { CategoricalChartType, ChartType, HasAllKeys, Prettify, XorY, XY } from "@/types"
+import { DeepPartialRecord, Prettify, XorY } from "@/types"
 import { Config } from "./Config"
-import { Lines, CurrFlags as PrevFlags, CurrOutputs as PrevOutputs } from "../data/types"
-import { ScaleOutput } from "./scales"
-import { TickConfig } from "./ticks"
+import { CurrFlags as PrevFlags, CurrOutput as PrevOutput } from "../data/types"
+import { AxisConfiguration, AxisType, BaseAxisConfiguration, ChartType, ConfigurableCatAxis, ConfigurableNumAxis, StartOrEnd } from "../axes/types"
 
 
 
 export type CurrFlags = {
-  hasConfiguredCategories: boolean
-  hasConfiguredScale: boolean,
+  hasConfiguredDomain: boolean,
 } & PrevFlags
 export type DefaultCurrFlags<PFlags extends PrevFlags> = Prettify<
   {
-    hasConfiguredCategories: false,
-    hasConfiguredScale: false,
+    hasConfiguredDomain: false,
   } & PFlags
 >
-type AllMethods = keyof Config<any, any, any>
+type AllMethods = keyof Config<any, any>
 type Method<M extends AllMethods> = M
 
 
 
-type RemoveIfNotCategorical<T extends ChartType> = T extends CategoricalChartType
-  ? ""
-  : Method<"configureCategories">
-type RemoveIfNotConfiguredCategories<T extends ChartType, Flags extends CurrFlags> =
-  T extends "default"
-    ? ""
-    : Flags["hasConfiguredCategories"] extends true
-      ? ""
-      : Method<"configureScales">
 type BlockIfNotConfiguredScale<Flags extends CurrFlags> =
-  Flags["hasConfiguredScale"] extends true ? "" : Method<"startVisual">
+  Flags["hasConfiguredDomain"] extends true ? "" : Method<"startVisual">
 type BlockIfNotRegisteredLines<Flags extends CurrFlags> =
   Flags["hasLines"] extends true ? "" : Method<"configureLines">
-type MethodsToRemove<T extends ChartType, Flags extends CurrFlags> = 
-  | RemoveIfNotCategorical<T>
-  | RemoveIfNotConfiguredCategories<T, Flags>
+type MethodsToRemove<_T extends ChartType, Flags extends CurrFlags> = 
   | BlockIfNotConfiguredScale<Flags>
   | BlockIfNotRegisteredLines<Flags>
 
-export type This<M, T extends ChartType, Flags extends CurrFlags> =
-  Omit<Config<M, T, Flags>, MethodsToRemove<T, Flags>>
-
-type AxisKeyMode = "required" | "optional"
-type MaybePartial<T, Mode extends AxisKeyMode> = Mode extends "optional" ? Partial<T> : T
-// When the per-axis type is never, that axis must be omitted.
-type XYOmitNever<X, Y, Mode extends AxisKeyMode> =
-  ([X] extends [never] ? {} : MaybePartial<{ x: X }, Mode>)
-  & ([Y] extends [never] ? {} : MaybePartial<{ y: Y }, Mode>)
-
-// In 'optional' mode, each axis can be omitted (if it isn't already omitted by XYOmitNever).
-export type PerAxisConfigByChartType<
-  Default,
-  Categorical,
-  Mode extends AxisKeyMode = "required",
-> = HasAllKeys<ChartType, {
-  default: XYOmitNever<Default, Default, Mode>,
-  categoricalX: XYOmitNever<Categorical, Default, Mode>,
-  categoricalY: XYOmitNever<Default, Categorical, Mode>,
-  categoricalXY: XYOmitNever<Categorical, Categorical, Mode>,
-}>
+export type This<T extends ChartType, Flags extends CurrFlags> =
+  Omit<Config<T, Flags>, MethodsToRemove<T, Flags>>
 
 
-export type Categories = PerAxisConfigByChartType<never, string[]>
 
 export type LinesArgs = {
   RDPEpsilon: number | null
 }
 
-type AxisArgsNumerical = { label?: { text: string, padding?: number }, drawOrigin?: boolean }
-type AxisArgsCategorical = AxisArgsNumerical & { innerPadding?: number }
-export type AxisArgs = PerAxisConfigByChartType<AxisArgsNumerical, AxisArgsCategorical, "optional">
-
-type AxisConfigNumerical = { label: { text: string, padding: number }, drawOrigin: boolean }
-type AxisConfigCategorical = AxisConfigNumerical & { innerPadding: number }
-export type AxisConfig = PerAxisConfigByChartType<AxisConfigNumerical, AxisConfigCategorical>
 
 
-export type CurrState<T extends ChartType> = {
-  axes: AxisConfig[T],
-  categories: Categories[T],
+
+export type FuncExtends = Record<AxisConfiguration["type"], any>
+export type IsAxesFunc<T extends FuncExtends> = T
+export type AxesArrayMap<
+  Arr extends AxisType[],
+  Func extends FuncExtends
+> = 
+  Arr extends [
+    infer F extends AxisType,
+    ...infer R extends AxisType[]
+  ] ? [Func[F], ...AxesArrayMap<R, Func>] :
+  []
+
+export type MakeChartArgs<
+  T extends ChartType,
+  Func extends FuncExtends
+> = {
+  [Ax in XorY]: {
+    [Pos in StartOrEnd]: AxesArrayMap<T[Ax][Pos], Func>
+  }
+}
+
+export type PartialMakeChartArgs<
+  T extends ChartType,
+  Func extends FuncExtends
+> = {
+  [Ax in XorY]?: {
+    [Pos in StartOrEnd]?: AxesArrayMap<T[Ax][Pos], Func>
+  }
+}
+
+
+
+type AxesFunc = IsAxesFunc<{
+  numerical: DeepPartialRecord<
+    Pick<ConfigurableNumAxis, keyof BaseAxisConfiguration | "drawOrigin">
+  >,
+  categorical: DeepPartialRecord<
+    Pick<ConfigurableCatAxis, keyof BaseAxisConfiguration | "innerPadding">
+  >,
+}>
+export type AxesArgs<T extends ChartType> = PartialMakeChartArgs<T, AxesFunc>
+
+
+
+type DomainFunc = IsAxesFunc<{
+  numerical: Pick<ConfigurableNumAxis, "domain">,
+  categorical: Pick<ConfigurableCatAxis, "domain">,
+}>
+export type DomainArgs<T extends ChartType> = MakeChartArgs<T, DomainFunc>
+
+
+
+type TicksFunc = IsAxesFunc<{
+  numerical: DeepPartialRecord<Pick<ConfigurableNumAxis, "tick">>,
+  categorical: DeepPartialRecord<Pick<ConfigurableCatAxis, "tick">>,
+}>
+export type TicksArgs<T extends ChartType> = PartialMakeChartArgs<T, TicksFunc>
+
+
+
+export type CurrState = {
   lines: LinesArgs,
-  scales: ScaleOutput[T],
-  ticks: TickConfig[T],
 }
 
-export type CurrOutputs<M> = {
-  [K in ChartType]: PrevOutputs<M>[K] & { configState: CurrState<K> }
-}
-
-export type CurrOutput<M> = CurrOutputs<M>[ChartType]
+export type CurrOutput = {
+  configState: CurrState
+} & PrevOutput

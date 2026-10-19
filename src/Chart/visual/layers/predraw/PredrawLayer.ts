@@ -1,6 +1,6 @@
 import { ZoomProperties } from "@/types";
 
-export abstract class PredrawLayer<_M> {
+export abstract class PredrawLayer {
   constructor() {};
 
   // brush lifecycle hooks
@@ -9,6 +9,6 @@ export abstract class PredrawLayer<_M> {
 
   // zoom lifecycle hooks
   beforeZoom(_zoomProperties: ZoomProperties) {};
-  async zoom(_zoomProperties: ZoomProperties) {};
+  zoom(_zoomProperties: ZoomProperties): Promise<void> | void {};
   afterZoom(_zoomProperties: ZoomProperties | null) {};
 };

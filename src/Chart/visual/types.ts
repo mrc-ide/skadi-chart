@@ -1,9 +1,11 @@
-import { ChartType, D3Selection, HasAllKeys, Prettify } from "@/types"
-import { CurrFlags as PrevFlags, CurrOutputs as PrevOutputs } from "../config/types"
+import { D3Selection, HasAllKeys, Prettify } from "@/types"
+import { CurrFlags as PrevFlags, CurrOutput as PrevOutput } from "../config/types"
 import { Visual } from "./Visual"
 import { AxesLayer } from "./layers/AxesLayer"
 import { TracesLayer } from "./layers/TracesLayer"
 import { LinesLayer } from "./layers/predraw/LinesLayer"
+import { ScalesLayer } from "./layers/predraw/ScalesLayer"
+import { ChartType } from "../axes/types"
 
 
 
@@ -11,7 +13,7 @@ export type CurrFlags = { hasVisualDataLayer: boolean } & PrevFlags
 export type DefaultCurrFlags<PFlags extends PrevFlags> = Prettify<
   { hasVisualDataLayer: false } & PFlags
 >
-type AllMethods = keyof Visual<any, any, any>
+type AllMethods = keyof Visual<any, any>
 type Method<M extends AllMethods> = M
 
 
@@ -20,10 +22,12 @@ type RemoveIfNoPoints<Flags extends CurrFlags> =
   (Flags["hasPoints"] extends true ? never : Method<"addScatterPoints">)
 type RemoveIfNoLines<Flags extends CurrFlags> =
   (Flags["hasLines"] extends true ? never : Method<"addTraces">)
-type MethodsToRemove<_T extends ChartType, Flags extends CurrFlags> = RemoveIfNoPoints<Flags> | RemoveIfNoLines<Flags>
+type MethodsToRemove<_T extends ChartType, Flags extends CurrFlags> =
+  | RemoveIfNoPoints<Flags>
+  | RemoveIfNoLines<Flags>
 
-export type This<M, T extends ChartType, Flags extends CurrFlags> =
-  Omit<Visual<M, T, Flags>, MethodsToRemove<T, Flags>>
+export type This<T extends ChartType, Flags extends CurrFlags> =
+  Omit<Visual<T, Flags>, MethodsToRemove<T, Flags>>
 
 
 
@@ -47,28 +51,28 @@ export enum VisualLayer {
   // Scatter = "skadiChartScatter",
   // CustomVisual = "skadiChartCustomVisual",
 }
-export type VisualLayers<M> = HasAllKeys<VisualLayer, {
-  [VisualLayer.Axes]: AxesLayer<M> | null
-  [VisualLayer.Trace]: TracesLayer<M> | null
+export type VisualLayers = HasAllKeys<VisualLayer, {
+  [VisualLayer.Axes]: AxesLayer | null
+  [VisualLayer.Trace]: TracesLayer | null
 }>
 
 export enum PredrawLayer {
+  Scales = "skadiChartScales",
   Lines = "skadiChartLines",
 }
-export type PredrawLayers<M> = {
-  [PredrawLayer.Lines]: LinesLayer<M, ChartType> | null
+export type PredrawLayers = {
+  [PredrawLayer.Scales]: ScalesLayer | null
+  [PredrawLayer.Lines]: LinesLayer | null
 }
 
 
 
-export type CurrState<M> = {
+export type CurrState = {
   coreLayers: CoreLayers,
-  visualLayers: VisualLayers<M>,
-  predrawLayers: PredrawLayers<M>,
+  visualLayers: VisualLayers
+  predrawLayers: PredrawLayers,
 }
 
-export type CurrOutputs<M> = {
-  [K in ChartType]: PrevOutputs<M>[K] & { visualState: CurrState<M> }
-}
-
-export type CurrOutput<M> = CurrOutputs<M>[ChartType]
+export type CurrOutput = {
+  visualState: CurrState
+} & PrevOutput
