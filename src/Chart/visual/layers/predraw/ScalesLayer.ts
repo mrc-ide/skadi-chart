@@ -2,7 +2,7 @@ import * as d3 from "@/d3";
 import { PredrawLayer } from "./PredrawLayer";
 import { CurrOutput as PrevOutput } from "@/Chart/config/types";
 import { ScaleCategorical, ScaleNumeric, SkadiPoint, XorY, XY, ZoomProperties } from "@/types";
-import { getInner } from "@/Chart/base/utils";
+import { getInner } from "@/Chart/html/utils";
 import { doXYStartEnd, makeObjXYStartEnd } from "@/helpers";
 import { AxisConfiguration, AxisType, StartEnd, StartOrEnd } from "@/Chart/axes/types";
 
