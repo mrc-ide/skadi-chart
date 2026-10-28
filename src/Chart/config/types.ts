@@ -86,7 +86,7 @@ type DomainFunc = IsAxesFunc<{
   numerical: Pick<ConfigurableNumAxis, "domain">,
   categorical: Pick<ConfigurableCatAxis, "domain">,
 }>
-export type DomainArgs<T extends ChartType> = MakeChartArgs<T, DomainFunc>
+export type DomainArgs<T extends ChartType> = PartialMakeChartArgs<T, DomainFunc>
 
 
 

@@ -95,7 +95,7 @@ export class AxesLayer extends Layer {
           .attr("transform-origin", `${otherAxisTr} ${inner.y.center}`)
       }
 
-      if ("categories" in scale && restAxisCfg.length !== 0) {
+      if ("categories" in scale && restAxisCfg.length) {
         Object.entries(scale.categories).forEach(([k, s]) => {
           recurseDraw(axis, position, `${path}-${k}`, s, restAxisCfg);
         });
@@ -105,8 +105,9 @@ export class AxesLayer extends Layer {
     doXYStartEnd((ax, pos) => {
       const axis = new AxisUtil(ax);
       const position = new PositionUtil(pos);
-      const scale = position.pick(axis.pick(scales!.scales));
       const c = position.pick(axis.pick(chart));
+      if (!c.length) return;
+      const scale = position.pick(axis.pick(scales!.scales));
       recurseDraw(
         axis, position, `${axis.curr()}-${position.curr()}`, scale, c
       );
