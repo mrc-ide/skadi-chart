@@ -207,6 +207,7 @@ export class AxisUtil {
   sign = () => this.axis === "x" ? 1 : -1;
   negSign = () => -1 * this.sign();
   pick = <T>(arg: XY<T>): T => arg[this.axis];
+  pickOther = <T>(arg: XY<T>): T => arg[this.other()];
 }
 
 export class PositionUtil {
