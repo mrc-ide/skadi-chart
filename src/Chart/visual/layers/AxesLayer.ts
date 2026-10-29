@@ -1,14 +1,14 @@
 import * as d3 from "@/d3";
 import { Layer } from "@/Chart/visual/layers/Layer";
-import { ScaleCategorical, ScaleNumeric } from "@/types";
+import { ScaleCategorical, ScaleNumeric, XorY } from "@/types";
 import { CurrOutput as PrevOutput } from "@/Chart/config/types";
 import { CoreLayer, CoreLayers, PredrawLayer, PredrawLayers, VisualLayer } from "../types";
 import { getInner } from "@/Chart/html/utils";
 import { AxisUtil, doXYStartEnd, makeObjXY, PositionUtil } from "@/helpers";
 import { Scales } from "./predraw/ScalesLayer";
 import { AxisConfiguration } from "@/Chart/axes/types";
+import { animationDuration } from "@/Chart/interactive/constants";
 
-// TODO perpendicular lines with categorical borders and draw origins
 // TODO remove when adding mathjax and zoom layer
 // declare const MathJax: any;
 
@@ -29,7 +29,7 @@ export class AxesLayer extends Layer {
 
   draw = () => {
     const chart = this.prevOutput.chartCfg;
-    const scales = this.predrawLayers[PredrawLayer.Scales];
+    const scalesLayer = this.predrawLayers[PredrawLayer.Scales];
     const inner = getInner(this.prevOutput.baseState.bounds);
     const { getHtmlId } = this.prevOutput.baseState;
     const translation = {
@@ -45,7 +45,7 @@ export class AxesLayer extends Layer {
       axis: AxisUtil, position: PositionUtil, path: string,
       scale: Scales, axisCfg: AxisConfiguration[] | undefined,
     ) => {
-      if (!axisCfg) return;
+      if (!axisCfg || axisCfg.length === 0) return;
       const [currAxisCfg, ...restAxisCfg] = axisCfg;
 
       const axisCons = position.pick(axis.pick(axisConstructors));
@@ -95,6 +95,32 @@ export class AxesLayer extends Layer {
           .attr("transform-origin", `${otherAxisTr} ${inner.y.center}`)
       }
 
+      if (currAxisCfg.type === "numerical" && currAxisCfg.drawOrigin) {
+        // Draw numerical axis specific elements here
+        const s = scale.scale as ScaleNumeric
+
+        // First example of perpendicular use case: the origin line.
+        const positionDC = 0;
+        const positionSC = s(positionDC);
+        const strokeWidthPx = 0.5;
+
+        const [minSC, maxSC] = s.range().sort((a, b) => a - b);
+
+        // If outside of range, don't draw the line. Otherwise we might draw a line onto another band.
+        if (positionSC < minSC || positionSC > maxSC) return;
+
+        const otherScaleAssumingItsNormal = position.pick(axis.pickOther(scalesLayer!.scales)).scale;
+        // Draw the origin line at positionSC
+        // IGNORING SEGMENTATION
+        // Not correct yet
+        this.coreLayers[CoreLayer.BaseLayer].append("g").append("line")
+          .attr(`${axis.curr()}1`, positionSC)
+          .attr(`${axis.curr()}2`, positionSC)
+          .attr(`${axis.other()}1`, otherScaleAssumingItsNormal.range()[0])
+          .attr(`${axis.other()}2`, otherScaleAssumingItsNormal.range()[1])
+          .style("stroke", "black").style("stroke-width", strokeWidthPx);
+      }
+
       if ("categories" in scale && restAxisCfg.length) {
         Object.entries(scale.categories).forEach(([k, s]) => {
           recurseDraw(axis, position, `${path}-${k}`, s, restAxisCfg);
@@ -104,10 +130,12 @@ export class AxesLayer extends Layer {
 
     doXYStartEnd((ax, pos) => {
       const axis = new AxisUtil(ax);
+      // todo: some way of skipping over unused positions, but i need to know
+      // what is the source of truth in config.
       const position = new PositionUtil(pos);
       const c = position.pick(axis.pick(chart));
       if (!c.length) return;
-      const scale = position.pick(axis.pick(scales!.scales));
+      const scale = position.pick(axis.pick(scalesLayer!.scales));
       recurseDraw(
         axis, position, `${axis.curr()}-${position.curr()}`, scale, c
       );
@@ -285,16 +313,13 @@ export class AxesLayer extends Layer {
   //   strokeWidthPx: number = 1,
   //   color: string = "black",
   // ) => {
-  //   if (this.prevOutput.configState.scales.config[axis].log && positionDC <= 0) {
-  //     // Cannot draw a line at a non-positive position on a log scale.
-  //     return;
-  //   }
-  //
+  //   // TODO: Skip drawing a line if the positionDC is non-positive and the scale is a log scale.
+  
   //   const positionSC = numScale(positionDC);
   //   const [minSC, maxSC] = numScale.range().sort((a, b) => a - b);
   //   // If outside of range, don't draw the line. Otherwise we might draw a line onto another band.
   //   if (positionSC < minSC || positionSC > maxSC) return;
-  //
+  
   //   // Get all the numerical scales for the other axis, termed the 'foreign axis'.
   //   // Categorical axes contain multiple numerical scales; non-categorical axes contain exactly one.
   //   const foreignAxis = axis === "x" ? "y" : "x";
@@ -303,7 +328,7 @@ export class AxesLayer extends Layer {
   //     "categories" in foreignMainScale
   //       ? Object.values(foreignMainScale.categories)
   //       : [foreignMainScale];
-  //
+  
   //   foreignNumScales.forEach(scale => {
   //     const lineSegment = this.coreLayers[CoreLayer.BaseLayer].append("g").append("line")
   //       .attr(`${axis}1`, positionSC)
@@ -311,7 +336,7 @@ export class AxesLayer extends Layer {
   //       .attr(`${foreignAxis}1`, scale.range()[0])
   //       .attr(`${foreignAxis}2`, scale.range()[1])
   //       .style("stroke", color).style("stroke-width", strokeWidthPx);
-  //
+  
   //     if (addZoom) {
   //       const zoom = async () => {
   //         const newPositionSC = numScale(positionDC);
