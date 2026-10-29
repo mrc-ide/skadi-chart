@@ -27,7 +27,7 @@ export class ScalesLayer extends PredrawLayer {
       y: [y.end, y.start],
     };
     this.scales = makeObjXYStartEnd((ax, pos) => {
-      return this.makeScalesFromChartArray(prevOutput.chartCfg[ax][pos], ranges[ax], ax);
+      return this.makeScalesFromChartArray(prevOutput.chartSettings[ax][pos], ranges[ax], ax);
     });
   };
 
@@ -35,7 +35,7 @@ export class ScalesLayer extends PredrawLayer {
     doXYStartEnd((ax, pos) => {
       if (!zoomProperties[ax][pos]) return;
       
-      const cfgArr = this.prevOutput.chartCfg[ax][pos];
+      const cfgArr = this.prevOutput.chartSettings[ax][pos];
       if (cfgArr.length === 1 && cfgArr[0].type === "numerical") {
         this.scales[ax][pos].scale.domain(zoomProperties[ax][pos]);
       }
