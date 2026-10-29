@@ -83,18 +83,19 @@ export type AxesArgs<T extends ChartType> = PartialMakeChartArgs<T, AxesFunc>
 
 
 type DomainFunc = IsAxesFunc<{
-  numerical: Pick<ConfigurableNumAxis, "domain">,
-  categorical: Pick<ConfigurableCatAxis, "domain">,
+  numerical: ConfigurableNumAxis["domain"],
+  categorical: ConfigurableCatAxis["domain"],
 }>
 export type DomainArgs<T extends ChartType> = PartialMakeChartArgs<T, DomainFunc>
 
 
 
 type TicksFunc = IsAxesFunc<{
-  numerical: DeepPartialRecord<Pick<ConfigurableNumAxis, "tick">>,
-  categorical: DeepPartialRecord<Pick<ConfigurableCatAxis, "tick">>,
+  numerical: DeepPartialRecord<ConfigurableNumAxis["tick"]>,
+  categorical: DeepPartialRecord<ConfigurableCatAxis["tick"]>,
 }>
 export type TicksArgs<T extends ChartType> = PartialMakeChartArgs<T, TicksFunc>
+export type GlobalTicksArgs<T extends ChartType> = MakeChartArgs<T, TicksFunc>[XorY][StartOrEnd]
 
 
 
