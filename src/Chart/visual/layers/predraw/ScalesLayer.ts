@@ -27,7 +27,7 @@ export class ScalesLayer extends PredrawLayer {
       y: [y.end, y.start],
     };
     this.scales = makeObjXYStartEnd((ax, pos) => {
-      return this.makeScalesFromChartArray(prevOutput.chartCfg[ax][pos], ranges[ax]);
+      return this.makeScalesFromChartArray(prevOutput.chartCfg[ax][pos], ranges[ax], ax);
     });
   };
 
@@ -46,7 +46,7 @@ export class ScalesLayer extends PredrawLayer {
     const nestedScale = this.scales[ax][pos];
     if (!nestedScale) throw new Error("Scale does not exist");
 
-    return (point: SkadiPoint["x"]) => {
+    return (point: SkadiPoint[XorY]) => {
       let currScale = nestedScale;
       let ret = 0;
 
@@ -81,6 +81,7 @@ export class ScalesLayer extends PredrawLayer {
   private makeScalesFromChartArray(
     arr: AxisConfiguration[],
     initialRange: number[],
+    axis: XorY,
   ): Scales {
     const recurse = (
       remainingArr: AxisConfiguration[],
@@ -88,17 +89,17 @@ export class ScalesLayer extends PredrawLayer {
       range: number[],
     ) => {
       if (remainingArr.length === 0) return;
-      const firstEl = remainingArr[0];
+      const cfg = remainingArr[0];
 
-      if (firstEl.type === "numerical") {
+      if (cfg.type === "numerical") {
         scales.scale = d3.scaleLinear()
-          .domain(firstEl.domain)
+          .domain(cfg.domain)
           .range(range);
-      } else if (firstEl.type === "categorical") {
+      } else if (cfg.type === "categorical") {
         const categoricalScale = d3.scaleBand()
-          .domain(firstEl.domain)
+          .domain(cfg.domain)
           .range(range)
-          .paddingInner(firstEl.innerPadding);
+          .paddingInner(cfg.innerPadding);
 
         const catScales = scales as CatScales;
         catScales.scale = categoricalScale;
@@ -106,7 +107,8 @@ export class ScalesLayer extends PredrawLayer {
         const width = categoricalScale.bandwidth();
         categoricalScale.domain().forEach(c => {
           const start = categoricalScale(c)!;
-          const range = [start, start + width];
+          const end = start + width;
+          const range = axis === "x" ? [start, end] : [end, start];
           catScales.categories[c] = {} as any;
           recurse(remainingArr.slice(1), catScales.categories[c], range);
         });
