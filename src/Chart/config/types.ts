@@ -50,12 +50,20 @@ export type AxesArrayMap<
   ] ? [Func[F], ...AxesArrayMap<R, Func>] :
   []
 
+type PopulatedAxes<T extends ChartType> = {
+  [Ax in XorY]: T[Ax][StartOrEnd] extends [] ? never : Ax
+}[XorY]
+
+type PopulatedPositions<T extends ChartType, Ax extends XorY> = {
+  [Pos in StartOrEnd]: T[Ax][Pos] extends [] ? never : Pos
+}[StartOrEnd]
+
 export type MakeChartArgs<
   T extends ChartType,
   Func extends FuncExtends
 > = {
-  [Ax in XorY]: {
-    [Pos in StartOrEnd]: AxesArrayMap<T[Ax][Pos], Func>
+  [Ax in PopulatedAxes<T>]: {
+    [Pos in PopulatedPositions<T, Ax>]: AxesArrayMap<T[Ax][Pos], Func>
   }
 }
 
@@ -63,8 +71,8 @@ export type PartialMakeChartArgs<
   T extends ChartType,
   Func extends FuncExtends
 > = {
-  [Ax in XorY]?: {
-    [Pos in StartOrEnd]?: AxesArrayMap<T[Ax][Pos], Func>
+  [Ax in PopulatedAxes<T>]?: {
+    [Pos in PopulatedPositions<T, Ax>]?: AxesArrayMap<T[Ax][Pos], Func>
   }
 }
 
