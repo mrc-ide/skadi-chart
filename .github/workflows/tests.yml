@@ -12,7 +12,10 @@ jobs:
   unit-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
 
       - name: Install Deps
         run: npm ci
@@ -26,7 +29,10 @@ jobs:
       matrix:
         project: [ chromium, firefox, webkit, mobileChrome, mobileSafari, googleChrome, microsoftEdge ]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
 
       - name: Install Deps
         run: npm ci
@@ -35,7 +41,7 @@ jobs:
         run: echo "PLAYWRIGHT_VERSION=$(node -e "console.log(require('./package-lock.json').packages['node_modules/@playwright/test'].version)")" >> $GITHUB_ENV
 
       - name: Cache binaries for playwright version
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         id: playwright-cache
         with:
           path: |
