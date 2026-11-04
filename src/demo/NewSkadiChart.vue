@@ -399,7 +399,10 @@ const renderChart = (chartType: ChartType) => {
       return l;
     });
 
-    const yRightDomain = { min: -1, max: 1 };
+    const yLeftDomainSpan = extents.y.upper - extents.y.lower;
+    // Set the right y-axis domain to be a tenth of the y-axis left domain,
+    // so that we can see that lines are drawn with respect to their assigned axes.
+    const yRightDomain = { min: extents.y.lower, max: extents.y.lower + (yLeftDomainSpan/10) };
     const categoricalLine = {
       points: xCategories.map((x) => ({
         x: [x],
