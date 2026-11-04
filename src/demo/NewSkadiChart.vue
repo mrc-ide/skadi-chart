@@ -167,9 +167,6 @@ const renderChart = (chartType: ChartType) => {
 
   const lines = generateWaveLines(lineProps);
 
-  // TODO traces should filter lines that are for it?
-  // need an interface for this??
-
   switch (chartType) {
   case ChartType.Numerical:
     // TODO: the interface of xBottom/yLeft is mapped to an interface of x:start, y:start.
