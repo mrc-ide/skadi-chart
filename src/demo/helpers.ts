@@ -3,8 +3,8 @@ import { Lines } from "@/Chart/data/types";
 type GenerateWaveLinesOptions = {
   lineCount: number;
   pointCount: number;
-  xRange: { lower: number; upper: number };
-  yRange: { lower: number; upper: number };
+  xDomain: { lower: number; upper: number };
+  yDomain: { lower: number; upper: number };
   cycles?: number;        // sine cycles across the line
   amplitude?: number;     // wave height relative to trend (0..1 is typical)
   phaseStep?: number;     // phase offset between lines, in radians
@@ -16,8 +16,8 @@ type GenerateWaveLinesOptions = {
 export const generateWaveLines = ({
   lineCount,
   pointCount,
-  xRange,
-  yRange,
+  xDomain,
+  yDomain,
   cycles = 2,
   amplitude = 0.25,
   phaseStep = 2 * Math.PI / lineCount,
@@ -28,7 +28,7 @@ export const generateWaveLines = ({
   if (pointCount < 2) {
     throw new Error("pointCount must be >= 2");
   }
-  if (xRange.lower >= xRange.upper || yRange.lower >= yRange.upper) {
+  if (xDomain.lower >= xDomain.upper || yDomain.lower >= yDomain.upper) {
     throw new Error("range min must be < max");
   }
 
@@ -57,9 +57,9 @@ export const generateWaveLines = ({
     const points = raw.map((rawY, i) => {
       const t = i / (pointCount - 1);
 
-      const x = xRange.lower + t * (xRange.upper - xRange.lower); // full x range
+      const x = xDomain.lower + t * (xDomain.upper - xDomain.lower); // full x range
       const y01 = (rawY - rawMin) / rawSpan;
-      const y = yRange.lower + y01 * (yRange.upper - yRange.lower); // full y range
+      const y = yDomain.lower + y01 * (yDomain.upper - yDomain.lower); // full y range
 
       return { x: [x], y: [y] };
     });

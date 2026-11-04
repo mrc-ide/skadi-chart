@@ -159,8 +159,8 @@ const renderChart = (chartType: ChartType) => {
     lineCount: xCategories.length * yCategories.length,
     pointCount: 200,
     // Include negative values in range to exercise the filtering of points when y-axis has log scale.
-    xRange: extents.x,
-    yRange: extents.y,
+    xDomain: extents.x,
+    yDomain: extents.y,
     cycles: 5,
     amplitude: 0.1,
   };
@@ -463,8 +463,8 @@ const drawStressChart = () => {
   const lines = generateWaveLines({
     lineCount: 10,
     pointCount: 500000,
-    xRange: extents.x,
-    yRange: extents.y,
+    xDomain: extents.x,
+    yDomain: extents.y,
     cycles: 5,
     amplitude: 0.2,
     opacity: 0.9,
