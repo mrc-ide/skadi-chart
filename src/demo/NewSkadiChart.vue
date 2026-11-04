@@ -47,7 +47,7 @@
     With MathJax (experimental)
   </h1>
   <div class="chart" ref="mathJaxChart" id="mathJaxChart"></div>
-  <h1>Stress test: 10 traces of 500,000 points</h1>
+  <h1>Stress test: 10 traces of 10,000 points</h1>
   <button @click="drawStressChart">Draw</button>
   <div class="chart" ref="stressTestChart" id="stressTestChart"></div>
 </template>
@@ -459,7 +459,7 @@ const drawStressChart = () => {
 
   const lines = generateWaveLines({
     lineCount: 10,
-    pointCount: 500000,
+    pointCount: 10000,
     xDomain: extents.x,
     yDomain: extents.y,
     cycles: 5,

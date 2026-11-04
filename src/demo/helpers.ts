@@ -50,8 +50,12 @@ export const generateWaveLines = ({
     });
 
     // 2) Normalize so y exactly spans full configured range
-    const rawMin = Math.min(...raw);
-    const rawMax = Math.max(...raw);
+    let rawMin = Infinity;
+    let rawMax = -Infinity;
+    for (const value of raw) {
+      rawMin = Math.min(rawMin, value);
+      rawMax = Math.max(rawMax, value);
+    }
     const rawSpan = rawMax - rawMin || 1;
 
     const points = raw.map((rawY, i) => {
