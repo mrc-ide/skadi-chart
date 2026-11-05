@@ -1,9 +1,10 @@
+import { Lines } from "@/Chart/data/types";
 
 type GenerateWaveLinesOptions = {
   lineCount: number;
   pointCount: number;
-  xRange: { start: number; end: number };
-  yRange: { start: number; end: number };
+  xDomain: { lower: number; upper: number };
+  yDomain: { lower: number; upper: number };
   cycles?: number;        // sine cycles across the line
   amplitude?: number;     // wave height relative to trend (0..1 is typical)
   phaseStep?: number;     // phase offset between lines, in radians
@@ -15,19 +16,19 @@ type GenerateWaveLinesOptions = {
 export const generateWaveLines = ({
   lineCount,
   pointCount,
-  xRange,
-  yRange,
+  xDomain,
+  yDomain,
   cycles = 2,
   amplitude = 0.25,
   phaseStep = 2 * Math.PI / lineCount,
   randomizeAmplitude,
   opacity = 0.7,
   strokeWidth = 1.5,
-}: GenerateWaveLinesOptions) => {
+}: GenerateWaveLinesOptions): Lines => {
   if (pointCount < 2) {
     throw new Error("pointCount must be >= 2");
   }
-  if (xRange.start >= xRange.end || yRange.start >= yRange.end) {
+  if (xDomain.lower >= xDomain.upper || yDomain.lower >= yDomain.upper) {
     throw new Error("range min must be < max");
   }
 
@@ -49,18 +50,22 @@ export const generateWaveLines = ({
     });
 
     // 2) Normalize so y exactly spans full configured range
-    const rawMin = Math.min(...raw);
-    const rawMax = Math.max(...raw);
+    let rawMin = Infinity;
+    let rawMax = -Infinity;
+    for (const value of raw) {
+      rawMin = Math.min(rawMin, value);
+      rawMax = Math.max(rawMax, value);
+    }
     const rawSpan = rawMax - rawMin || 1;
 
     const points = raw.map((rawY, i) => {
       const t = i / (pointCount - 1);
 
-      const x = xRange.start + t * (xRange.end - xRange.start); // full x range
+      const x = xDomain.lower + t * (xDomain.upper - xDomain.lower); // full x range
       const y01 = (rawY - rawMin) / rawSpan;
-      const y = yRange.start + y01 * (yRange.end - yRange.start); // full y range
+      const y = yDomain.lower + y01 * (yDomain.upper - yDomain.lower); // full y range
 
-      return { x, y };
+      return { x: [x], y: [y] };
     });
 
     return {

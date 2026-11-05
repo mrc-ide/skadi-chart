@@ -1,4 +1,4 @@
-import { Bounds } from "./Chart/base/types";
+import { StartEnd, StartOrEnd } from "./Chart/axes/types";
 import { ScatterLayer } from "./layers/ScatterLayer";
 import { TracesLayer } from "./layers/TracesLayer";
 import { LayerArgs, ScaleNumeric, XY, Point, Scales, AxisType, D3Selection, PointWithMetadata, XorY } from "./types";
@@ -165,3 +165,55 @@ export const makeObjXY = <T>(callback: (axis: XorY) => T): XY<T> => {
     y: callback("y"),
   }
 };
+
+export const doStartEnd = (callBack: (position: StartOrEnd) => void) => {
+  callBack("start");
+  callBack("end");
+};
+
+export const makeObjStartEnd = <T>(callBack: (position: StartOrEnd) => T): StartEnd<T> => {
+  return {
+    start: callBack("start"),
+    end: callBack("end"),
+  }
+};
+
+export const doXYStartEnd = (callback: (a: XorY, pos: StartOrEnd) => void) => {
+  callback("x", "start");
+  callback("x", "end");
+  callback("y", "start");
+  callback("y", "end");
+};
+
+export const makeObjXYStartEnd = <T>(
+  callback: (a: XorY, pos: StartOrEnd) => T
+): XY<StartEnd<T>> => {
+  return {
+    x: {
+      start: callback("x", "start"),
+      end: callback("x", "end"),
+    },
+    y: {
+      start: callback("y", "start"),
+      end: callback("y", "end"),
+    },
+  }
+};
+
+export class AxisUtil {
+  constructor(private axis: XorY) {}
+  other = () => this.axis === "x" ? "y" : "x";
+  curr = () => this.axis;
+  sign = () => this.axis === "x" ? 1 : -1;
+  negSign = () => -1 * this.sign();
+  pick = <T>(arg: XY<T>): T => arg[this.axis];
+}
+
+export class PositionUtil {
+  constructor(private position: StartOrEnd) {}
+  other = () => this.position === "start" ? "end" : "start";
+  curr = () => this.position;
+  sign = () => this.position === "start" ? 1 : -1;
+  negSign = () => -1 * this.sign();
+  pick = <T>(arg: StartEnd<T>): T => arg[this.position];
+}

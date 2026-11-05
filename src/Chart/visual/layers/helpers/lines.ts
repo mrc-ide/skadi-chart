@@ -1,4 +1,4 @@
-import { Bounds } from "@/Chart/base/types";
+import { Bounds } from "@/Chart/html/types";
 import { Point } from "@/types";
 
 const round = (num: number) => Math.floor(num * 10) / 10;

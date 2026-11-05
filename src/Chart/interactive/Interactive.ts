@@ -1,4 +1,3 @@
-import { ChartType } from "@/types";
 import {
   DefaultCurrFlags,
   CurrFlags,
@@ -8,23 +7,24 @@ import {
 } from "./types";
 import { End } from "../end/End";
 import { CurrFlags as PrevFlags, CurrOutput as PrevOutput } from "../visual/types";
+import { ChartType } from "../axes/types";
 
-export class Interactive<M, T extends ChartType, Flags extends CurrFlags> {
-  private constructor(private prevOutput: PrevOutput<M>) {};
+export class Interactive<CType extends ChartType, Flags extends CurrFlags> {
+  private constructor(private prevOutput: PrevOutput) {};
 
-  static start<M, T extends ChartType, PFlags extends PrevFlags>(
-    prevOutput: PrevOutput<M>
+  static start<CType extends ChartType, PFlags extends PrevFlags>(
+    prevOutput: PrevOutput
   ) {
     type NewFlags = DefaultCurrFlags<PFlags>
-    return new Interactive<M, T, NewFlags>(prevOutput) as This<M, T, NewFlags>
+    return new Interactive<CType, NewFlags>(prevOutput) as This<CType, NewFlags>
   };
 
   addZoom() {
-    return this as This<M, T, Flags>;
+    return this as This<CType, Flags>;
   };
 
   addTooltips() {
-    return this as This<M, T, Flags>;
+    return this as This<CType, Flags>;
   };
 
   end() {
@@ -32,7 +32,7 @@ export class Interactive<M, T extends ChartType, Flags extends CurrFlags> {
     const output = {
       ...this.prevOutput,
       interactiveState,
-    } as CurrOutput<M>;
-    return new End<M, T, Flags>(output);
+    } as CurrOutput;
+    return new End<CType, Flags>(output);
   };
 }
