@@ -136,17 +136,14 @@ export class LinesLayer extends PredrawLayer {
     // });
   };
 
-  // TODO change so each function is calculated for xy startend
-  // zoom layer should check that at least one of the axis is only numerical
-  // otherwise zoom makes no sense
-  //
-  // if axis is categorical, zoom layer should return null
   beforeZoom = (zoomProperties: ZoomProperties) => {
     doXYStartEnd((ax, pos) => {
       if (!zoomProperties[ax][pos]) return;
       const { scales } = this.scalesLayer;
       const scale = scales[ax][pos].scale as ScaleNumeric;
 
+      // we have to convert the extents to SC from DC to find out what pixel
+      // scaling we need
       const newExtentDC = zoomProperties[ax][pos];
       const newExtentSC = [scale(newExtentDC[0]), scale(newExtentDC[1])];
 
@@ -154,55 +151,24 @@ export class LinesLayer extends PredrawLayer {
       const oldExtentSC = [scale(oldExtentDC[0]), scale(oldExtentDC[1])];
 
       const scaling = (oldExtentSC[1] - oldExtentSC[0]) / (newExtentSC[1] - newExtentSC[0]);
+
+      // translation to make sure the start of the zoomed in graph is the start of the user
+      // brush selection
       const offsetSC = scaling * scale(newExtentDC[0]) - scale(oldExtentDC[0]);
       const scaleRelative = scaling - 1;
       
+      // this function gives us the coordinates at any point t (between 0 and 1) of the
+      // animation, t = 0 gives the coords of the original trace, t = 1 gives the zoomed
+      // in line coordinates
       this.getNewPoint[ax][pos] = (c, t) => c * (t * scaleRelative + 1) - t * offsetSC;
+
+      // this function is helpful to the area layer but convenient to define here.
+      // say we start at a number x_0 for time t = 0. At time step t = T, we would
+      // get an intermediate point, x_T = getNewPoint(x_0, T). we can apply
+      // getNewPointInverse to this intermediate point to get the original point, i.e.
+      // getNewPointInverse(x_T, T) = x_0
       this.getNewPointInverse[ax][pos] = (c, t) => (c + t * offsetSC) / (t * scaleRelative + 1);
     });
-
-    // const { x: scaleX, y: scaleY }: XY<ScaleNumeric> = (this.prevOutput.configState as PrevState<"default">).scales;
-    //
-    // // we have to convert the extents to SC from DC to find out what pixel
-    // // scaling we need
-    // const newExtentXDC = zoomExtentsDCX;
-    // const newExtentYDC = zoomExtentsDCY;
-    // const newExtentXSC = [scaleX(newExtentXDC[0]), scaleX(newExtentXDC[1])];
-    // const newExtentYSC = [scaleY(newExtentYDC[0]), scaleY(newExtentYDC[1])];
-    //
-    // const oldExtentXDC = scaleX.domain();
-    // const oldExtentYDC = scaleY.domain();
-    // const oldExtentXSC = [scaleX(oldExtentXDC[0]), scaleX(oldExtentXDC[1])];
-    // const oldExtentYSC = [scaleY(oldExtentYDC[0]), scaleY(oldExtentYDC[1])];
-    //
-    // const scalingX = (oldExtentXSC[1] - oldExtentXSC[0]) / (newExtentXSC[1] - newExtentXSC[0]);
-    // const scalingY = (oldExtentYSC[1] - oldExtentYSC[0]) / (newExtentYSC[1] - newExtentYSC[0]);
-    //
-    // // translation to make sure the start of the zoomed in graph is the start of the user
-    // // brush selection
-    // const offsetXSC = scalingX * scaleX(newExtentXDC[0]) - scaleX(oldExtentXDC[0]);
-    // const offsetYSC = scalingY * scaleY(newExtentYDC[0]) - scaleY(oldExtentYDC[0]);
-    //
-    // // useful to precompute
-    // const scaleRelativeX = scalingX - 1;
-    // const scaleRelativeY = scalingY - 1;
-    //
-    // // this function gives us the coordinates at any point t (between 0 and 1) of the
-    // // animation, t = 0 gives the points of the original traces, t = 1 gives the zoomed
-    // // in line coordinates
-    // this.getNewPoint = (x, y, t) => ({
-    //   x: x * (t * scaleRelativeX + 1) - t * offsetXSC,
-    //   y: y * (t * scaleRelativeY + 1) - t * offsetYSC
-    // });
-    // // this function is helpful to the area layer but convenient to define here.
-    // // say we start at a point (x_0, y_0) for time t = 0. At time step t = T, we would
-    // // get an intermediate point, (x_T, y_T) = getNewPoint(x_0, y_0, T). we can apply
-    // // getNewPointInverse to this intermediate point to get the original point, i.e.
-    // // getNewPointInverse(x_T, y_T, T) = (x_0, y_0)
-    // this.getNewPointInverse = (x, y, t) => ({
-    //   x: (x + t * offsetXSC) / (t * scaleRelativeX + 1),
-    //   y: (y + t * offsetYSC) / (t * scaleRelativeY + 1)
-    // });
   };
 
   afterZoom = () => this.updateLowResLinesSC();
