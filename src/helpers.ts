@@ -1,7 +1,8 @@
 import { StartEnd, StartOrEnd } from "./Chart/axes/types";
+import type { Scales } from "./Chart/visual/layers/predraw/ScalesLayer";
 import { ScatterLayer } from "./layers/ScatterLayer";
 import { TracesLayer } from "./layers/TracesLayer";
-import { LayerArgs, ScaleNumeric, XY, Point, Scales, AxisType, D3Selection, PointWithMetadata, XorY } from "./types";
+import { LayerArgs, ScaleNumeric, XY, Point, AxisType, D3Selection, PointWithMetadata, XorY } from "./types";
 
 const round = (num: number) => Math.floor(num * 10) / 10;
 
@@ -67,7 +68,7 @@ export const getXYMinMax = <Metadata>(
   traceLayers: TracesLayer<Metadata>[],
   scatterLayers: ScatterLayer<Metadata>[],
 ) => {
-  const minMax: Scales = {
+  const minMax = {
     x: { start: Infinity, end: -Infinity },
     y: { start: Infinity, end: -Infinity }
   };
@@ -218,3 +219,11 @@ export class PositionUtil {
   negSign = () => -1 * this.sign();
   pick = <T>(arg: StartEnd<T>): T => arg[this.position];
 }
+
+// Retrieve the deepest-nested numerical scales from a tree of scales.
+// Numerical leaves are all at the same depth.
+export const digNumericalScales = (scales: Scales | {}): ScaleNumeric[] => {
+  return "categories" in scales
+    ? Object.values(scales.categories).flatMap(digNumericalScales)
+    : "scale" in scales ? [scales.scale] : [];
+};
