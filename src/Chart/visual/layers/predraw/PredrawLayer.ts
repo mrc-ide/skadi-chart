@@ -1,4 +1,8 @@
-import { ZoomProperties } from "@/types";
+import { StartEnd } from "@/Chart/axes/types"
+import { XY } from "@/types"
+
+export type ZoomExtents = XY<StartEnd<[number, number] | null>>
+export type ZoomProperties = ZoomExtents & { eventType: "brush" | "dblclick" }
 
 export abstract class PredrawLayer {
   constructor() {};
@@ -9,6 +13,6 @@ export abstract class PredrawLayer {
 
   // zoom lifecycle hooks
   beforeZoom(_zoomProperties: ZoomProperties) {};
-  zoom(_zoomProperties: ZoomProperties): Promise<void> | void {};
+  zoom = async (_zoomProperties: ZoomProperties): Promise<void> => {};
   afterZoom(_zoomProperties: ZoomProperties | null) {};
 };

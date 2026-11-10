@@ -1,7 +1,7 @@
 import * as d3 from "@/d3";
-import { PredrawLayer } from "./PredrawLayer";
+import { PredrawLayer, ZoomProperties } from "./PredrawLayer";
 import { CurrOutput as PrevOutput } from "@/Chart/config/types";
-import { ScaleCategorical, ScaleNumeric, SkadiPoint, XorY, XY, ZoomProperties } from "@/types";
+import { ScaleCategorical, ScaleNumeric, SkadiPoint, XorY, XY } from "@/types";
 import { getInner } from "@/Chart/html/utils";
 import { doXYStartEnd, makeObjXYStartEnd } from "@/helpers";
 import { AxisConfiguration, AxisType, StartEnd, StartOrEnd } from "@/Chart/axes/types";
@@ -31,13 +31,13 @@ export class ScalesLayer extends PredrawLayer {
     });
   };
 
-  zoom(zoomProperties: ZoomProperties) {
+  zoom = async (zoomProperties: ZoomProperties) => {
     doXYStartEnd((ax, pos) => {
-      if (!zoomProperties[ax]) return;
+      if (!zoomProperties[ax][pos]) return;
       
       const cfgArr = this.prevOutput.chartCfg[ax][pos];
       if (cfgArr.length === 1 && cfgArr[0].type === "numerical") {
-        this.scales[ax][pos].scale.domain(zoomProperties[ax]);
+        this.scales[ax][pos].scale.domain(zoomProperties[ax][pos]);
       }
     });
   };
