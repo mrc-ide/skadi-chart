@@ -22,15 +22,16 @@ type LineStyle = {
   fillColor?: string,
   fillOpacity?: number
 }
+export type AxisNames = {
+  x: ExtendsAxis<"xBottom" | "xTop">,
+  y: ExtendsAxis<"yLeft" | "yRight">,
+}
 type LineConfig = {
   points: SkadiPoint[],
   style: LineStyle,
   metadata?: any,
   fill?: boolean,
-  axisName?: Partial<{
-    x: ExtendsAxis<"xBottom" | "xTop">,
-    y: ExtendsAxis<"yLeft" | "yRight">,
-  }>,
+  axisName?: Partial<AxisNames>,
 }
 export type Lines = LineConfig[]
 

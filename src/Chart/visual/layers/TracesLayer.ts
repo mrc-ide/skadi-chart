@@ -5,6 +5,7 @@ import { D3Selection, Point } from "@/types";
 import { customLineGenerator } from "./helpers/lines";
 import { LinesLayer } from "./predraw/LinesLayer";
 import { animationDuration } from "@/Chart/interactive/constants";
+import { ZoomProperties } from "./predraw/PredrawLayer";
 
 export class TracesLayer extends Layer {
   private zoomCallbacks: (() => Promise<void>)[] = [];
@@ -22,7 +23,7 @@ export class TracesLayer extends Layer {
     const { getHtmlId } = this.prevOutput.baseState;
 
     this.traces = this.linesLayer.linesDC.map((lDC, index) => {
-      const linePathSC = this.toPath(this.linesLayer.currLinesSC[index]);
+      const linePathSC = this.toPath(this.linesLayer.currLinesSC[index].points);
       return this.coreLayers[CoreLayer.BaseLayer].append("path")
         .attr("id", `${getHtmlId(VisualLayer.Trace)}-${index}`)
         .attr("pointer-events", "none")
@@ -35,7 +36,7 @@ export class TracesLayer extends Layer {
     });
   };
 
-  zoom = async () => {
+  zoom = async (_z: ZoomProperties) => {
     const promises: Promise<void>[] = [];
     for (let i = 0; i < this.linesLayer.linesDC.length; i++) {
       const promise = this.traces[i]
@@ -53,7 +54,7 @@ export class TracesLayer extends Layer {
   // Replace traces using newly re-calculated lines, without the user knowing.
   afterZoom = () => {
     this.traces.forEach((t, index) => {
-      t.attr("d", this.toPath(this.linesLayer.currLinesSC[index]))
+      t.attr("d", this.toPath(this.linesLayer.currLinesSC[index].points))
     });
   };
 
