@@ -96,6 +96,7 @@ export class AxesLayer extends Layer {
       }
 
       if (currAxisCfg.type === "numerical" && currAxisCfg.drawOrigin) {
+        // TODO: Skip drawing an origin line if the scale is a log scale.
         const s = scale.scale as ScaleNumeric
         this.drawPerpendicularLine(s(0), s, axis, 0.5);
       }
@@ -133,8 +134,6 @@ export class AxesLayer extends Layer {
     strokeWidthPx: number = 1,
     color: string = "black",
   ) => {
-    // TODO: Skip drawing a line if the valueDC is non-positive and the scale is a _log_ numerical scale.
-
     // If outside of range, don't draw the line. Otherwise we might draw a line onto another band.
     const [minSC, maxSC] = scale.range().sort((a, b) => a - b);
     if (valueSC < minSC || valueSC > maxSC) return;
