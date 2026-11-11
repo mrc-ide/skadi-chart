@@ -94,7 +94,7 @@ const mathJaxChart = ref<HTMLDivElement | null>(null);
 const stressTestChart = ref<HTMLDivElement | null>(null);
 
 const logScale = ref({ x: false, y: false });
-const drawOrigin = ref({ x: false, y: false });
+const drawOrigin = ref({ x: true, y: true });
 
 enum ChartType {
   Numerical = "numerical",
@@ -373,7 +373,7 @@ const renderChart = (chartType: ChartType) => {
           { count: 3 }
         ] },
         y: { start: [
-          { formatter: (v) => v.toUpperCase(), translate: 40 }, {}
+          { formatter: (v) => v.toUpperCase(), translate: 30 }, {}
         ] },
       })
       .startVisual()
