@@ -103,7 +103,6 @@ type TicksFunc = IsAxesFunc<{
   categorical: DeepPartialRecord<ConfigurableCatAxis["tick"]>,
 }>
 export type TicksArgs<T extends ChartType> = PartialMakeChartArgs<T, TicksFunc>
-export type GlobalTicksArgs<T extends ChartType> = MakeChartArgs<T, TicksFunc>[XorY][StartOrEnd]
 
 
 

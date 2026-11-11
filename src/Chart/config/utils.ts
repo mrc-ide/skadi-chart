@@ -97,6 +97,8 @@ Allows user interface to omit intermediate keys which are orphaned and hence red
 instead of:
 
 .configureTicks({ x: { start: [{ tick: { size: 10 } }] } })
+
+This saves repetition across multiple axes and positions.
 */
 export const mergeChartArgsAt = (
   chart: ChartConfig,
@@ -112,37 +114,6 @@ export const mergeChartArgsAt = (
 
     posCfg.forEach((cfg, i) => {
       deepAssignRecordIfDefined(chart[ax][pos][i], { [key]: cfg })
-    });
-  });
-};
-
-/*
-Allows user to configure all axes and positions with a single global configuration array:
-
-`.configureTicks({ global: [{ size: 0 }] })`
-
-instead of:
-
-`.configureTicks({
-   x: {
-     start: [{ size: 0 }],
-     end: [{ size: 0 }]
-   },
-   y: {
-     start: [{ size: 0 }],
-     end: [{ size: 0 }]
-   }
-})`
-*/
-export const mergeGlobalChartArgsAt = (
-  chart: ChartConfig,
-  globalConfig: any[],
-  key: keyof AxisConfiguration
-) => {
-  doXYStartEnd((ax, pos) => {
-    chart[ax][pos].forEach((axisCfg, i) => {
-      const cfg = globalConfig[i];
-      if (cfg) deepAssignRecordIfDefined(axisCfg, { [key]: cfg });
     });
   });
 };

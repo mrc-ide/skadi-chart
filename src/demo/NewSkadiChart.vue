@@ -216,6 +216,8 @@ const renderChart = (chartType: ChartType) => {
       ][i % 4];
     });
 
+    const globalTickConfig = { size: 0, translate: 10 };
+
     ChartNew.start()
       .xBottom().numerical()
       .xTop().numerical()
@@ -246,7 +248,10 @@ const renderChart = (chartType: ChartType) => {
           end: [[-200, 100]] // Unequal to ensure origin line does not overlap
         },
       })
-      .configureTicks({ global: [{ size: 0, translate: 10 }] })
+      .configureTicks({
+        x: { start: [globalTickConfig], end: [globalTickConfig] },
+        y: { start: [globalTickConfig], end: [globalTickConfig] },
+      })
       .startVisual()
       .addAxes()
       .addTraces()
