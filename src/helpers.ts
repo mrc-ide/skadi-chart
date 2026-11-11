@@ -220,8 +220,8 @@ export class PositionUtil {
   pick = <T>(arg: StartEnd<T>): T => arg[this.position];
 }
 
-// Retrieve the deepest-nested numerical scales from a tree of scales.
-// Numerical leaves are all at the same depth.
+// Retrieve the numerical scales from a tree of scales.
+// We can assume numerical scales are all leaves at the same depth.
 export const digNumericalScales = (scales: Scales | {}): ScaleNumeric[] => {
   return "categories" in scales
     ? Object.values(scales.categories).flatMap(digNumericalScales)

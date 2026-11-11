@@ -7,7 +7,6 @@ import { getInner } from "@/Chart/html/utils";
 import { AxisUtil, digNumericalScales, doXYStartEnd, makeObjXY, PositionUtil } from "@/helpers";
 import { Scales } from "./predraw/ScalesLayer";
 import { AxisConfiguration } from "@/Chart/axes/types";
-import { animationDuration } from "@/Chart/interactive/constants";
 
 // TODO remove when adding mathjax and zoom layer
 // declare const MathJax: any;
@@ -140,50 +139,49 @@ export class AxesLayer extends Layer {
     const [minSC, maxSC] = scale.range().sort((a, b) => a - b);
     if (valueSC < minSC || valueSC > maxSC) return;
 
+    // Inner paddings are implied by the numerical scales, so fetch them from the other axis.
     const otherAxisScales = axis.pickOther(this.scalesLayer()!.scales); // both positions included
-    // Inner paddings are implied by the numerical scales.
     const otherNumScalesStart = digNumericalScales(otherAxisScales.start);
     const otherNumScalesEnd = digNumericalScales(otherAxisScales.end);
 
-    // If opposite-position scales on the same x/y axis have different inner paddings, by width or
-    // by placement, then we should not draw perpendicular lines,
+    // If a start scale and end scale on the same x/y axis have different inner paddings, by size or
+    // by placement, then we should not try to draw perpendicular lines across the gaps,
     // as the behaviour of 'skipping the inner padding' would be undefinable.
     if (otherNumScalesStart.length > 0 && otherNumScalesEnd.length > 0) {
       // If there are two positions in use for this axis, and there is some inner padding
       // to be considered, we need to check if those gaps are consistent across both positions.
 
+      // Get the placements and widths of the gaps for each scale
       const startScaleGaps = this.getScaleGaps(otherNumScalesStart);
       const endScaleGaps = this.getScaleGaps(otherNumScalesEnd);
 
       if (
         !(startScaleGaps.length === 0 && endScaleGaps.length === 0) // no issues if no padding on either position
-        && JSON.stringify(startScaleGaps) !== JSON.stringify(endScaleGaps)
+        && JSON.stringify(startScaleGaps) !== JSON.stringify(endScaleGaps) // mismatch
       ) {
         throw new Error(`You tried to draw a border or origin on an ${axis.curr()} axis, ` +
-        `but the corresponding start and end ${axis.other()}-axes have different placements ` +
-        `(likely from differences in the configuration of innerPadding),` +
-        `so we cannot draw the perpendicular line safely.`);
+        `but the corresponding start and end ${axis.other()}-axes have different placements or sizes ` +
+        `so we cannot draw the perpendicular line safely. Check that their innerPadding configurations match.`);
       }
     }
 
-    // Iterate over the numerical scales and draw a line segment for each.
-    // Recall that either the start or end position may be empty for our axis.
+    // Now iterate over the numerical scales and draw a line segment for each.
+
+    // Recall that either the start or end position may be an empty array.
     // Use the first one that is non-empty - we are equanimous between start and end,
     // since by now we know that the inner padding gaps are the same for each position.
-
     const otherNumScales = otherNumScalesStart.length > 0 ? otherNumScalesStart : otherNumScalesEnd;
-
-    otherNumScales.forEach(otherScale => {
+    otherNumScales.forEach(s => {
       this.coreLayers[CoreLayer.BaseLayer].append("g").append("line")
         .attr(`${axis.curr()}1`, valueSC)
         .attr(`${axis.curr()}2`, valueSC)
-        .attr(`${axis.other()}1`, otherScale.range()[0])
-        .attr(`${axis.other()}2`, otherScale.range()[1])
+        .attr(`${axis.other()}1`, s.range()[0])
+        .attr(`${axis.other()}2`, s.range()[1])
         .style("stroke", color).style("stroke-width", strokeWidthPx);
     });
   };
 
-  // Within some position ('start'/'end'), get the "negative space" of the deepest num scale ranges,
+  // Get the "negative spaces" from a list of numerical scales,
   // i.e., the gaps between the ranges.
   private getScaleGaps = (scales: ScaleNumeric[]) => {
     return scales.map((s, i) => {

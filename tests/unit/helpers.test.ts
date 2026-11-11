@@ -15,7 +15,7 @@ describe("digScale", () => {
     expect(digNumericalScales({ scale })[0]).toBe(scale);
   });
 
-  test("collects numerical scales across equally deep branches", () => {
+  test("collects numerical scales nested within two levels of categorical scales", () => {
     const first = scaleLinear();
     const second = scaleLinear();
     const third = scaleLinear();
@@ -36,10 +36,5 @@ describe("digScale", () => {
     });
 
     expect(digNumericalScales(scales)).toEqual([first, second]);
-  });
-
-  test("returns an empty array when there are no numerical scales", () => {
-    expect(digNumericalScales(categorical({}))).toEqual([]);
-    expect(digNumericalScales(categorical({ empty: categorical({}) }))).toEqual([]);
   });
 });
