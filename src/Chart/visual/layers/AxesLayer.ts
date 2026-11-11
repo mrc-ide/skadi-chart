@@ -101,9 +101,11 @@ export class AxesLayer extends Layer {
         this.drawPerpendicularLine(s(0), s, axis, 0.5);
       }
 
-      scale.scale.range().forEach((sc) => {
-        this.drawPerpendicularLine(sc, scale.scale, axis, currAxisCfg.border.strokeWidth);
-      });
+      if (currAxisCfg.border.strokeWidth) {
+        scale.scale.range().forEach((sc) => {
+          this.drawPerpendicularLine(sc, scale.scale, axis, currAxisCfg.border.strokeWidth);
+        });
+      }
 
       if ("categories" in scale) {
         Object.entries(scale.categories).forEach(([k, s]) => {
@@ -139,13 +141,12 @@ export class AxesLayer extends Layer {
     if (valueSC < minSC || valueSC > maxSC) return;
 
     const otherAxisScales = axis.pickOther(this.scalesLayer()!.scales); // both positions included
-    // Inner paddings are determined by the numerical scales.
-
+    // Inner paddings are implied by the numerical scales.
     const otherNumScalesStart = digNumericalScales(otherAxisScales.start);
     const otherNumScalesEnd = digNumericalScales(otherAxisScales.end);
 
     // If opposite-position scales on the same x/y axis have different inner paddings, by width or
-    // by placement, then we should not draw perpendicular lines (we should return early),
+    // by placement, then we should not draw perpendicular lines,
     // as the behaviour of 'skipping the inner padding' would be undefinable.
     if (otherNumScalesStart.length > 0 && otherNumScalesEnd.length > 0) {
       // If there are two positions in use for this axis, and there is some inner padding
@@ -154,11 +155,14 @@ export class AxesLayer extends Layer {
       const startScaleGaps = this.getScaleGaps(otherNumScalesStart);
       const endScaleGaps = this.getScaleGaps(otherNumScalesEnd);
 
-      if (startScaleGaps.length === 0 && endScaleGaps.length === 0) {
-        // No inner paddings on either position, safe to continue.
-      } else if (JSON.stringify(startScaleGaps) !== JSON.stringify(endScaleGaps)) {
-        // Inconsistent inner paddings across positions, should return early.
-        return;
+      if (
+        !(startScaleGaps.length === 0 && endScaleGaps.length === 0) // no issues if no padding on either position
+        && JSON.stringify(startScaleGaps) !== JSON.stringify(endScaleGaps)
+      ) {
+        throw new Error(`You tried to draw a border or origin on an ${axis.curr()} axis, ` +
+        `but the corresponding start and end ${axis.other()}-axes have different placements ` +
+        `(likely from differences in the configuration of innerPadding),` +
+        `so we cannot draw the perpendicular line safely.`);
       }
     }
 

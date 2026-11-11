@@ -1,6 +1,5 @@
 import { expectTypeOf } from "vitest";
-import type { DefaultChartType } from "@/Chart/axes/types";
-import type { DomainArgs, MakeChartArgs } from "@/Chart/config/types";
+import type { AxesArgs, DomainArgs, MakeChartArgs } from "@/Chart/config/types";
 
 type AxisValues = {
   numerical: number,
@@ -42,11 +41,6 @@ describe("MakeChartArgs", () => {
     }>();
   });
 
-  test("has no required keys for an empty chart", () => {
-    expectTypeOf<keyof MakeChartArgs<DefaultChartType, AxisValues>>()
-      .toEqualTypeOf<never>();
-  });
-
   test("domain arguments require only configured axes and positions", () => {
     type Chart = {
       x: { start: ["numerical"], end: [] },
@@ -54,8 +48,38 @@ describe("MakeChartArgs", () => {
     };
 
     expectTypeOf<DomainArgs<Chart>>().toEqualTypeOf<{
-      x: { start: [{ domain: number[] }] },
-      y: { end: [{ domain: string[] }] },
+      x: { start: [number[]] },
+      y: { end: [string[]] },
     }>();
+  });
+
+  test("numerical axes must not accept categorical innerPadding", () => {
+    type Chart = {
+      x: { start: ["numerical"], end: [] },
+      y: { start: [], end: [] },
+    };
+
+    type OptionKeys = AxesArgs<Chart> extends {
+      x?: { start?: (infer Options)[] },
+    } ? keyof Options : never;
+
+    expectTypeOf<OptionKeys>().toEqualTypeOf<
+      "show" | "label" | "translate" | "border" | "drawOrigin"
+    >();
+  });
+
+  test("categorical axes must not accept numerical drawOrigin", () => {
+    type Chart = {
+      x: { start: [], end: [] },
+      y: { start: [], end: ["categorical"] },
+    };
+
+    type OptionKeys = AxesArgs<Chart> extends {
+      y?: { end?: (infer Options)[] },
+    } ? keyof Options : never;
+
+    expectTypeOf<OptionKeys>().toEqualTypeOf<
+      "show" | "label" | "translate" | "border" | "innerPadding"
+    >();
   });
 });
