@@ -1,6 +1,6 @@
 import { MixNewFlags } from "@/types";
 import {
-  ChartConfig,
+  AxesConfig,
   ChartType,
   CurrAxis,
   CurrFlags,
@@ -12,13 +12,13 @@ import {
   CurrOutput,
   CurrAxisNoNone
 } from "./types";
-import { chartCfgDefs } from "./defaults";
+import { axesCfgDefs } from "./defaults";
 import { Html } from "../html/Html";
 import { deepCopy, userAxisToAxPos } from "./utils";
 
 export class Axes<Flags extends CurrFlags, CType extends ChartType> {
   private currAxis: CurrAxis = "none";
-  private chartCfg: ChartConfig = {
+  private axesCfg: AxesConfig = {
     x: { start: [], end: [] },
     y: { start: [], end: [] },
   };
@@ -55,14 +55,14 @@ export class Axes<Flags extends CurrFlags, CType extends ChartType> {
 
   categorical = () => {
     const { axis, position } = userAxisToAxPos(this.currAxis as CurrAxisNoNone);
-    this.chartCfg[axis][position].push(deepCopy(chartCfgDefs["categorical"]));
+    this.axesCfg[axis][position].push(deepCopy(axesCfgDefs["categorical"]));
 
     type NewChartType = MixNewChartType<Flags, CType, "categorical">
     return this as This<Flags, NewChartType>
   };
   numerical = () => {
     const { axis, position } = userAxisToAxPos(this.currAxis as CurrAxisNoNone);
-    this.chartCfg[axis][position].push(deepCopy(chartCfgDefs["numerical"]));
+    this.axesCfg[axis][position].push(deepCopy(axesCfgDefs["numerical"]));
 
     type NewChartType = MixNewChartType<Flags, CType, "numerical">
     type NewFlags = NumericalOn<Flags>
@@ -72,7 +72,7 @@ export class Axes<Flags extends CurrFlags, CType extends ChartType> {
 
   startHtml = () => {
     const output: CurrOutput = {
-      chartCfg: this.chartCfg
+      axesCfg: this.axesCfg
     };
     return Html.start<CType>(output);
   }

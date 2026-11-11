@@ -41,7 +41,7 @@ export const defCatAxis = {
   ...baseAxisConfiguration,
 };
 
-export const chartCfgDefs = {
+export const axesCfgDefs = {
   numerical: defNumAxis,
   categorical: defCatAxis,
 }

@@ -1,6 +1,6 @@
 import { DeepPartialRecord, Prettify, XY } from "@/types";
 import { doXYStartEnd, makeObjXY, makeObjXYStartEnd } from "@/helpers";
-import { AxisConfiguration, ChartConfig, ChartType, StartEnd } from "../axes/types";
+import { AxisConfiguration, AxesConfig, ChartType, StartEnd } from "../axes/types";
 
 type Dict = Record<string, unknown>
 
@@ -73,7 +73,7 @@ type PartialObj = Partial<XY<
 >>
 
 export const mergeChartArgs = (
-  chart: ChartConfig,
+  chart: AxesConfig,
   partial: PartialObj,
 ) => {
   doXYStartEnd((ax, pos) => {
@@ -101,7 +101,7 @@ instead of:
 This saves repetition across multiple axes and positions.
 */
 export const mergeChartArgsAt = (
-  chart: ChartConfig,
+  chart: AxesConfig,
   partial: PartialObj,
   key: keyof AxisConfiguration
 ) => {

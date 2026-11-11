@@ -29,7 +29,7 @@ export class AxesLayer extends Layer {
   };
 
   draw = () => {
-    const chart = this.prevOutput.chartCfg;
+    const axesCfg = this.prevOutput.axesCfg;
     const inner = getInner(this.prevOutput.baseState.bounds);
     const { getHtmlId } = this.prevOutput.baseState;
     const translation = {
@@ -112,7 +112,7 @@ export class AxesLayer extends Layer {
       // todo: some way of skipping over unused positions, but i need to know
       // what is the source of truth in config.
       const position = new PositionUtil(pos);
-      const c = position.pick(axis.pick(chart));
+      const axisCfg = position.pick(axis.pick(axesCfg));
       const scale = position.pick(axis.pick(this.scalesLayer()!.scales));
 
       // If a scale at this top level is categorical, draw borders between categories.
@@ -131,7 +131,7 @@ export class AxesLayer extends Layer {
       }
 
       recurseDraw(
-        axis, position, `${axis.curr()}-${position.curr()}`, scale, c
+        axis, position, `${axis.curr()}-${position.curr()}`, scale, axisCfg
       );
     });
   };
