@@ -6,6 +6,7 @@ import { TracesLayer } from "./layers/TracesLayer"
 import { LinesLayer } from "./layers/predraw/LinesLayer"
 import { ScalesLayer } from "./layers/predraw/ScalesLayer"
 import { ChartType } from "../axes/types"
+import { BarsLayer } from "./layers/BarsLayer"
 
 
 
@@ -45,6 +46,7 @@ export type CoreLayers = HasAllKeys<CoreLayer, {
 export enum VisualLayer {
   Axes = "skadiChartAxes",
   Trace = "skadiChartTrace",
+  Bar = "skadiChartBar",
   // TODO
   // Area = "skadiChartArea",
   // Grid = "skadiChartGrid",
@@ -54,6 +56,7 @@ export enum VisualLayer {
 export type VisualLayers = HasAllKeys<VisualLayer, {
   [VisualLayer.Axes]: AxesLayer | null
   [VisualLayer.Trace]: TracesLayer | null
+  [VisualLayer.Bar]: BarsLayer | null
 }>
 
 export enum PredrawLayer {

@@ -48,6 +48,7 @@ export class ScalesLayer extends PredrawLayer {
 
     return (point: SkadiPoint[XorY]) => {
       let currScale = nestedScale;
+      let parentScale = nestedScale;
       let ret = 0;
 
       // TODO: need one time error checking for points so that they match
@@ -58,24 +59,20 @@ export class ScalesLayer extends PredrawLayer {
           const currS = currScale.scale as d3.ScaleBand<string>;
           // TODO does this work for y axis? or is it reversed
           ret = currS(p as string)! + currS.bandwidth() / 2;
+
+          parentScale = currScale;
           currScale = currScale.categories[p];
         } else if (args[i] === "numerical") {
           ret = (currScale.scale as ScaleNumeric)(p as number);
         }
       });
 
-      return ret;
+      return {
+        coord: ret,
+        scale: currScale,
+        parentScale: parentScale,
+      };
     };
-  };
-
-  // TODO: this doesnt need to exist if traces layer is fully generic
-  scaleNum(ax: XorY, pos: StartOrEnd) {
-    const config = this.prevOutput.chartCfg[ax][pos];
-
-    const lastCfg = config.at(-1)!;
-    if (lastCfg.type !== "numerical") throw new Error("Numerical scale does not exist");
-
-    return this.scale(ax, pos, ...config.map(c => c.type));
   };
 
   private makeScalesFromChartArray(
