@@ -31,6 +31,11 @@ export class ZoomLayer extends Layer {
     // select a particular x interval and it will then fire an end event
     const d3Brush = d3.brush<Point>()
       .extent([[xInner.start, yInner.start], [xInner.end, yInner.end]]);
+    const defaultFilter = d3Brush.filter();
+    const zoomLayer = this;
+    d3Brush.filter(function(event, datum) {
+      return !zoomLayer.zooming && defaultFilter.call(this, event, datum);
+    });
     this.brushLayer = baseLayer.append("g")
       .attr("id", `brush-${getHtmlId(InteractiveLayer.Zoom)}`)
       // we hide the default brush layer and implement our own because
@@ -84,6 +89,7 @@ export class ZoomLayer extends Layer {
     
 
     d3Brush.on("start", () => {
+      if (this.zooming) return;
       Object.values(predrawLayers).forEach(l => l?.brushStart());
       Object.values(visualLayers).forEach(l => l?.brushStart());
     });
@@ -145,7 +151,7 @@ export class ZoomLayer extends Layer {
   };
 
   private handleBrushMove = (e: d3.D3BrushEvent<Point>) => {
-    if (!e.selection) return;
+    if (this.zooming || !e.selection) return;
     this.overlay!.style("display", "");
     const [[x0, y0], [x1, y1]] = this.processSelection(e);
     this.selectionMask!
@@ -174,6 +180,7 @@ export class ZoomLayer extends Layer {
   };
 
   private handleBrushEnd = (e: d3.D3BrushEvent<Point>) => {
+    if (this.zooming) return;
     this.overlay!.style("display", "none")
     this.selectionMask!
       .attr("x", 0)
