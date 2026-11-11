@@ -23,9 +23,12 @@ type RemoveIfNoPoints<Flags extends CurrFlags> =
   (Flags["hasPoints"] extends true ? never : Method<"addScatterPoints">)
 type RemoveIfNoLines<Flags extends CurrFlags> =
   (Flags["hasLines"] extends true ? never : Method<"addTraces">)
+type RemoveIfNoBars<Flags extends CurrFlags> =
+  (Flags["hasBars"] extends true ? never : Method<"addBars">)
 type MethodsToRemove<_T extends ChartType, Flags extends CurrFlags> =
   | RemoveIfNoPoints<Flags>
   | RemoveIfNoLines<Flags>
+  | RemoveIfNoBars<Flags>
 
 export type This<T extends ChartType, Flags extends CurrFlags> =
   Omit<Visual<T, Flags>, MethodsToRemove<T, Flags>>
