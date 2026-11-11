@@ -100,6 +100,10 @@ export class AxesLayer extends Layer {
         this.drawPerpendicularLine(s(0), s, axis, 0.5);
       }
 
+      scale.scale.range().forEach((sc) => {
+        this.drawPerpendicularLine(sc, scale.scale, axis, currAxisCfg.border.strokeWidth);
+      });
+
       if ("categories" in scale) {
         Object.entries(scale.categories).forEach(([k, s]) => {
           recurseDraw(axis, position, `${path}-${k}`, s, restAxisCfg);
@@ -109,27 +113,9 @@ export class AxesLayer extends Layer {
 
     doXYStartEnd((ax, pos) => {
       const axis = new AxisUtil(ax);
-      // todo: some way of skipping over unused positions, but i need to know
-      // what is the source of truth in config.
       const position = new PositionUtil(pos);
       const axisCfg = position.pick(axis.pick(axesCfg));
       const scale = position.pick(axis.pick(this.scalesLayer()!.scales));
-
-      // If a scale at this top level is categorical, draw borders between categories.
-      if ("categories" in scale) {
-        const outerScale = scale.scale as ScaleCategorical
-        if (outerScale.paddingInner() !== 0) {
-          // Process each band's "inner" scale, which may be either kind of scale.
-          // Draw perpendicular lines at the start and end of each inner scale's domain.
-          Object.entries(scale.categories).forEach(([_, innerScale]) => {
-            const s = innerScale.scale;
-            innerScale.scale.range().forEach((sc) => {
-              this.drawPerpendicularLine(sc, s, axis);
-            });
-          });
-        }
-      }
-
       recurseDraw(
         axis, position, `${axis.curr()}-${position.curr()}`, scale, axisCfg
       );
@@ -206,101 +192,6 @@ export class AxesLayer extends Layer {
       return a !== b;
     });
   };
-
-  // private drawNumerical = (
-  //   axis: XorY,
-  //   scale: ScaleNumeric,
-  //   tickConfig: TickConfigBase<number>,
-  //   addZoom: boolean,
-  // ) => {
-  //   const { getHtmlId, bounds } = this.prevOutput.baseState;
-  //   const { formatter: tickFormatter } = tickConfig;
-  //   const inner = getInner(bounds);
-  //   const translation = axis === "x"
-  //     ? { x: 0, y: inner.y.end }
-  //     : { x: inner.x.start, y: 0 };
-  //   const axisConstructor = axis === "x" ? d3.axisBottom : d3.axisLeft;
-  //
-  //   const numericalAxis = axisConstructor(scale)
-  //     .ticks(tickConfig.count, tickConfig.specifier)
-  //     .tickSize(tickConfig.size)
-  //     .tickPadding(tickConfig.padding);
-  //   if (tickFormatter) {
-  //     if (tickConfig.enableMathJax) {
-  //       // When MathJax is enabled, blank out the default text labels here.
-  //       // the MathJax-rendered labels are drawn separately below, as foreignObject elements.
-  //       numericalAxis.tickFormat(() => "");
-  //     } else {
-  //       numericalAxis.tickFormat((val: d3.NumberValue, i) => tickFormatter(val as number, i));
-  //     }
-  //     // When d3-axis' .tickFormat is left uncalled, d3-axis falls back to its own built-in default
-  //     // formatter which makes use of the specifier option.
-  //   }
-  //
-  //   const axisGElement = this.coreLayers[CoreLayer.Svg]
-  //     .append("g")
-  //     .attr("id", `${axis}-${getHtmlId(VisualLayer.Axes)}`)
-  //     .style("font-size", "0.75rem")
-  //     .attr("transform", `translate(${translation.x},${translation.y})`)
-  //     .call(numericalAxis);
-  //   axisGElement.select(".domain").style("stroke-opacity", 0);
-  //
-  //   if (tickFormatter && tickConfig.enableMathJax) {
-  //     this.drawMathJaxTicks(scale, tickConfig, tickFormatter, axisGElement);
-  //   }
-  //
-  //   if (addZoom) {
-  //     const zoom = async () => {
-  //       await axisGElement.transition()
-  //         .duration(animationDuration)
-  //         .call(numericalAxis)
-  //         .end();
-  //     };
-  //     this.zoomCallbacks.push(zoom);
-  //   }
-  //
-  //   if (this.prevOutput.configState.axes[axis].drawOrigin) {
-  //     // Draw origin line
-  //     this.drawPerpendicularLine(axis, scale, addZoom, 0);
-  //   }
-  // };
-  //
-  // private drawCategorical = (
-  //   axis: XorY,
-  //   scaleCategorical: ScaleCategorical,
-  //   tickConfig: { categorical: TickConfigBase<string>, numerical: TickConfigBase<number> },
-  // ) => {
-  //   const { getHtmlId, bounds } = this.prevOutput.baseState;
-  //   const { formatter } = tickConfig.categorical;
-  //   const inner = getInner(bounds);
-  //   const translation = axis === "x"
-  //     ? { x: 0, y: inner.y.end }
-  //     : { x: inner.x.start, y: 0 };
-  //   const axisConstructor = axis === "x" ? d3.axisBottom : d3.axisLeft;
-  //   
-  //   const bandScale = scaleCategorical.scale; // The main, "outer" scale, containing all the bands
-  //   const categoricalAxis = axisConstructor(bandScale)
-  //     .tickSize(tickConfig.categorical.size)
-  //     .tickPadding(tickConfig.categorical.padding);
-  //   if (formatter) {
-  //     categoricalAxis.tickFormat(formatter);
-  //   }
-  //   const axisGElement = this.coreLayers[CoreLayer.Svg]
-  //     .append("g")
-  //     .attr("id", `${axis}-categorical-${getHtmlId(VisualLayer.Axes)}`)
-  //     .style("font-size", "0.75rem")
-  //     .attr("transform", `translate(${translation.x},${translation.y})`)
-  //     .call(categoricalAxis);
-  //   axisGElement.select(".domain").style("stroke-opacity", 0);
-  //
-  //   // Process each band's "inner" scale, which is a numerical scale
-  //   Object.entries(scaleCategorical.categories).forEach(([_, innerNumScale]) => {
-  //     this.drawNumerical(axis, innerNumScale, tickConfig.numerical, false);
-  //     if (bandScale.paddingInner() !== 0) {
-  //       innerNumScale.domain().forEach(d => this.drawPerpendicularLine(axis, innerNumScale, false, d));
-  //     }
-  //   });
-  // };
 
   // TODO
   // private drawMathJaxTicks = (

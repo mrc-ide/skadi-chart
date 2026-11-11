@@ -186,7 +186,7 @@ const renderChart = (chartType: ChartType) => {
       .startConfig()
       .configureAxes({
         x: { start: [{ label: { text: "Time", translate: 20 }, drawOrigin: drawOrigin.value.x }] },
-        y: { start: [{ label: { text: "Value", translate: 20 }, drawOrigin: drawOrigin.value.y }] },
+        y: { start: [{ label: { text: "Value", translate: 20 }, drawOrigin: drawOrigin.value.y, border: { strokeWidth: 0.5 } }] },
       })
       .configureDomain({
         x: { start: [[extents.x.lower, extents.x.upper]] },
@@ -277,11 +277,11 @@ const renderChart = (chartType: ChartType) => {
       .configureAxes({
         x: { start: [
           { label: { text: "X category", translate: 7 }, innerPadding: 0.2 },
-          { label: { text: "X numerical label", translate: 20 }, drawOrigin: drawOrigin.value.x },
+          { label: { text: "X numerical label", translate: 20 }, drawOrigin: drawOrigin.value.x, border: { strokeWidth: 1 } },
         ] },
         y: { start: [
           { label: { text: "Y category", translate: 25 }, innerPadding: 0.25 },
-          { label: { text: "Y numerical label", translate: 5 }, drawOrigin: drawOrigin.value.y }
+          { label: { text: "Y numerical label", translate: 5 }, drawOrigin: drawOrigin.value.y, border: { strokeWidth: 1 } }
         ] },
       })
       .configureDomain({
@@ -322,7 +322,7 @@ const renderChart = (chartType: ChartType) => {
       .configureAxes({
         x: { start: [
           { label: { text: "X category", translate: 7 }, innerPadding: 0.2 },
-          { label: { text: "X numerical label", translate: 20 }, drawOrigin: drawOrigin.value.x },
+          { label: { text: "X numerical label", translate: 20 }, drawOrigin: drawOrigin.value.x, border: { strokeWidth: 1 } },
         ] },
         y: { start: [
           { label: { text: "Y numerical label", translate: 5 }, drawOrigin: drawOrigin.value.y }

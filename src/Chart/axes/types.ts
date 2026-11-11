@@ -61,6 +61,7 @@ export type BaseAxisConfiguration = {
   show: boolean,
   label: { text: string, translate: number },
   translate: number,
+  border: { strokeWidth: number },
 }
 
 export type ConfigurableNumAxis = {
