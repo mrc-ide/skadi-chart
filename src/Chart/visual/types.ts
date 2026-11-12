@@ -6,6 +6,7 @@ import { TracesLayer } from "./layers/TracesLayer"
 import { LinesLayer } from "./layers/predraw/LinesLayer"
 import { ScalesLayer } from "./layers/predraw/ScalesLayer"
 import { ChartType } from "../axes/types"
+import { BarsLayer } from "./layers/BarsLayer"
 
 
 
@@ -22,9 +23,12 @@ type RemoveIfNoPoints<Flags extends CurrFlags> =
   (Flags["hasPoints"] extends true ? never : Method<"addScatterPoints">)
 type RemoveIfNoLines<Flags extends CurrFlags> =
   (Flags["hasLines"] extends true ? never : Method<"addTraces">)
+type RemoveIfNoBars<Flags extends CurrFlags> =
+  (Flags["hasBars"] extends true ? never : Method<"addBars">)
 type MethodsToRemove<_T extends ChartType, Flags extends CurrFlags> =
   | RemoveIfNoPoints<Flags>
   | RemoveIfNoLines<Flags>
+  | RemoveIfNoBars<Flags>
 
 export type This<T extends ChartType, Flags extends CurrFlags> =
   Omit<Visual<T, Flags>, MethodsToRemove<T, Flags>>
@@ -45,6 +49,7 @@ export type CoreLayers = HasAllKeys<CoreLayer, {
 export enum VisualLayer {
   Axes = "skadiChartAxes",
   Trace = "skadiChartTrace",
+  Bar = "skadiChartBar",
   // TODO
   // Area = "skadiChartArea",
   // Grid = "skadiChartGrid",
@@ -54,6 +59,7 @@ export enum VisualLayer {
 export type VisualLayers = HasAllKeys<VisualLayer, {
   [VisualLayer.Axes]: AxesLayer | null
   [VisualLayer.Trace]: TracesLayer | null
+  [VisualLayer.Bar]: BarsLayer | null
 }>
 
 export enum PredrawLayer {

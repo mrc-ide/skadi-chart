@@ -1,5 +1,6 @@
 import { MixNewFlags } from "@/types";
 import {
+    Bars,
   CurrFlags,
   CurrOutput,
   CurrState,
@@ -15,6 +16,7 @@ import { ChartType } from "../axes/types";
 export class Data<CType extends ChartType, Flags extends CurrFlags> {
   private lines: Lines = [];
   private scatterPoints: ScatterPoints = [];
+  private bars: Bars = [];
   
   private constructor(private prevOutput: PrevOutput) {};
 
@@ -34,10 +36,17 @@ export class Data<CType extends ChartType, Flags extends CurrFlags> {
     return this as This<CType, NewFlags>;
   };
 
+  registerBars = (bars: Bars) => {
+    this.bars.push(...bars);
+    type NewFlags = MixNewFlags<CurrFlags, Flags, { hasBars: true }>;
+    return this as This<CType, NewFlags>;
+  };
+
   startConfig = () => {
     const dataState: CurrState = {
       lines: this.lines,
       scatterPoints: this.scatterPoints,
+      bars: this.bars,
     };
     const output = {
       ...this.prevOutput,

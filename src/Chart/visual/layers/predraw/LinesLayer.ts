@@ -113,13 +113,16 @@ export class LinesLayer extends PredrawLayer {
       // scales layer
       const axisNameX = lDC.axisName?.x || "xBottom";
       const { position: xPos } = userAxisToAxPos(axisNameX);
-      const numScaleX = this.scalesLayer.scaleNum("x", xPos);
+      const configX = this.prevOutput.chartCfg["x"][xPos];
+      const scaleX = this.scalesLayer.scale("x", xPos, ...configX.map(c => c.type));
+
       const axisNameY = lDC.axisName?.y || "yLeft";
       const { position: yPos } = userAxisToAxPos(axisNameY);
-      const numScaleY = this.scalesLayer.scaleNum("y", yPos);
+      const configY = this.prevOutput.chartCfg["y"][yPos];
+      const scaleY = this.scalesLayer.scale("y", yPos, ...configY.map(c => c.type));
       return {
         axisNames: { x: axisNameX, y: axisNameY },
-        points: lDC.points.map(p => ({ x: numScaleX(p.x), y: numScaleY(p.y) })),
+        points: lDC.points.map(p => ({ x: scaleX(p.x).coord, y: scaleY(p.y).coord })),
       };
     });
 

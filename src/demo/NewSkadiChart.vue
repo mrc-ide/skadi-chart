@@ -42,6 +42,18 @@
       <h2>Categorical x-axis, two numerical y-axes</h2>
       <div class="chart" ref="categoricalLineChart" id="categoricalLineChart"></div>
     </div>
+    <div v-if="selectedChartTypes.includes(ChartType.BarchartX)">
+      <h2>Barchart x</h2>
+      <div class="chart" ref="barchartXChart" id="barchartXChart"></div>
+    </div>
+    <div v-if="selectedChartTypes.includes(ChartType.BarchartY)">
+      <h2>Barchart y</h2>
+      <div class="chart" ref="barchartYChart" id="barchartYChart"></div>
+    </div>
+    <div v-if="selectedChartTypes.includes(ChartType.BarchartXDoubleBar)">
+      <h2>Barchart x double bars</h2>
+      <div class="chart" ref="barchartXDoubleBarChart" id="barchartXDoubleBarChart"></div>
+    </div>
   </div>
   <h1 style="margin-top: 100px">
     With MathJax (experimental)
@@ -73,7 +85,7 @@
 </style>
 
 <script setup lang="ts">
-import { generateWaveLines } from "@/demo/helpers";
+import { barchartCats1Level1, barchartCats1Level2, barchartCats2, generateWaveLines, getBarData, getDoubleBarData } from "@/demo/helpers";
 import type { Option } from "vue3-select-component";
 import VueSelect from "vue3-select-component";
 import { onMounted, ref, watch } from "vue";
@@ -85,6 +97,9 @@ const categoricalXYChart = ref<HTMLDivElement | null>(null);
 const categoricalXChart = ref<HTMLDivElement | null>(null);
 const categoricalYChart = ref<HTMLDivElement | null>(null);
 const categoricalLineChart = ref<HTMLDivElement | null>(null);
+const barchartXChart = ref<HTMLDivElement | null>(null);
+const barchartYChart = ref<HTMLDivElement | null>(null);
+const barchartXDoubleBarChart = ref<HTMLDivElement | null>(null);
 
 const mathJaxChart = ref<HTMLDivElement | null>(null);
 const stressTestChart = ref<HTMLDivElement | null>(null);
@@ -98,6 +113,9 @@ enum ChartType {
   CategoricalY = "categoricalY",
   CategoricalXY = "categoricalXY",
   CategoricalLine = "categoricalLine",
+  BarchartX = "barchartX",
+  BarchartY = "barchartY",
+  BarchartXDoubleBar = "barchartXDoubleBar",
 }
 
 const chartTypes: Record<ChartType, string> = {
@@ -107,6 +125,9 @@ const chartTypes: Record<ChartType, string> = {
   [ChartType.CategoricalY]: "Categorical y-axis", // 1 num, 1 cat (w/ nested num)
   [ChartType.CategoricalXY]: "X and Y categorical axes", // 2 cats (each w/ nested num)
   [ChartType.CategoricalLine]: "Categorical x-axis, two numerical y-axes", // 1 cat (w/ nested num), 2 nums. For the bar chart + categorical line type of case.
+  [ChartType.BarchartX]: "Double nested and single nested x axes, 1 numerical y",
+  [ChartType.BarchartY]: "Double nested and single nested y axes, 1 numerical x",
+  [ChartType.BarchartXDoubleBar]: "Double nested x axes, numerical y, two levels of bars",
 };
 
 const selectedChartTypes = ref<ChartType[]>(Object.keys(chartTypes) as ChartType[]);
@@ -121,6 +142,9 @@ const chartContainers: Record<ChartType, typeof numericalChart> = {
   [ChartType.CategoricalY]: categoricalYChart,
   [ChartType.CategoricalXY]: categoricalXYChart,
   [ChartType.CategoricalLine]: categoricalLineChart,
+  [ChartType.BarchartX]: barchartXChart,
+  [ChartType.BarchartY]: barchartYChart,
+  [ChartType.BarchartXDoubleBar]: barchartXDoubleBarChart,
 };
 
 const xCategories = ["A", "B", "C"];
@@ -452,6 +476,111 @@ const renderChart = (chartType: ChartType) => {
       .startVisual()
       .addAxes()
       .addTraces()
+      .startInteractive()
+      .addZoom()
+      .end();
+    break;
+    case ChartType.BarchartX:
+    ChartNew.start()
+      .xBottom().categorical().categorical()
+      .xTop().categorical()
+      .yLeft().numerical()
+      .startHtml()
+      .addElement(container)
+      .startData()
+      .registerBars(getBarData("xBottom", "xTop", "yLeft"))
+      .startConfig()
+      .configureAxes({
+        x: {
+          start: [{ innerPadding: 0.2, translate: 25 }, { innerPadding: 0.1 }],
+          end: [{ innerPadding: 0.01 }]
+        }
+      })
+      .configureDomain({
+        x: {
+          start: [
+            { domain: barchartCats1Level1 },
+            { domain: barchartCats1Level2 }
+          ],
+          end: [{ domain: barchartCats2 }]
+        },
+        y: {
+          start: [{ domain: [0, 100] }]
+        }
+      })
+      .startVisual()
+      .addAxes()
+      .addBars()
+      .startInteractive()
+      .addZoom()
+      .end();
+    break;
+    case ChartType.BarchartY:
+    ChartNew.start()
+      .yLeft().categorical().categorical()
+      .yRight().categorical()
+      .xBottom().numerical()
+      .startHtml()
+      .addElement(container)
+      .startData()
+      .registerBars(getBarData("yLeft", "yRight", "xBottom"))
+      .startConfig()
+      .configureAxes({
+        y: {
+          start: [{ innerPadding: 0.2, translate: 25 }, { innerPadding: 0.1 }],
+          end: [{ innerPadding: 0.01 }]
+        }
+      })
+      .configureTicks({
+        y: { start: [{ tick: { translate: 4 } }, {}] }
+      })
+      .configureDomain({
+        y: {
+          start: [
+            { domain: barchartCats1Level1 },
+            { domain: barchartCats1Level2 }
+          ],
+          end: [{ domain: barchartCats2 }]
+        },
+        x: {
+          start: [{ domain: [0, 100] }]
+        }
+      })
+      .startVisual()
+      .addAxes()
+      .addBars()
+      .startInteractive()
+      .addZoom()
+      .end();
+    break;
+    case ChartType.BarchartXDoubleBar:
+    ChartNew.start()
+      .xBottom().categorical().categorical()
+      .yLeft().numerical()
+      .startHtml()
+      .addElement(container)
+      .startData()
+      .registerBars(getDoubleBarData("xBottom", "yLeft"))
+      .startConfig()
+      .configureAxes({
+        x: {
+          start: [{ innerPadding: 0.2, translate: 25 }, { innerPadding: 0.1 }],
+        }
+      })
+      .configureDomain({
+        x: {
+          start: [
+            { domain: barchartCats1Level1 },
+            { domain: barchartCats1Level2 }
+          ],
+        },
+        y: {
+          start: [{ domain: [0, 100] }]
+        }
+      })
+      .startVisual()
+      .addAxes()
+      .addBars()
       .startInteractive()
       .addZoom()
       .end();
