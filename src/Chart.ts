@@ -3,7 +3,7 @@ import { AxesLayer } from "./layers/AxesLayer";
 import { TracesLayer, TracesOptions } from "./layers/TracesLayer";
 import { ZoomLayer, ZoomOptions } from "./layers/ZoomLayer";
 import { TooltipHtmlCallback, TooltipsLayer } from "./layers/TooltipsLayer";
-import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, ZoomExtents, PartialScales, Scales, ScatterPoints, XY, ScaleNumeric, AxisType, CategoricalScaleConfig, ClipPathBounds, TickConfig } from "./types";
+import { AllOptionalLayers, Bounds, D3Selection, LayerArgs, Lines, ZoomExtents, PartialScales, Scales, ScatterPoints, XY, ScaleNumeric, AxisType, ClipPathBounds } from "./types";
 import { LayerType, LifecycleHooks, OptionalLayer } from "./layers/Layer";
 import { GridLayer, GridOptions } from "./layers/GridLayer";
 import html2canvas from "html2canvas";
@@ -28,8 +28,8 @@ type PartialChartOptions = {
   animationDuration?: number,
   categoricalScalePaddingInner?: Partial<XY<number>>,
   tickConfig?: {
-    numerical?: Partial<XY<Partial<TickConfig<number>>>>,
-    categorical?: Partial<XY<Partial<TickConfig<string>>>>,
+    numerical?: Partial<XY<Partial<any>>>,
+    categorical?: Partial<XY<Partial<any>>>,
   },
 }
 
@@ -384,7 +384,7 @@ export class Chart<Metadata = any> {
         this.options.categoricalScalePaddingInner[axis],
       );
       return acc;
-    }, {} as Partial<XY<CategoricalScaleConfig>>);
+    }, {} as Partial<XY<any>>);
 
     // Set some sensible defaults for numerical tick count if not provided in user options
     Object.entries(this.globals.tickConfig.numerical).forEach(([axis, tickConfig]) => {
@@ -479,7 +479,7 @@ export class Chart<Metadata = any> {
     numericalScale: ScaleNumeric,
     axis: AxisType,
     paddingInner: number,
-  ): CategoricalScaleConfig | undefined => {
+  ): any | undefined => {
     if (!domain?.length) {
       return;
     }

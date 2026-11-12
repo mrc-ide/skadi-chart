@@ -133,7 +133,7 @@ export class AxesLayer extends OptionalLayer {
     const bandNumericalScales = Object.entries(layerArgs.scaleConfig.categoricalScales[axis]!.bands);
     bandNumericalScales.forEach(([category, bandNumericalScale]) => {
       const bandStart = categoricalScale(category)!;
-      this.drawNumericalAxis(axis, bandNumericalScale, layerArgs, 6);
+      this.drawNumericalAxis(axis, bandNumericalScale as any, layerArgs, 6);
       if (categoricalScale.paddingInner()) {
         this.drawLinePerpendicularToAxis(axis, bandStart, layerArgs);
       }
@@ -245,7 +245,7 @@ export class AxesLayer extends OptionalLayer {
     // out of multiple shorter lines with gaps for padding as required by the other axis).
     const otherAxisBandWidth = otherAxisCategoricalScale.bandwidth();
     const otherAxisPositionSC = otherAxis === "x" ? height - margin.bottom : margin.left;
-    const lineParts = otherAxisCategoricalScale.domain().map(category => {
+    const lineParts = (otherAxisCategoricalScale.domain() as number[]).map(category => {
       const otherAxisBandStart = otherAxisCategoricalScale(category);
       if (otherAxisBandStart === undefined) return;
 

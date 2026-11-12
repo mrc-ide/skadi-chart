@@ -96,14 +96,14 @@ export type LayerArgs = {
   globals: {
     animationDuration: number,
     tickConfig: {
-      numerical: XY<TickConfig<number>>,
-      categorical: XY<TickConfig<string>>,
+      numerical: XY<any>,
+      categorical: XY<any>,
     },
   },
   scaleConfig: {
     numericalScales: XY<ScaleNumeric>,
     scaleExtents: Scales,
-    categoricalScales: Partial<XY<CategoricalScaleConfig>>,
+    categoricalScales: Partial<XY<any>>,
   },
   coreLayers: {
     [LayerType.Svg]: D3Selection<SVGSVGElement>,

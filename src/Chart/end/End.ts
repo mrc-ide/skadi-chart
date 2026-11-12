@@ -59,4 +59,6 @@ export class End<_CType extends ChartType, _Flags extends PrevFlags> {
     //   });
     // }, 2000);
   };
+
+  output = () => this.prevOutput;
 }

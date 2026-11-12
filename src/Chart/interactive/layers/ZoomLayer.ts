@@ -155,7 +155,7 @@ export class ZoomLayer extends Layer {
       .attr("height", Math.abs(y0 - y1));
   };
 
-  private handleZoom = async (zoomProperties: ZoomProperties) => {
+  handleZoom = async (zoomProperties: ZoomProperties) => {
     if (this.zooming) return;
     this.zooming = true;
 

@@ -86,7 +86,7 @@ export class GridLayer extends OptionalLayer {
         const bandScales = categoricalScales[axis]?.bands;
         const scales = bandScales ? Object.values(bandScales) : [numericalScales[axis]];
 
-        scales.forEach((scale) => {
+        (scales as any[]).forEach((scale) => {
           const gridG = svgLayer.append("g")
             .call((g) => addGridCallbacks[axis]?.({ g, scale }))
             .attr("opacity", this.gridOpacity)

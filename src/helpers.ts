@@ -95,7 +95,7 @@ export const mapScales = <T>(
     const ax = axis as AxisType;
     return [
       ax,
-      Object.fromEntries(Object.entries(catScaleConfig?.bands ?? {}).map(([cat, scale]) => [cat, callback(scale, ax)]),
+      Object.fromEntries(Object.entries(catScaleConfig?.bands ?? {}).map(([cat, scale]) => [cat, callback(scale as any, ax)]),
     )];
   }));
 
