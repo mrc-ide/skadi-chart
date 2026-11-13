@@ -27,7 +27,7 @@ export class ScalesLayer extends PredrawLayer {
       y: [y.end, y.start],
     };
     this.scales = makeObjXYStartEnd((ax, pos) => {
-      return this.makeScalesFromChartArray(prevOutput.axesCfg[ax][pos], ranges[ax], ax);
+      return this.makeScalesFromChartArray(prevOutput.chartCfg[ax][pos], ranges[ax], ax);
     });
   };
 
@@ -35,7 +35,7 @@ export class ScalesLayer extends PredrawLayer {
     doXYStartEnd((ax, pos) => {
       if (!zoomProperties[ax]) return;
       
-      const cfgArr = this.prevOutput.axesCfg[ax][pos];
+      const cfgArr = this.prevOutput.chartCfg[ax][pos];
       if (cfgArr.length === 1 && cfgArr[0].type === "numerical") {
         this.scales[ax][pos].scale.domain(zoomProperties[ax]);
       }
@@ -70,7 +70,7 @@ export class ScalesLayer extends PredrawLayer {
 
   // TODO: this doesnt need to exist if traces layer is fully generic
   scaleNum(ax: XorY, pos: StartOrEnd) {
-    const config = this.prevOutput.axesCfg[ax][pos];
+    const config = this.prevOutput.chartCfg[ax][pos];
 
     const lastCfg = config.at(-1)!;
     if (lastCfg.type !== "numerical") throw new Error("Numerical scale does not exist");

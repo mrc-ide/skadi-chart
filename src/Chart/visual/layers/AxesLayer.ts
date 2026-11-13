@@ -28,7 +28,7 @@ export class AxesLayer extends Layer {
   };
 
   draw = () => {
-    const axesCfg = this.prevOutput.axesCfg;
+    const chart = this.prevOutput.chartCfg;
     const inner = getInner(this.prevOutput.baseState.bounds);
     const { getHtmlId } = this.prevOutput.baseState;
     const translation = {
@@ -116,10 +116,10 @@ export class AxesLayer extends Layer {
     doXYStartEnd((ax, pos) => {
       const axis = new AxisUtil(ax);
       const position = new PositionUtil(pos);
-      const axisCfg = position.pick(axis.pick(axesCfg));
+      const c = position.pick(axis.pick(chart));
       const scale = position.pick(axis.pick(this.scalesLayer()!.scales));
       recurseDraw(
-        axis, position, `${axis.curr()}-${position.curr()}`, scale, axisCfg
+        axis, position, `${axis.curr()}-${position.curr()}`, scale, c
       );
     });
   };

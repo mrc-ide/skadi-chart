@@ -33,18 +33,18 @@ export class Config<CType extends ChartType, Flags extends CurrFlags> {
   };
 
   configureAxes(args: AxesArgs<CType>) {
-    mergeChartArgs(this.prevOutput.axesCfg, args);
+    mergeChartArgs(this.prevOutput.chartCfg, args);
     return this as This<CType, Flags>;
   };
 
   configureDomain(args: DomainArgs<CType>) {
-    mergeChartArgsAt(this.prevOutput.axesCfg, args, "domain");
+    mergeChartArgsAt(this.prevOutput.chartCfg, args, "domain");
     type NewFlags = MixNewFlags<CurrFlags, Flags, { hasConfiguredDomain: true }>
     return this as This<CType, NewFlags>;
   };
 
   configureTicks(args: TicksArgs<CType>) {
-    mergeChartArgsAt(this.prevOutput.axesCfg, args, "tick");
+    mergeChartArgsAt(this.prevOutput.chartCfg, args, "tick");
     return this as This<CType, Flags>;
   };
 
