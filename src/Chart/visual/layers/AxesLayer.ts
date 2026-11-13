@@ -1,19 +1,19 @@
 import * as d3 from "@/d3";
 import { Layer } from "@/Chart/visual/layers/Layer";
-import { ScaleCategorical, ScaleNumeric } from "@/types";
+import { ScaleCategorical, ScaleNumeric, XorY } from "@/types";
 import { CurrOutput as PrevOutput } from "@/Chart/config/types";
 import { CoreLayer, CoreLayers, PredrawLayer, PredrawLayers, VisualLayer } from "../types";
 import { getInner } from "@/Chart/html/utils";
-import { AxisUtil, doXYStartEnd, makeObjXY, PositionUtil } from "@/helpers";
+import { AxisUtil, digNumericalScales, doXYStartEnd, makeObjXY, PositionUtil } from "@/helpers";
 import { Scales } from "./predraw/ScalesLayer";
 import { AxisConfiguration } from "@/Chart/axes/types";
 
-// TODO perpendicular lines with categorical borders and draw origins
 // TODO remove when adding mathjax and zoom layer
 // declare const MathJax: any;
 
 export class AxesLayer extends Layer {
   private zoomCallbacks: (() => Promise<void>)[] = [];
+  private scalesLayer = () => this.predrawLayers[PredrawLayer.Scales];
 
   constructor(
     private prevOutput: PrevOutput,
@@ -29,7 +29,6 @@ export class AxesLayer extends Layer {
 
   draw = () => {
     const chart = this.prevOutput.chartCfg;
-    const scales = this.predrawLayers[PredrawLayer.Scales];
     const inner = getInner(this.prevOutput.baseState.bounds);
     const { getHtmlId } = this.prevOutput.baseState;
     const translation = {
@@ -45,7 +44,7 @@ export class AxesLayer extends Layer {
       axis: AxisUtil, position: PositionUtil, path: string,
       scale: Scales, axisCfg: AxisConfiguration[] | undefined,
     ) => {
-      if (!axisCfg) return;
+      if (!axisCfg || axisCfg.length === 0) return;
       const [currAxisCfg, ...restAxisCfg] = axisCfg;
 
       const axisCons = position.pick(axis.pick(axisConstructors));
@@ -95,7 +94,19 @@ export class AxesLayer extends Layer {
           .attr("transform-origin", `${otherAxisTr} ${inner.y.center}`)
       }
 
-      if ("categories" in scale && restAxisCfg.length) {
+      if (currAxisCfg.type === "numerical" && currAxisCfg.drawOrigin) {
+        // TODO: Skip drawing an origin line if the scale is a log scale.
+        const s = scale.scale as ScaleNumeric
+        this.drawPerpendicularLine(s(0), s, axis, 0.5);
+      }
+
+      if (currAxisCfg.border.strokeWidth) {
+        scale.scale.range().forEach((sc) => {
+          this.drawPerpendicularLine(sc, scale.scale, axis, currAxisCfg.border.strokeWidth);
+        });
+      }
+
+      if ("categories" in scale) {
         Object.entries(scale.categories).forEach(([k, s]) => {
           recurseDraw(axis, position, `${path}-${k}`, s, restAxisCfg);
         });
@@ -106,139 +117,82 @@ export class AxesLayer extends Layer {
       const axis = new AxisUtil(ax);
       const position = new PositionUtil(pos);
       const c = position.pick(axis.pick(chart));
-      if (!c.length) return;
-      const scale = position.pick(axis.pick(scales!.scales));
+      const scale = position.pick(axis.pick(this.scalesLayer()!.scales));
       recurseDraw(
         axis, position, `${axis.curr()}-${position.curr()}`, scale, c
       );
     });
-
-    //
-    // if (this.prevOutput.chartType === "default") {
-    //   const { x: xScale, y: yScale } = this.prevOutput.configState.scales;
-    //   const { x: xTickConfig, y: yTickConfig } = this.prevOutput.configState.ticks;
-    //   this.drawNumerical("x", xScale, xTickConfig.numerical, true);
-    //   this.drawNumerical("y", yScale, yTickConfig.numerical, true);
-    // } else if (this.prevOutput.chartType === "categoricalX") {
-    //   const { x: xScale, y: yScale } = this.prevOutput.configState.scales;
-    //   const { x: xTickConfig, y: yTickConfig } = this.prevOutput.configState.ticks;
-    //   this.drawCategorical("x", xScale, xTickConfig);
-    //   this.drawNumerical("y", yScale, yTickConfig.numerical, true);
-    //   if (xScale.scale.paddingInner() !== 0) {
-    //     yScale.domain().forEach(d => this.drawPerpendicularLine("y", yScale, false, d));
-    //   }
-    // } else if (this.prevOutput.chartType === "categoricalY") {
-    //   const { x: xScale, y: yScale } = this.prevOutput.configState.scales;
-    //   const { x: xTickConfig, y: yTickConfig } = this.prevOutput.configState.ticks;
-    //   this.drawNumerical("x", xScale, xTickConfig.numerical, true);
-    //   this.drawCategorical("y", yScale, yTickConfig);
-    //   if (yScale.scale.paddingInner() !== 0) {
-    //     xScale.domain().forEach(d => this.drawPerpendicularLine("x", xScale, false, d));
-    //   }
-    // } else {
-    //   const { x: xScale, y: yScale } = this.prevOutput.configState.scales;
-    //   const { x: xTickConfig, y: yTickConfig } = this.prevOutput.configState.ticks;
-    //   this.drawCategorical("x", xScale, xTickConfig);
-    //   this.drawCategorical("y", yScale, yTickConfig);
-    // }
-    //
-    // this.addLabels();
   };
 
-  // private drawNumerical = (
-  //   axis: XorY,
-  //   scale: ScaleNumeric,
-  //   tickConfig: TickConfigBase<number>,
-  //   addZoom: boolean,
-  // ) => {
-  //   const { getHtmlId, bounds } = this.prevOutput.baseState;
-  //   const { formatter: tickFormatter } = tickConfig;
-  //   const inner = getInner(bounds);
-  //   const translation = axis === "x"
-  //     ? { x: 0, y: inner.y.end }
-  //     : { x: inner.x.start, y: 0 };
-  //   const axisConstructor = axis === "x" ? d3.axisBottom : d3.axisLeft;
-  //
-  //   const numericalAxis = axisConstructor(scale)
-  //     .ticks(tickConfig.count, tickConfig.specifier)
-  //     .tickSize(tickConfig.size)
-  //     .tickPadding(tickConfig.padding);
-  //   if (tickFormatter) {
-  //     if (tickConfig.enableMathJax) {
-  //       // When MathJax is enabled, blank out the default text labels here.
-  //       // the MathJax-rendered labels are drawn separately below, as foreignObject elements.
-  //       numericalAxis.tickFormat(() => "");
-  //     } else {
-  //       numericalAxis.tickFormat((val: d3.NumberValue, i) => tickFormatter(val as number, i));
-  //     }
-  //     // When d3-axis' .tickFormat is left uncalled, d3-axis falls back to its own built-in default
-  //     // formatter which makes use of the specifier option.
-  //   }
-  //
-  //   const axisGElement = this.coreLayers[CoreLayer.Svg]
-  //     .append("g")
-  //     .attr("id", `${axis}-${getHtmlId(VisualLayer.Axes)}`)
-  //     .style("font-size", "0.75rem")
-  //     .attr("transform", `translate(${translation.x},${translation.y})`)
-  //     .call(numericalAxis);
-  //   axisGElement.select(".domain").style("stroke-opacity", 0);
-  //
-  //   if (tickFormatter && tickConfig.enableMathJax) {
-  //     this.drawMathJaxTicks(scale, tickConfig, tickFormatter, axisGElement);
-  //   }
-  //
-  //   if (addZoom) {
-  //     const zoom = async () => {
-  //       await axisGElement.transition()
-  //         .duration(animationDuration)
-  //         .call(numericalAxis)
-  //         .end();
-  //     };
-  //     this.zoomCallbacks.push(zoom);
-  //   }
-  //
-  //   if (this.prevOutput.configState.axes[axis].drawOrigin) {
-  //     // Draw origin line
-  //     this.drawPerpendicularLine(axis, scale, addZoom, 0);
-  //   }
-  // };
-  //
-  // private drawCategorical = (
-  //   axis: XorY,
-  //   scaleCategorical: ScaleCategorical,
-  //   tickConfig: { categorical: TickConfigBase<string>, numerical: TickConfigBase<number> },
-  // ) => {
-  //   const { getHtmlId, bounds } = this.prevOutput.baseState;
-  //   const { formatter } = tickConfig.categorical;
-  //   const inner = getInner(bounds);
-  //   const translation = axis === "x"
-  //     ? { x: 0, y: inner.y.end }
-  //     : { x: inner.x.start, y: 0 };
-  //   const axisConstructor = axis === "x" ? d3.axisBottom : d3.axisLeft;
-  //   
-  //   const bandScale = scaleCategorical.scale; // The main, "outer" scale, containing all the bands
-  //   const categoricalAxis = axisConstructor(bandScale)
-  //     .tickSize(tickConfig.categorical.size)
-  //     .tickPadding(tickConfig.categorical.padding);
-  //   if (formatter) {
-  //     categoricalAxis.tickFormat(formatter);
-  //   }
-  //   const axisGElement = this.coreLayers[CoreLayer.Svg]
-  //     .append("g")
-  //     .attr("id", `${axis}-categorical-${getHtmlId(VisualLayer.Axes)}`)
-  //     .style("font-size", "0.75rem")
-  //     .attr("transform", `translate(${translation.x},${translation.y})`)
-  //     .call(categoricalAxis);
-  //   axisGElement.select(".domain").style("stroke-opacity", 0);
-  //
-  //   // Process each band's "inner" scale, which is a numerical scale
-  //   Object.entries(scaleCategorical.categories).forEach(([_, innerNumScale]) => {
-  //     this.drawNumerical(axis, innerNumScale, tickConfig.numerical, false);
-  //     if (bandScale.paddingInner() !== 0) {
-  //       innerNumScale.domain().forEach(d => this.drawPerpendicularLine(axis, innerNumScale, false, d));
-  //     }
-  //   });
-  // };
+  // Draw a line perpendicular to the specified axis at the given value in screen coordinates.
+  // This line will be made up of 1 or more segments, since if the other axis is categorical,
+  // inter-segment gaps are required for skipping over the padding of the categorical bands.
+  // This padding is called 'inner padding' by d3.
+  private drawPerpendicularLine = (
+    valueSC: number,
+    scale: ScaleNumeric | ScaleCategorical,
+    axis: AxisUtil,
+    strokeWidthPx: number = 1,
+    color: string = "black",
+  ) => {
+    // If outside of range, don't draw the line. Otherwise we might draw a line onto another band.
+    const [minSC, maxSC] = scale.range().sort((a, b) => a - b);
+    if (valueSC < minSC || valueSC > maxSC) return;
+
+    // Inner paddings are implied by the numerical scales, so fetch them from the other axis.
+    const otherAxisScales = axis.pickOther(this.scalesLayer()!.scales); // both positions included
+    const otherNumScalesStart = digNumericalScales(otherAxisScales.start);
+    const otherNumScalesEnd = digNumericalScales(otherAxisScales.end);
+
+    // If a start scale and end scale on the same x/y axis have different inner paddings, by size or
+    // by placement, then we should not try to draw perpendicular lines across the gaps,
+    // as the behaviour of 'skipping the inner padding' would be undefinable.
+    if (otherNumScalesStart.length > 0 && otherNumScalesEnd.length > 0) {
+      // If there are two positions in use for this axis, and there is some inner padding
+      // to be considered, we need to check if those gaps are consistent across both positions.
+
+      // Get the placements and widths of the gaps for each scale
+      const startScaleGaps = this.getScaleGaps(otherNumScalesStart);
+      const endScaleGaps = this.getScaleGaps(otherNumScalesEnd);
+
+      if (
+        !(startScaleGaps.length === 0 && endScaleGaps.length === 0) // no issues if no padding on either position
+        && JSON.stringify(startScaleGaps) !== JSON.stringify(endScaleGaps) // mismatch
+      ) {
+        throw new Error(`You tried to draw a border or origin on an ${axis.curr()} axis, ` +
+        `but the corresponding start and end ${axis.other()}-axes have different placements or sizes ` +
+        `so we cannot draw the perpendicular line safely. Check that their innerPadding configurations match.`);
+      }
+    }
+
+    // Now iterate over the numerical scales and draw a line segment for each.
+
+    // Recall that either the start or end position may be an empty array.
+    // Use the first one that is non-empty - we are equanimous between start and end,
+    // since by now we know that the inner padding gaps are the same for each position.
+    const otherNumScales = otherNumScalesStart.length > 0 ? otherNumScalesStart : otherNumScalesEnd;
+    otherNumScales.forEach(s => {
+      this.coreLayers[CoreLayer.BaseLayer].append("g").append("line")
+        .attr(`${axis.curr()}1`, valueSC)
+        .attr(`${axis.curr()}2`, valueSC)
+        .attr(`${axis.other()}1`, s.range()[0])
+        .attr(`${axis.other()}2`, s.range()[1])
+        .style("stroke", color).style("stroke-width", strokeWidthPx);
+    });
+  };
+
+  // Get the "negative spaces" from a list of numerical scales,
+  // i.e., the gaps between the ranges.
+  private getScaleGaps = (scales: ScaleNumeric[]) => {
+    return scales.map((s, i) => {
+      if (i === 0) return null;
+      const prevRange = scales[i - 1].range();
+      return [prevRange[1], s.range()[0]] as [number, number];
+    }).filter((gap) => !!gap).filter(([a, b]) => {
+      // Filter out 'gaps' of width 0.
+      return a !== b;
+    });
+  };
 
   // TODO
   // private drawMathJaxTicks = (
@@ -271,59 +225,6 @@ export class AxesLayer extends Layer {
   //       const foreignObject = sn.parentElement! as unknown as SVGForeignObjectElement;
   //       foreignObject.x.baseVal.value = - width / 2;
   //     });
-  //   });
-  // };
-
-  // Draw a line perpendicular to the specified axis at the given position in data coordinates.
-  // This line will be made up of 1 or more segments, since if the other axis is categorical,
-  // inter-segment gaps are required for skipping over the padding of the categorical bands.
-  // private drawPerpendicularLine = (
-  //   axis: XorY,
-  //   numScale: ScaleNumeric,
-  //   addZoom: boolean,
-  //   positionDC: number,
-  //   strokeWidthPx: number = 1,
-  //   color: string = "black",
-  // ) => {
-  //   if (this.prevOutput.configState.scales.config[axis].log && positionDC <= 0) {
-  //     // Cannot draw a line at a non-positive position on a log scale.
-  //     return;
-  //   }
-  //
-  //   const positionSC = numScale(positionDC);
-  //   const [minSC, maxSC] = numScale.range().sort((a, b) => a - b);
-  //   // If outside of range, don't draw the line. Otherwise we might draw a line onto another band.
-  //   if (positionSC < minSC || positionSC > maxSC) return;
-  //
-  //   // Get all the numerical scales for the other axis, termed the 'foreign axis'.
-  //   // Categorical axes contain multiple numerical scales; non-categorical axes contain exactly one.
-  //   const foreignAxis = axis === "x" ? "y" : "x";
-  //   const foreignMainScale = this.prevOutput.configState.scales[foreignAxis];
-  //   const foreignNumScales: ScaleNumeric[] =
-  //     "categories" in foreignMainScale
-  //       ? Object.values(foreignMainScale.categories)
-  //       : [foreignMainScale];
-  //
-  //   foreignNumScales.forEach(scale => {
-  //     const lineSegment = this.coreLayers[CoreLayer.BaseLayer].append("g").append("line")
-  //       .attr(`${axis}1`, positionSC)
-  //       .attr(`${axis}2`, positionSC)
-  //       .attr(`${foreignAxis}1`, scale.range()[0])
-  //       .attr(`${foreignAxis}2`, scale.range()[1])
-  //       .style("stroke", color).style("stroke-width", strokeWidthPx);
-  //
-  //     if (addZoom) {
-  //       const zoom = async () => {
-  //         const newPositionSC = numScale(positionDC);
-  //         await lineSegment.transition()
-  //           .duration(animationDuration)
-  //           .attr(`${axis}1`, newPositionSC)
-  //           .attr(`${axis}2`, newPositionSC)
-  //           .style("stroke-width", strokeWidthPx)
-  //           .end();
-  //       };
-  //       this.zoomCallbacks.push(zoom);
-  //     }
   //   });
   // };
 }

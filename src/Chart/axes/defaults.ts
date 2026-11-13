@@ -4,7 +4,8 @@ import { AxisConfiguration, BaseAxisConfiguration, TickConfig } from "./types";
 const baseAxisConfiguration: BaseAxisConfiguration = {
   show: true,
   label: { text: "", translate: 0 },
-  translate: 0
+  translate: 0,
+  border: { strokeWidth: 0 },
 };
 
 const defTickCfg = {

@@ -9,11 +9,15 @@
         placeholder="Select chart types"
       />
     </div>
-    <!-- Toggle log scale for each axis -->
     <div v-for="axis in ['x', 'y']" :key="axis">
+      <h3>{{ axis.toUpperCase() }}-axis config</h3>
       <label>
         <input type="checkbox" v-model="logScale[axis]" />
-        Log scale {{ axis.toUpperCase() }}-axis
+        Log scale
+      </label>
+      <label>
+        <input type="checkbox" v-model="drawOrigin[axis]" />
+        Draw origin
       </label>
     </div>
   </div>
@@ -90,6 +94,7 @@ const mathJaxChart = ref<HTMLDivElement | null>(null);
 const stressTestChart = ref<HTMLDivElement | null>(null);
 
 const logScale = ref({ x: false, y: false });
+const drawOrigin = ref({ x: true, y: true });
 
 enum ChartType {
   Numerical = "numerical",
@@ -180,16 +185,16 @@ const renderChart = (chartType: ChartType) => {
       .registerLines(lines)
       .startConfig()
       .configureAxes({
-        x: { start: [{ label: { text: "Time", translate: 20 } }] },
-        y: { start: [{ label: { text: "Value", translate: 20 } }] },
+        x: { start: [{ label: { text: "Time", translate: 20 }, drawOrigin: drawOrigin.value.x }] },
+        y: { start: [{ label: { text: "Value", translate: 20 }, drawOrigin: drawOrigin.value.y, border: { strokeWidth: 0.5 } }] },
       })
       .configureDomain({
-        x: { start: [{ domain: [extents.x.lower, extents.x.upper] }] },
-        y: { start: [{ domain: [extents.y.lower, extents.y.upper] }] }
+        x: { start: [[extents.x.lower, extents.x.upper]] },
+        y: { start: [[extents.y.lower, extents.y.upper]] }
       })
       .configureTicks({
-        x: { start: [{ tick: { size: 10, translate: 10, count: 4 } }] },
-        y: { start: [{ tick: { size: 10, translate: 10 } }] }
+        x: { start: [{ size: 10, translate: 10, count: 4 }] },
+        y: { start: [{ size: 10, translate: 10 }] }
       })
       .startVisual()
       .addAxes()
@@ -211,6 +216,8 @@ const renderChart = (chartType: ChartType) => {
       ][i % 4];
     });
 
+    const globalTickConfig = { size: 0, translate: 10 };
+
     ChartNew.start()
       .xBottom().numerical()
       .xTop().numerical()
@@ -223,33 +230,27 @@ const renderChart = (chartType: ChartType) => {
       .startConfig()
       .configureAxes({
         x: {
-          start: [{ label: { text: "Time", translate: 20 } }],
-          end: [{ label: { text: "Space", translate: 20 } }],
+          start: [{ label: { text: "Time", translate: 20 }, drawOrigin: drawOrigin.value.x }],
+          end: [{ label: { text: "Space", translate: 20 }, drawOrigin: drawOrigin.value.x }],
         },
         y: {
-          start: [{ label: { text: "Value", translate: 20 } }],
-          end: [{ label: { text: "Amount", translate: 20 } }],
+          start: [{ label: { text: "Value", translate: 20 }, drawOrigin: drawOrigin.value.y }],
+          end: [{ label: { text: "Amount", translate: 20 }, drawOrigin: drawOrigin.value.y }],
         },
       })
       .configureDomain({
         x: {
-          start: [{ domain: [extents.x.lower, extents.x.upper] }],
-          end: [{ domain: [-2, 1] }] // Unequal to ensure origin line does not overlap
+          start: [[extents.x.lower, extents.x.upper]],
+          end: [[-2, 1]] // Unequal to ensure origin line does not overlap
         },
         y: {
-          start: [{ domain: [extents.y.lower, extents.y.upper] }],
-          end: [{ domain: [-200, 100] }] // Unequal to ensure origin line does not overlap
+          start: [[extents.y.lower, extents.y.upper]],
+          end: [[-200, 100]] // Unequal to ensure origin line does not overlap
         },
       })
       .configureTicks({
-        x: {
-          start: [{ tick: { size: 10, translate: 10 } }],
-          end: [{ tick: { size: 10, translate: 10 } }],
-        },
-        y: {
-          start: [{ tick: { size: 10, translate: 10 } }],
-          end: [{ tick: { size: 10, translate: 10 } }],
-        }
+        x: { start: [globalTickConfig], end: [globalTickConfig] },
+        y: { start: [globalTickConfig], end: [globalTickConfig] },
       })
       .startVisual()
       .addAxes()
@@ -276,24 +277,24 @@ const renderChart = (chartType: ChartType) => {
       .configureAxes({
         x: { start: [
           { label: { text: "X category", translate: 7 }, innerPadding: 0.2 },
-          { label: { text: "X numerical label", translate: 20 } },
+          { label: { text: "X numerical label", translate: 20 }, drawOrigin: drawOrigin.value.x, border: { strokeWidth: 1 } },
         ] },
         y: { start: [
           { label: { text: "Y category", translate: 25 }, innerPadding: 0.25 },
-          { label: { text: "Y numerical label", translate: 5 } }
+          { label: { text: "Y numerical label", translate: 5 }, drawOrigin: drawOrigin.value.y, border: { strokeWidth: 1 } }
         ] },
       })
       .configureDomain({
-        x: { start: [{ domain: xCategories }, { domain: [extents.x.lower, extents.x.upper] }] },
-        y: { start: [{ domain: yCategories }, { domain: [extents.y.lower, extents.y.upper] }] }
+        x: { start: [xCategories, [extents.x.lower, extents.x.upper]] },
+        y: { start: [yCategories, [extents.y.lower, extents.y.upper]] }
       })
       .configureTicks({
         x: { start: [
-          { tick: { formatter: (v) => v.toLowerCase(), translate: 15 }, },
-          { tick: { count: 3 } }
+          { formatter: (v) => v.toLowerCase(), translate: 15 },
+          { count: 3 }
         ] },
         y: { start: [
-          { tick: { formatter: (v) => v.toUpperCase(), translate: 40 } }, {}
+          { formatter: (v) => v.toUpperCase(), translate: 40 }, {}
         ] },
       })
       .startVisual()
@@ -321,20 +322,20 @@ const renderChart = (chartType: ChartType) => {
       .configureAxes({
         x: { start: [
           { label: { text: "X category", translate: 7 }, innerPadding: 0.2 },
-          { label: { text: "X numerical label", translate: 20 } },
+          { label: { text: "X numerical label", translate: 20 }, drawOrigin: drawOrigin.value.x, border: { strokeWidth: 1 } },
         ] },
         y: { start: [
-          { label: { text: "Y numerical label", translate: 5 } }
+          { label: { text: "Y numerical label", translate: 5 }, drawOrigin: drawOrigin.value.y }
         ] },
       })
       .configureDomain({
-        x: { start: [{ domain: xCategories }, { domain: [extents.x.lower, extents.x.upper] }] },
-        y: { start: [{ domain: [extents.y.lower, extents.y.upper] }] }
+        x: { start: [xCategories, [extents.x.lower, extents.x.upper]] },
+        y: { start: [[extents.y.lower, extents.y.upper]] }
       })
       .configureTicks({
         x: { start: [
-          { tick: { formatter: (v) => v.toLowerCase(), translate: 15 } },
-          { tick: { count: 3 } }
+          { formatter: (v) => v.toLowerCase(), translate: 15 },
+          { count: 3 }
         ] }
       })
       .startVisual()
@@ -361,23 +362,23 @@ const renderChart = (chartType: ChartType) => {
       .startConfig()
       .configureAxes({
         x: { start: [
-          { label: { text: "X numerical label", translate: 20 } },
+          { label: { text: "X numerical label", translate: 20 }, drawOrigin: drawOrigin.value.x },
         ] },
         y: { start: [
           { label: { text: "Y category", translate: 25 }, innerPadding: 0.25 },
-          { label: { text: "Y numerical label", translate: 5 } }
+          { label: { text: "Y numerical label", translate: 5 }, drawOrigin: drawOrigin.value.y }
         ] },
       })
       .configureDomain({
-        x: { start: [{ domain: [extents.x.lower, extents.x.upper] }] },
-        y: { start: [{ domain: yCategories }, { domain: [extents.y.lower, extents.y.upper] }] }
+        x: { start: [[extents.x.lower, extents.x.upper]] },
+        y: { start: [yCategories, [extents.y.lower, extents.y.upper]] }
       })
       .configureTicks({
         x: { start: [
-          { tick: { count: 3 } }
+          { count: 3 }
         ] },
         y: { start: [
-          { tick: { formatter: (v) => v.toUpperCase(), translate: 40 } }, {}
+          { formatter: (v) => v.toUpperCase(), translate: 30 }, {}
         ] },
       })
       .startVisual()
@@ -429,20 +430,20 @@ const renderChart = (chartType: ChartType) => {
       .configureAxes({
         x: { start: [
           { label: { text: "X category", translate: 20 }, innerPadding: 0.2 },
-          { label: { text: "X numerical label", translate: 40 } }
+          { label: { text: "X numerical label", translate: 40 }, drawOrigin: drawOrigin.value.x }
         ]},
         y: {
-          start: [{ label: { text: "Y numerical label", translate: 5 } }],
-          end: [{ label: { text: "Y numerical label", translate: 5 } }]
+          start: [{ label: { text: "Y numerical label", translate: 5 }, drawOrigin: drawOrigin.value.y }],
+          end: [{ label: { text: "Y numerical label", translate: 5 }, drawOrigin: drawOrigin.value.y }]
         }
       })
       .configureDomain({
-        x: { start: [{ domain: xCategories }, { domain: [extents.x.lower, extents.x.upper] }] },
-        y: { start: [{ domain: [extents.y.lower, extents.y.upper] }], end: [{ domain: [yRightDomain.min, yRightDomain.max] }] }
+        x: { start: [xCategories, [extents.x.lower, extents.x.upper]] },
+        y: { start: [[extents.y.lower, extents.y.upper]], end: [[yRightDomain.min, yRightDomain.max]] }
       })
       .configureTicks({
-        x: { start: [{ tick: { size: 0, translate: 25 } }, { tick: { count: 2, translate: 4 } }] },
-        y: { start: [{ tick: { size: 0 } }], end: [{ tick: { size: 0 } }] },
+        x: { start: [{ size: 0, translate: 25 }, { count: 2, translate: 4 }] },
+        y: { start: [{ size: 0 }], end: [{ size: 0 }] },
       })
       .startVisual()
       .addAxes()
@@ -484,8 +485,8 @@ const drawStressChart = () => {
     })
     .configureLines({ RDPEpsilon: 1 })
     .configureDomain({
-      x: { start: [{ domain: [extents.x.lower, extents.x.upper] }] },
-      y: { start: [{ domain: [extents.y.lower, extents.y.upper] }] }
+      x: { start: [[extents.x.lower, extents.x.upper]] },
+      y: { start: [[extents.y.lower, extents.y.upper]] }
     })
     .startVisual()
     .addAxes()
@@ -500,7 +501,7 @@ watch(selectedChartTypes, (newChartTypes) => {
   flush: "post", // Ensure v-if container refs update before we attempt to render charts
 });
 
-watch(logScale, () => {
+watch([logScale, drawOrigin], () => {
   // renderMathJaxChart();
   selectedChartTypes.value.forEach(renderChart);
 }, { deep: true });
