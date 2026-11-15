@@ -10,7 +10,7 @@ import {
 import { End } from "../end/End";
 import { CurrFlags as PrevFlags, CurrOutput as PrevOutput } from "../visual/types";
 import { ChartType } from "../axes/types";
-import { ZoomLayer } from "./layers/ZoomLayer";
+import { ZoomLayer, ZoomOptions } from "./layers/ZoomLayer";
 
 export class Interactive<CType extends ChartType, Flags extends CurrFlags> {
   private interactiveLayers: InteractiveLayers = {
@@ -26,8 +26,10 @@ export class Interactive<CType extends ChartType, Flags extends CurrFlags> {
     return new Interactive<CType, NewFlags>(prevOutput) as This<CType, NewFlags>
   };
 
-  addZoom() {
-    this.interactiveLayers[InteractiveLayer.Zoom] = new ZoomLayer(this.prevOutput);
+  addZoom(options: ZoomOptions = {}) {
+    this.interactiveLayers[InteractiveLayer.Zoom] = new ZoomLayer(
+      this.prevOutput, options
+    );
     return this as This<CType, Flags>;
   };
 
