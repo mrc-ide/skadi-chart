@@ -67,6 +67,7 @@ export class ZoomLayer extends Layer {
       // 1D zoom if the selection has similar x or y coordinates
       .style("opacity", 0)
       .call(d3Brush);
+    d3Brush.filter(() => !this.zooming);
 
     // below is the overlay mask that is the entire graph view, the selection
     // mask which is a rectangle that is the shape of the current user selection

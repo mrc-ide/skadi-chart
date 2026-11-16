@@ -89,7 +89,7 @@ export class ScalesLayer extends PredrawLayer {
       const cfg = remainingArr[0];
 
       if (cfg.type === "numerical") {
-        scales.scale = d3.scaleLinear()
+        scales.scale = (cfg.log ? d3.scaleLog() : d3.scaleLinear())
           .domain(cfg.domain)
           .range(range);
       } else if (cfg.type === "categorical") {

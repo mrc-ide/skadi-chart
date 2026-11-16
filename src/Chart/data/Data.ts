@@ -24,6 +24,8 @@ export class Data<CType extends ChartType, Flags extends CurrFlags> {
     return new Data<T, DefaultCurrFlags>(prevOutput) as This<T, DefaultCurrFlags>;
   };
 
+  // TODO validate all points of lines, scatterPoints and bars for negative value
+  // if log axis is on. Not sure if this is worth it
   registerLines = (lines: Lines) => {
     this.lines.push(...lines);
     type NewFlags = MixNewFlags<CurrFlags, Flags, { hasLines: true }>;
