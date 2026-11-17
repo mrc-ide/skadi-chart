@@ -80,7 +80,7 @@ export type PartialMakeChartArgs<
 
 type AxesFunc = IsAxesFunc<{
   numerical: DeepPartialRecord<
-    Pick<ConfigurableNumAxis, keyof BaseAxisConfiguration | "drawOrigin">
+    Pick<ConfigurableNumAxis, keyof BaseAxisConfiguration | "drawOrigin" | "log">
   >,
   categorical: DeepPartialRecord<
     Pick<ConfigurableCatAxis, keyof BaseAxisConfiguration | "innerPadding">

@@ -12,7 +12,7 @@ import {
 } from "./types";
 import { CurrFlags as PrevFlags, CurrOutput as PrevOutput } from "@/Chart/data/types";
 import { Visual } from "../visual/Visual";
-import { mergeChartArgs } from "./utils";
+import { mergeChartArgs, validateDomainLog } from "./utils";
 import { ChartType } from "../axes/types";
 
 export class Config<CType extends ChartType, Flags extends CurrFlags> {
@@ -39,6 +39,7 @@ export class Config<CType extends ChartType, Flags extends CurrFlags> {
 
   configureDomain(args: DomainArgs<CType>) {
     mergeChartArgs(this.prevOutput.chartCfg, args);
+    validateDomainLog(this.prevOutput);
     type NewFlags = MixNewFlags<CurrFlags, Flags, { hasConfiguredDomain: true }>
     return this as This<CType, NewFlags>;
   };

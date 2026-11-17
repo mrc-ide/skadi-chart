@@ -29,6 +29,7 @@ export const defNumAxis: AxisConfiguration = {
   type: "numerical" as const,
   domain: [],
   drawOrigin: true,
+  log: false,
   tick: defNumTickCfg,
   ...baseAxisConfiguration,
 };

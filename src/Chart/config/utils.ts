@@ -1,6 +1,8 @@
 import { DeepPartialRecord, Prettify, XY } from "@/types";
 import { doXYStartEnd } from "@/helpers";
-import { ChartConfig, StartEnd } from "../axes/types";
+import { ChartConfig, ChartType, StartEnd } from "../axes/types";
+import { DomainArgs } from "./types";
+import { CurrOutput as PrevOutput } from "@/Chart/data/types";
 
 type Dict = Record<string, unknown>
 
@@ -86,5 +88,26 @@ export const mergeChartArgs = (
     posCfg.forEach(
       (cfg, i) => deepAssignRecordIfDefined(chart[ax][pos][i], cfg)
     );
+  });
+};
+
+export const validateDomainLog = (prevOutput: PrevOutput) => {
+  doXYStartEnd((ax, pos) => {
+    const cfgArr = prevOutput.chartCfg[ax][pos];
+    if (cfgArr.length === 0) return;
+
+    // check no <= 0 domains
+    const lastCfg = cfgArr.at(-1)!;
+    if (lastCfg.type === "numerical" && lastCfg.log) {
+      lastCfg.domain.forEach(c => {
+        if (c <= 0) {
+          throw new Error(
+            `You have specified a log numerical ${ax}-axis in the `
+            + `${pos} position but provided a non-positive domain `
+            + `value of ${c}`
+          );
+        }
+      })
+    }
   });
 };
