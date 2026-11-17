@@ -1,6 +1,6 @@
 import { DeepPartialRecord, Prettify, XY } from "@/types";
-import { doXYStartEnd, makeObjXY, makeObjXYStartEnd } from "@/helpers";
-import { AxisConfiguration, ChartSettings, ChartType, StartEnd } from "../axes/types";
+import { doXYStartEnd } from "@/helpers";
+import { ChartConfig, StartEnd } from "../axes/types";
 
 type Dict = Record<string, unknown>
 
@@ -73,7 +73,7 @@ type PartialObj = Partial<XY<
 >>
 
 export const mergeChartArgs = (
-  chart: ChartSettings,
+  chart: ChartConfig,
   partial: PartialObj,
 ) => {
   doXYStartEnd((ax, pos) => {
@@ -83,37 +83,8 @@ export const mergeChartArgs = (
     const posCfg = axCfg[pos];
     if (!posCfg) return;
 
-    posCfg.forEach((cfg, i) => {
-      deepAssignRecordIfDefined(chart[ax][pos][i], cfg)
-    });
-  });
-};
-
-/*
-Allows user interface to omit intermediate keys which are orphaned and hence redundant:
-
-.configureTicks({ x: { start: [{ size: 10 }] } })
-
-instead of:
-
-.configureTicks({ x: { start: [{ tick: { size: 10 } }] } })
-
-This saves repetition across multiple axes and positions.
-*/
-export const mergeChartArgsAt = (
-  chart: ChartSettings,
-  partial: PartialObj,
-  key: keyof AxisConfiguration
-) => {
-  doXYStartEnd((ax, pos) => {
-    const axCfg = partial[ax];
-    if (!axCfg) return;
-    
-    const posCfg = axCfg[pos];
-    if (!posCfg) return;
-
-    posCfg.forEach((cfg, i) => {
-      deepAssignRecordIfDefined(chart[ax][pos][i], { [key]: cfg })
-    });
+    posCfg.forEach(
+      (cfg, i) => deepAssignRecordIfDefined(chart[ax][pos][i], cfg)
+    );
   });
 };

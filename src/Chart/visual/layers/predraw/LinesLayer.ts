@@ -3,9 +3,6 @@ import { CurrOutput as PrevOutput } from "@/Chart/config/types";
 import { PredrawLayer, ZoomProperties } from "./PredrawLayer";
 import { ScalesLayer } from "./ScalesLayer";
 import { ChartConfig, StartEnd } from "@/Chart/axes/types";
-import { AxesConfig } from "@/Chart/axes/types";
-import { ChartConfig } from "@/Chart/axes/types";
-import { ChartSettings } from "@/Chart/axes/types";
 import { userAxisToAxPos } from "@/Chart/axes/utils";
 import { Point, ScaleNumeric, XY } from "@/types";
 import { CurrState as PrevState } from "@/Chart/config/types";
@@ -48,15 +45,15 @@ export class LinesLayer extends PredrawLayer {
     private scalesLayer: ScalesLayer,
   ) {
     super();
-    const { dataState, chartSettings } = this.prevOutput;
-    this.lines = this.filterLines(dataState.lines, chartSettings);
+    const { dataState, chartCfg } = this.prevOutput;
+    this.lines = this.filterLines(dataState.lines, chartCfg);
     this.updateLowResLinesSC();
   };
 
   // Filter lines to exclude points with values <= 0 on a log axis.
   // If there are points in the line with values <= 0 then we split up the line into
   // segments, missing out the points with values <= 0.
-  private filterLines = (lines: Lines, chart: ChartSettings) => {
+  private filterLines = (lines: Lines, chart: ChartConfig) => {
     // TODO need to refactor once log has been added to options
     return lines;
     // let filteredLines = lines;

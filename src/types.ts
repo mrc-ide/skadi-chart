@@ -11,6 +11,11 @@ export type SkadiPoint = XY<(string | number)[]>
 
 
 
+export type CategoricalChartType = "categoricalX" | "categoricalY" | "categoricalXY"
+export type ChartType = "default" | CategoricalChartType
+
+
+
 export type HasAllKeys<
   Keys extends string | number | symbol,
   T extends Record<Keys, any>

@@ -62,7 +62,6 @@ export type BaseAxisConfiguration = {
   show: boolean,
   label: { text: string, translate: number },
   translate: number,
-  border: { strokeWidth: number },
 }
 
 export type ConfigurableNumAxis = {
@@ -92,7 +91,7 @@ export type StartEnd<T> = Record<StartOrEnd, T>
 
 export type AxesLevels = AxisConfiguration[]
 export type ChartType = XY<StartEnd<AxisType[]>>
-export type ChartSettings = XY<StartEnd<AxesLevels>>
+export type ChartConfig = XY<StartEnd<AxesLevels>>
 export type DefaultChartType = Prettify<XY<StartEnd<[]>>>
 
 
@@ -146,5 +145,5 @@ export type NumericalOn<
 
 
 export type CurrOutput = {
-  chartSettings: ChartSettings
+  chartCfg: ChartConfig
 }
