@@ -99,7 +99,7 @@ export const validateDomainLog = (prevOutput: PrevOutput) => {
     // check no <= 0 domains
     const lastCfg = cfgArr.at(-1)!;
     if (lastCfg.type === "numerical" && lastCfg.log) {
-      lastCfg.domain.map(c => {
+      lastCfg.domain.forEach(c => {
         if (c <= 0) {
           throw new Error(
             `You have specified a log numerical ${ax}-axis in the `
