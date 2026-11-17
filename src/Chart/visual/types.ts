@@ -7,6 +7,7 @@ import { LinesLayer } from "./layers/predraw/LinesLayer"
 import { ScalesLayer } from "./layers/predraw/ScalesLayer"
 import { ChartType } from "../axes/types"
 import { BarsLayer } from "./layers/BarsLayer"
+import { CustomLayer } from "./layers/CustomLayer"
 
 
 
@@ -77,6 +78,7 @@ export type CurrState = {
   coreLayers: CoreLayers,
   visualLayers: VisualLayers
   predrawLayers: PredrawLayers,
+  customLayer: CustomLayer,
 }
 
 export type CurrOutput = {
