@@ -52,7 +52,9 @@ export class ZoomLayer extends Layer {
     const { bounds, getHtmlId } = this.prevOutput.baseState;
     const { x: xInner, y: yInner } = getInner(bounds);
 
-    const { coreLayers, predrawLayers, visualLayers } = this.prevOutput.visualState;
+    const {
+      coreLayers, predrawLayers, visualLayers, customLayer
+    } = this.prevOutput.visualState;
     const svg = coreLayers[CoreLayer.Svg];
     const baseLayer = coreLayers[CoreLayer.BaseLayer];
     
@@ -116,6 +118,7 @@ export class ZoomLayer extends Layer {
     d3Brush.on("start", () => {
       Object.values(predrawLayers).forEach(l => l?.brushStart());
       Object.values(visualLayers).forEach(l => l?.brushStart());
+      customLayer.brushStart();
     });
     d3Brush.on("brush", this.handleBrushMove);
     d3Brush.on("end", this.handleBrushEnd);
@@ -183,17 +186,20 @@ export class ZoomLayer extends Layer {
     if (this.zooming) return;
     this.zooming = true;
 
-    const { predrawLayers, visualLayers } = this.prevOutput.visualState;
+    const { predrawLayers, visualLayers, customLayer } = this.prevOutput.visualState;
     Object.values(predrawLayers).forEach(l => l?.beforeZoom(zoomProperties));
     Object.values(visualLayers).forEach(l => l?.beforeZoom(zoomProperties));
+    customLayer.beforeZoom(zoomProperties);
 
     const promises: Promise<void>[] = [];
     Object.values(predrawLayers).forEach(l => l && promises.push(l.zoom(zoomProperties)));
     Object.values(visualLayers).forEach(l => l && promises.push(l.zoom(zoomProperties)));
+    promises.push(customLayer.zoom(zoomProperties));
     await Promise.all(promises);
 
     Object.values(predrawLayers).forEach(l => l?.afterZoom(zoomProperties));
     Object.values(visualLayers).forEach(l => l?.afterZoom(zoomProperties));
+    customLayer.afterZoom(zoomProperties);
     this.zooming = false;
   };
 
@@ -205,10 +211,11 @@ export class ZoomLayer extends Layer {
       .attr("width", 0)
       .attr("height", 0);
 
-    const { predrawLayers, visualLayers } = this.prevOutput.visualState;
+    const { predrawLayers, visualLayers, customLayer } = this.prevOutput.visualState;
     if (!e.selection) {
       Object.values(predrawLayers).forEach(l => l?.afterZoom(null));
       Object.values(visualLayers).forEach(l => l?.afterZoom(null));
+      customLayer.afterZoom(null);
       return;
     }
 
@@ -223,6 +230,7 @@ export class ZoomLayer extends Layer {
     if (Math.abs(x0 - x1) < zoomMinPixelThreshold || Math.abs(y0 - y1) < zoomMinPixelThreshold) {
       Object.values(predrawLayers).forEach(l => l?.afterZoom(null));
       Object.values(visualLayers).forEach(l => l?.afterZoom(null));
+      customLayer.afterZoom(null);
       return;
     };
 

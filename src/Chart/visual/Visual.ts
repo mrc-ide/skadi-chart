@@ -21,6 +21,8 @@ import { LinesLayer } from "./layers/predraw/LinesLayer";
 import { ScalesLayer } from "./layers/predraw/ScalesLayer";
 import { ChartType } from "../axes/types";
 import { BarsLayer } from "./layers/BarsLayer";
+import { CustomHookArgs, CustomHooks, CustomLayer } from "./layers/CustomLayer";
+import { objKeys } from "../config/utils";
 
 export class Visual<CType extends ChartType, Flags extends CurrFlags> {
   private coreLayers: CoreLayers;
@@ -35,6 +37,13 @@ export class Visual<CType extends ChartType, Flags extends CurrFlags> {
   private predrawLayers: PredrawLayers = {
     [PredrawLayer.Scales]: null,
     [PredrawLayer.Lines]: null,
+  };
+  private customHooks: CustomHooks = {
+    drawHook: [],
+    bushStartHook: [],
+    beforeZoomHook: [],
+    zoomHook: [],
+    afterZoomHook: [],
   };
 
   private constructor(private prevOutput: PrevOutput) {
@@ -117,11 +126,25 @@ export class Visual<CType extends ChartType, Flags extends CurrFlags> {
     return this as This<CType, NewFlags>;
   };
 
+  addCustomHooks(args: CustomHookArgs) {
+    objKeys(args).forEach(k => {
+      this.customHooks[k].push(args[k] as any)
+    });
+    type NewFlags = MixNewFlags<CurrFlags, Flags, {}>
+    return this as This<CType, NewFlags>;
+  };
+
   startInteractive() {
     const visualState: CurrState = {
       coreLayers: this.coreLayers,
       visualLayers: this.visualLayers,
       predrawLayers: this.predrawLayers,
+      customLayer: new CustomLayer(
+        this.prevOutput,
+        this.coreLayers,
+        this.predrawLayers,
+        this.customHooks,
+      ),
     };
     const output = {
       ...this.prevOutput,

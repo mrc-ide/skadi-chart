@@ -32,7 +32,7 @@
       <div class="chart" ref="categoricalYChart" id="categoricalYChart"></div>
     </div>
     <div v-if="selectedChartTypes.includes(ChartType.CategoricalYLog)">
-      <h2>Categorical y-axis with log numerical</h2>
+      <h2>Categorical y-axis, log numerical and custom hook</h2>
       <div class="chart" ref="categoricalYLogChart" id="categoricalYLogChart"></div>
     </div>
     <div v-if="selectedChartTypes.includes(ChartType.CategoricalLine)">
@@ -454,6 +454,13 @@ const renderChart = (chartType: ChartType) => {
       .startVisual()
       .addAxes()
       .addTraces()
+      .addCustomHooks({
+        drawHook: () => console.log("drawing"),
+        bushStartHook: () => console.log("brush start"),
+        beforeZoomHook: () => console.log("before zoom"),
+        zoomHook: async () => console.log("zoom"),
+        afterZoomHook: () => console.log("after zoom"),
+      })
       .startInteractive()
       .addZoom()
       .end();
