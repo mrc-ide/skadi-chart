@@ -38,7 +38,7 @@ export class ZoomLayer extends Layer {
     if (isAxisCategorical.x && isAxisCategorical.y) {
       throw new Error(
         "You have tried to add the zoom layer for a chart that "
-        + "cannot zoom in either axis bexause both x and y are "
+        + "cannot zoom in either axis because both x and y are "
         + "categorical"
       );
     }
