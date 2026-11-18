@@ -12,7 +12,7 @@
     <!-- Toggle log scale for each axis -->
     <div v-for="axis in ['x', 'y']" :key="axis">
       <label>
-        <input type="checkbox" v-model="logScale[axis]" />
+        <input type="checkbox" v-model="logScale[axis as XorY]" />
         Log scale {{ axis.toUpperCase() }}-axis
       </label>
     </div>
@@ -90,6 +90,7 @@ import type { Option } from "vue3-select-component";
 import VueSelect from "vue3-select-component";
 import { onMounted, ref, watch } from "vue";
 import { Axes as ChartNew } from "../Chart/axes/Axes";
+import { XorY } from "@/types";
 
 const numericalChart = ref<HTMLDivElement | null>(null);
 const numericalDoubledChart = ref<HTMLDivElement | null>(null);
@@ -326,7 +327,6 @@ const renderChart = (chartType: ChartType) => {
       .addAxes()
       .addTraces()
       .startInteractive()
-      .addZoom()
       .end();
     break;
   case ChartType.CategoricalX:

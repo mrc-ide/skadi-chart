@@ -3,9 +3,13 @@ import { Layer } from "@/Chart/visual/layers/Layer";
 import { CoreLayer, PredrawLayer, CurrOutput as PrevOutput } from "@/Chart/visual/types";
 import { getInner } from "@/Chart/html/utils";
 import { InteractiveLayer } from "../types";
-import { D3Selection, Point, ScaleNumeric } from "@/types";
-import { makeObjXYStartEnd } from "@/helpers";
+import { D3Selection, Point, ScaleNumeric, XorY } from "@/types";
+import { doStartEnd, doXY, doXYStartEnd, makeObjXY, makeObjXYStartEnd } from "@/helpers";
 import { ZoomProperties } from "@/Chart/visual/layers/predraw/PredrawLayer";
+
+export type ZoomOptions = {
+  lockAxis?: XorY,
+}
 
 export class ZoomLayer extends Layer {
   private zooming = false;
@@ -13,12 +17,37 @@ export class ZoomLayer extends Layer {
   private selectionMask: D3Selection<SVGRectElement> | null = null;
   private overlay: D3Selection<SVGRectElement> | null = null;
 
-  constructor(private prevOutput: PrevOutput) {
+  constructor(
+    private prevOutput: PrevOutput,
+    private options: ZoomOptions,
+  ) {
     super();
   };
 
   draw = () => {
-    // TODO disable zoom when categorical is enabled in any axis
+    const isAxisCategorical = makeObjXY(ax => {
+      let anyCategorical = false;
+      doStartEnd(pos => {
+        const cfgArr = this.prevOutput.chartCfg[ax][pos];
+        if (cfgArr.length === 0) return;
+        if (cfgArr.length === 1 && cfgArr[0].type === "numerical") return;
+        anyCategorical = true;
+      });
+      return anyCategorical;
+    });
+    if (isAxisCategorical.x && isAxisCategorical.y) {
+      throw new Error(
+        "You have tried to add the zoom layer for a chart that "
+        + "cannot zoom in either axis because both x and y are "
+        + "categorical"
+      );
+    }
+
+    doXY(ax => {
+      if (isAxisCategorical[ax]) {
+        this.options.lockAxis = ax;
+      }
+    });
 
     const { bounds, getHtmlId } = this.prevOutput.baseState;
     const { x: xInner, y: yInner } = getInner(bounds);
@@ -105,13 +134,11 @@ export class ZoomLayer extends Layer {
       eventType: "dblclick"
     };
 
-    // TODO add lock y and x axis
-    // if (this.options.lockAxis === "y") {
-    //   dblClickZoomProperties.y = scaleY.domain() as [number, number];
-    // }
-    // if (this.options.lockAxis === "x") {
-    //   dblClickZoomProperties.x = scaleX.domain() as [number, number];
-    // }
+    doXYStartEnd((ax, pos) => {
+      if (this.options.lockAxis === ax) {
+        dblClickZoomProperties[ax][pos] = null;
+      }
+    });
 
     svg.on("dblclick",() => this.handleZoom(dblClickZoomProperties));
   };
@@ -127,15 +154,11 @@ export class ZoomLayer extends Layer {
     const distY = Math.abs(y0 - y1);
 
     // the return value is in the form [topLeftCoord, bottomRightCoord]
-    //
-    // TODO lock x and y axis
-    // if (this.options.lockAxis === "y") {
-    //   return [[x0, margin.top], [x1, height - margin.bottom]];
-    // } else if (this.options.lockAxis === "x") {
-    //   return [[margin.left, y0], [width - margin.right, y1]];
-    // }
-
-    if (distX > zoom1dThreshold && distY <= zoom1dThreshold) {
+    if (this.options.lockAxis === "y") {
+      return [[x0, yInner.start], [x1, yInner.end]];
+    } else if (this.options.lockAxis === "x") {
+      return [[xInner.start, y0], [xInner.end, y1]];
+    } else if (distX > zoom1dThreshold && distY <= zoom1dThreshold) {
       return [[x0, yInner.start], [x1, yInner.end]];
     } else if (distX <= zoom1dThreshold && distY > zoom1dThreshold) {
       return [[xInner.start, y0], [xInner.end, y1]];
