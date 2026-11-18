@@ -8,7 +8,6 @@ import { animationDuration } from "@/Chart/interactive/constants";
 import { ZoomProperties } from "./predraw/PredrawLayer";
 
 export class TracesLayer extends Layer {
-  private zoomCallbacks: (() => Promise<void>)[] = [];
   private traces: D3Selection<SVGPathElement>[] = [];
   
   constructor(
