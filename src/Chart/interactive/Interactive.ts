@@ -3,13 +3,20 @@ import {
   CurrFlags,
   CurrOutput,
   CurrState,
-  This
+  This,
+  InteractiveLayers,
+  InteractiveLayer
 } from "./types";
 import { End } from "../end/End";
 import { CurrFlags as PrevFlags, CurrOutput as PrevOutput } from "../visual/types";
 import { ChartType } from "../axes/types";
+import { ZoomLayer } from "./layers/ZoomLayer";
 
 export class Interactive<CType extends ChartType, Flags extends CurrFlags> {
+  private interactiveLayers: InteractiveLayers = {
+    [InteractiveLayer.Zoom]: null,
+  };
+
   private constructor(private prevOutput: PrevOutput) {};
 
   static start<CType extends ChartType, PFlags extends PrevFlags>(
@@ -20,6 +27,7 @@ export class Interactive<CType extends ChartType, Flags extends CurrFlags> {
   };
 
   addZoom() {
+    this.interactiveLayers[InteractiveLayer.Zoom] = new ZoomLayer(this.prevOutput);
     return this as This<CType, Flags>;
   };
 
@@ -28,7 +36,9 @@ export class Interactive<CType extends ChartType, Flags extends CurrFlags> {
   };
 
   end() {
-    const interactiveState: CurrState = {};
+    const interactiveState: CurrState = {
+      interactiveLayers: this.interactiveLayers
+    };
     const output = {
       ...this.prevOutput,
       interactiveState,

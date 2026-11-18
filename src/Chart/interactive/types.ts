@@ -1,7 +1,8 @@
-import { Prettify } from "@/types"
+import { HasAllKeys, Prettify } from "@/types"
 import { CurrFlags as PrevFlags, CurrOutput as PrevOutput } from "../visual/types"
 import { Interactive } from "./Interactive"
 import { ChartType } from "../axes/types"
+import { ZoomLayer } from "./layers/ZoomLayer"
 
 
 
@@ -24,7 +25,17 @@ export type This<CType extends ChartType, Flags extends CurrFlags> =
 
 
 
-export type CurrState = {}
+export enum InteractiveLayer {
+  Zoom = "skadiChartZoom"
+}
+export type InteractiveLayers = HasAllKeys<InteractiveLayer, {
+  [InteractiveLayer.Zoom]: ZoomLayer | null
+}>
+
+
+export type CurrState = {
+  interactiveLayers: InteractiveLayers,
+}
 
 export type CurrOutput = {
   interactiveState: CurrState

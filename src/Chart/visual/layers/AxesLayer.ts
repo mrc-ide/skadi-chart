@@ -7,6 +7,8 @@ import { getInner } from "@/Chart/html/utils";
 import { AxisUtil, doXYStartEnd, makeObjXY, PositionUtil } from "@/helpers";
 import { Scales } from "./predraw/ScalesLayer";
 import { AxisConfiguration } from "@/Chart/axes/types";
+import { ZoomProperties } from "./predraw/PredrawLayer";
+import { animationDuration } from "@/Chart/interactive/constants";
 
 // TODO perpendicular lines with categorical borders and draw origins
 // TODO remove when adding mathjax and zoom layer
@@ -23,7 +25,7 @@ export class AxesLayer extends Layer {
     super();
   };
 
-  zoom = async () => {
+  zoom = async (_z: ZoomProperties) => {
     await Promise.all(this.zoomCallbacks.map(f => f()));
   };
 
@@ -44,6 +46,7 @@ export class AxesLayer extends Layer {
     const recurseDraw = (
       axis: AxisUtil, position: PositionUtil, path: string,
       scale: Scales, axisCfg: AxisConfiguration[] | undefined,
+      addZoom: boolean,
     ) => {
       if (!axisCfg) return;
       const [currAxisCfg, ...restAxisCfg] = axisCfg;
@@ -78,6 +81,16 @@ export class AxesLayer extends Layer {
         .call(axisCall);
       axisGElement.select(".domain").style("stroke-opacity", 0);
 
+      if (addZoom && currAxisCfg.type === "numerical") {
+        const zoom = async () => {
+          await axisGElement.transition()
+            .duration(animationDuration)
+            .call(axisCall)
+            .end();
+        };
+        this.zoomCallbacks.push(zoom);
+      }
+
       const label = this.coreLayers[CoreLayer.Svg]
         .append("text")
         .attr("text-anchor", "middle")
@@ -97,7 +110,7 @@ export class AxesLayer extends Layer {
 
       if ("categories" in scale && restAxisCfg.length) {
         Object.entries(scale.categories).forEach(([k, s]) => {
-          recurseDraw(axis, position, `${path}-${k}`, s, restAxisCfg);
+          recurseDraw(axis, position, `${path}-${k}`, s, restAxisCfg, false);
         });
       }
     };
@@ -109,7 +122,9 @@ export class AxesLayer extends Layer {
       if (!c.length) return;
       const scale = position.pick(axis.pick(scales!.scales));
       recurseDraw(
-        axis, position, `${axis.curr()}-${position.curr()}`, scale, c
+        axis, position,
+        `${axis.curr()}-${position.curr()}`, scale, c,
+        c.length === 1
       );
     });
 

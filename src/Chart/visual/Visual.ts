@@ -23,6 +23,9 @@ import { ChartType } from "../axes/types";
 
 export class Visual<CType extends ChartType, Flags extends CurrFlags> {
   private coreLayers: CoreLayers;
+  // JS objects with string keys are ordered by insertion order, this means
+  // in the zoom layer, the lifecycle hooks will be executed in the order
+  // of layers below
   private visualLayers: VisualLayers = {
     [VisualLayer.Axes]: null,
     [VisualLayer.Trace]: null,

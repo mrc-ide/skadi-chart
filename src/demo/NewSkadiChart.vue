@@ -195,6 +195,7 @@ const renderChart = (chartType: ChartType) => {
       .addAxes()
       .addTraces()
       .startInteractive()
+      .addZoom()
       .end()
     break;
   case ChartType.NumericalDoubled:
@@ -255,6 +256,7 @@ const renderChart = (chartType: ChartType) => {
       .addAxes()
       .addTraces()
       .startInteractive()
+      .addZoom()
       .end()
     break;
   case ChartType.CategoricalXY:
@@ -300,6 +302,7 @@ const renderChart = (chartType: ChartType) => {
       .addAxes()
       .addTraces()
       .startInteractive()
+      .addZoom()
       .end();
     break;
   case ChartType.CategoricalX:
@@ -341,6 +344,7 @@ const renderChart = (chartType: ChartType) => {
       .addAxes()
       .addTraces()
       .startInteractive()
+      .addZoom()
       .end();
     break;
   case ChartType.CategoricalY:
@@ -384,6 +388,7 @@ const renderChart = (chartType: ChartType) => {
       .addAxes()
       .addTraces()
       .startInteractive()
+      .addZoom()
       .end();
     break;
   case ChartType.CategoricalLine:
@@ -448,6 +453,7 @@ const renderChart = (chartType: ChartType) => {
       .addAxes()
       .addTraces()
       .startInteractive()
+      .addZoom()
       .end();
     break;
   }
@@ -491,6 +497,7 @@ const drawStressChart = () => {
     .addAxes()
     .addTraces()
     .startInteractive()
+    .addZoom()
     .end();
 };
 
