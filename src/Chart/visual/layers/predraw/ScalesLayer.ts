@@ -43,12 +43,12 @@ export class ScalesLayer extends PredrawLayer {
   };
 
   scale(ax: XorY, pos: StartOrEnd, ...args: AxisType[]) {
-    const nestedScale = this.scales[ax][pos];
-    if (!nestedScale) throw new Error("Scale does not exist");
+    const topLevelScale = this.scales[ax][pos];
+    if (!topLevelScale) throw new Error("Scale does not exist");
 
     return (point: SkadiPoint[XorY]) => {
-      let currScale = nestedScale;
-      let parentScale = nestedScale;
+      let currScale = topLevelScale;
+      let parentScale = null as Scales | null;
       let ret = 0;
 
       // TODO: need one time error checking for points so that they match
@@ -68,7 +68,7 @@ export class ScalesLayer extends PredrawLayer {
       });
 
       return {
-        coord: ret,
+        SC: ret,
         scale: currScale,
         parentScale: parentScale,
       };
@@ -103,11 +103,15 @@ export class ScalesLayer extends PredrawLayer {
         catScales.categories = {}
         const width = categoricalScale.bandwidth();
         categoricalScale.domain().forEach(c => {
+          const restArr = remainingArr.slice(1);
+          if (restArr.length === 0) return;
           const start = categoricalScale(c)!;
           const end = start + width;
           const range = axis === "x" ? [start, end] : [end, start];
+          // this empty object will be populated in the next recurse
+          // call as there is another scale available
           catScales.categories[c] = {} as any;
-          recurse(remainingArr.slice(1), catScales.categories[c], range);
+          recurse(restArr, catScales.categories[c], range);
         });
       }
     };
