@@ -20,6 +20,7 @@ import { TracesLayer } from "./layers/TracesLayer";
 import { LinesLayer } from "./layers/predraw/LinesLayer";
 import { ScalesLayer } from "./layers/predraw/ScalesLayer";
 import { ChartType } from "../axes/types";
+import { BarsLayer } from "./layers/BarsLayer";
 
 export class Visual<CType extends ChartType, Flags extends CurrFlags> {
   private coreLayers: CoreLayers;
@@ -29,6 +30,7 @@ export class Visual<CType extends ChartType, Flags extends CurrFlags> {
   private visualLayers: VisualLayers = {
     [VisualLayer.Axes]: null,
     [VisualLayer.Trace]: null,
+    [VisualLayer.Bar]: null,
   };
   private predrawLayers: PredrawLayers = {
     [PredrawLayer.Scales]: null,
@@ -96,6 +98,14 @@ export class Visual<CType extends ChartType, Flags extends CurrFlags> {
   addTraces() {
     this.visualLayers[VisualLayer.Trace] = new TracesLayer(
       this.prevOutput, this.coreLayers, this.predrawLayers[PredrawLayer.Lines]!
+    );
+    type NewFlags = MixNewFlags<CurrFlags, Flags, { hasVisualDataLayer: true }>
+    return this as This<CType, NewFlags>;
+  };
+
+  addBars() {
+    this.visualLayers[VisualLayer.Bar] = new BarsLayer(
+      this.prevOutput, this.coreLayers, this.predrawLayers
     );
     type NewFlags = MixNewFlags<CurrFlags, Flags, { hasVisualDataLayer: true }>
     return this as This<CType, NewFlags>;

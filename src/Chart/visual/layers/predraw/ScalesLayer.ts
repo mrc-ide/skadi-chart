@@ -43,11 +43,12 @@ export class ScalesLayer extends PredrawLayer {
   };
 
   scale(ax: XorY, pos: StartOrEnd, ...args: AxisType[]) {
-    const nestedScale = this.scales[ax][pos];
-    if (!nestedScale) throw new Error("Scale does not exist");
+    const topLevelScale = this.scales[ax][pos];
+    if (!topLevelScale) throw new Error("Scale does not exist");
 
     return (point: SkadiPoint[XorY]) => {
-      let currScale = nestedScale;
+      let currScale = topLevelScale;
+      let parentScale = null as Scales | null;
       let ret = 0;
 
       // TODO: need one time error checking for points so that they match
@@ -58,24 +59,20 @@ export class ScalesLayer extends PredrawLayer {
           const currS = currScale.scale as d3.ScaleBand<string>;
           // TODO does this work for y axis? or is it reversed
           ret = currS(p as string)! + currS.bandwidth() / 2;
+
+          parentScale = currScale;
           currScale = currScale.categories[p];
         } else if (args[i] === "numerical") {
           ret = (currScale.scale as ScaleNumeric)(p as number);
         }
       });
 
-      return ret;
+      return {
+        SC: ret,
+        scale: currScale,
+        parentScale: parentScale,
+      };
     };
-  };
-
-  // TODO: this doesnt need to exist if traces layer is fully generic
-  scaleNum(ax: XorY, pos: StartOrEnd) {
-    const config = this.prevOutput.chartCfg[ax][pos];
-
-    const lastCfg = config.at(-1)!;
-    if (lastCfg.type !== "numerical") throw new Error("Numerical scale does not exist");
-
-    return this.scale(ax, pos, ...config.map(c => c.type));
   };
 
   private makeScalesFromChartArray(
@@ -106,11 +103,15 @@ export class ScalesLayer extends PredrawLayer {
         catScales.categories = {}
         const width = categoricalScale.bandwidth();
         categoricalScale.domain().forEach(c => {
+          const restArr = remainingArr.slice(1);
+          if (restArr.length === 0) return;
           const start = categoricalScale(c)!;
           const end = start + width;
           const range = axis === "x" ? [start, end] : [end, start];
+          // this empty object will be populated in the next recurse
+          // call as there is another scale available
           catScales.categories[c] = {} as any;
-          recurse(remainingArr.slice(1), catScales.categories[c], range);
+          recurse(restArr, catScales.categories[c], range);
         });
       }
     };

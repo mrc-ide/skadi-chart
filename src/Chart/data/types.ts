@@ -1,12 +1,20 @@
 import { Prettify, SkadiPoint } from "@/types"
 import { Data } from "./Data"
 import { CurrOutput as PrevOutput } from "../html/types"
-import { ChartType, ExtendsAxis } from "../axes/types"
+import { AxisName, ChartType, ExtendsAxis } from "../axes/types"
 
 
 
-export type CurrFlags = { hasLines: boolean, hasPoints: boolean }
-export type DefaultCurrFlags = Prettify<{ hasLines: false, hasPoints: false }>
+export type CurrFlags = {
+  hasLines: boolean,
+  hasPoints: boolean,
+  hasBars: boolean,
+}
+export type DefaultCurrFlags = Prettify<{
+  hasLines: false,
+  hasPoints: false,
+  hasBars: false,
+}>
 
 
 
@@ -49,10 +57,28 @@ type ScatterPointConfig = {
 export type ScatterPoints = ScatterPointConfig[];
 
 
+export type BarStyle = {
+  color?: string,
+  opacity?: number,
+}
+type BarConfig = {
+  metadata?: any,
+  baseAxis: AxisName,
+  valueAxis: AxisName,
+  base: string[],
+  stack: {
+    range: number[],
+    style: BarStyle,
+  }[]
+}
+export type Bars = BarConfig[];
+
+
 
 export type CurrState = {
   lines: Lines,
-  scatterPoints: ScatterPoints
+  scatterPoints: ScatterPoints,
+  bars: Bars,
 }
 
 export type CurrOutput = {

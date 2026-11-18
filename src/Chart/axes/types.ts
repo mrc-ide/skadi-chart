@@ -4,6 +4,7 @@ import { Axes } from "./Axes"
 
 export type CurrAxis = "xBottom" | "xTop" | "yLeft" | "yRight" | "none"
 export type CurrAxisNoNone = Exclude<CurrAxis, "none">
+export type AxisName = CurrAxisNoNone
 export type ExtendsAxis<T extends CurrAxisNoNone> = T
 export type CurrFlags = {
   axis: CurrAxis
