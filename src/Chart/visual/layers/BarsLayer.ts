@@ -4,6 +4,7 @@ import { Layer } from "./Layer";
 import { CurrOutput as PrevOutput } from "@/Chart/config/types";
 import { userAxisToAxPos } from "@/Chart/axes/utils";
 import { animationDuration } from "@/Chart/interactive/constants";
+import { AxisType } from "@/Chart/axes/types";
 
 export class BarsLayer extends Layer {
   private bars: D3Selection<SVGRectElement>[][] = [];
@@ -23,12 +24,12 @@ export class BarsLayer extends Layer {
     this.prevOutput.dataState.bars.forEach((bar, barIdx) => {
       const { axis: baseAx, position: basePos } = userAxisToAxPos(bar.baseAxis);
       const baseScaleFn = scalesLayer.scale(
-        baseAx, basePos, ...bar.base.map(() => "categorical" as const)
+        baseAx, basePos, ...bar.base.map(() => "categorical" as AxisType)
       );
-      const { parentScale: baseScale, coord: baseCoord } = baseScaleFn(bar.base);
+      const { parentScale: baseScale, SC: baseSC } = baseScaleFn(bar.base);
 
-      const baseSize = (baseScale.scale as ScaleCategorical).bandwidth();
-      const baseStart = baseCoord - baseSize / 2;
+      const baseSize = (baseScale!.scale as ScaleCategorical).bandwidth();
+      const baseStart = baseSC - baseSize / 2; // half-way across the band
       const baseDistance = baseAx === "x" ? "width" : "height"
 
       const { axis: valueAx, position: valuePos } = userAxisToAxPos(bar.valueAxis);
@@ -38,13 +39,13 @@ export class BarsLayer extends Layer {
       const valueDistance = valueAx === "x" ? "width" : "height";
 
       const stackedBars = bar.stack.map((st, stIdx) => {
-        let [start, end] = st.range.map(val => valueScaleFn([val]).coord)
+        let [start, end] = st.range.map(val => valueScaleFn([val]).SC)
         const min = Math.min(start, end);
         const max = Math.max(start, end);
         start = min;
         end = max;
 
-        const size = Math.abs(start - end);
+        const size = end - start;
 
         return this.coreLayers[CoreLayer.BaseLayer].append("rect")
           .attr("id", `${getHtmlId(VisualLayer.Bar)}-${barIdx}-${stIdx}`)
@@ -72,7 +73,7 @@ export class BarsLayer extends Layer {
       const valueDistance = valueAx === "x" ? "width" : "height";
 
       bar.stack.forEach((st, stIdx) => {
-        let [start, end] = st.range.map(val => valueScaleFn([val]).coord)
+        let [start, end] = st.range.map(val => valueScaleFn([val]).SC)
         const min = Math.min(start, end);
         const max = Math.max(start, end);
         start = min;

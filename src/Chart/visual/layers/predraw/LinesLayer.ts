@@ -122,7 +122,7 @@ export class LinesLayer extends PredrawLayer {
       const scaleY = this.scalesLayer.scale("y", yPos, ...configY.map(c => c.type));
       return {
         axisNames: { x: axisNameX, y: axisNameY },
-        points: lDC.points.map(p => ({ x: scaleX(p.x).coord, y: scaleY(p.y).coord })),
+        points: lDC.points.map(p => ({ x: scaleX(p.x).SC, y: scaleY(p.y).SC })),
       };
     });
 
