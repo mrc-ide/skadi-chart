@@ -1,7 +1,7 @@
 import { DeepPartialRecord, Prettify, XorY } from "@/types"
 import { Config } from "./Config"
 import { CurrFlags as PrevFlags, CurrOutput as PrevOutput } from "../data/types"
-import { AxisConfiguration, AxisType, BaseAxisConfiguration, ChartType, ConfigurableCatAxis, ConfigurableNumAxis, StartEnd, StartOrEnd } from "../axes/types"
+import { AxisConfiguration, AxisType, BaseAxisConfiguration, ChartType, ConfigurableCatAxis, ConfigurableNumAxis, ConfigurableNumAxisOptions, StartEnd, StartOrEnd } from "../axes/types"
 
 
 
@@ -79,9 +79,7 @@ export type PartialMakeChartArgs<
 
 
 type AxesFunc = IsAxesFunc<{
-  numerical: DeepPartialRecord<
-    Omit<ConfigurableNumAxis, "domain" | "tick">
-  >,
+  numerical: DeepPartialRecord<ConfigurableNumAxisOptions>,
   categorical: DeepPartialRecord<
     Omit<ConfigurableCatAxis, "domain" | "tick">
   >,

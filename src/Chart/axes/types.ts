@@ -64,12 +64,15 @@ export type BaseAxisConfiguration = {
   translate: number,
 }
 
+export type ConfigurableNumAxisOptions = (
+  | { log: true, drawOrigin: false }
+  | { log: false, drawOrigin: boolean }
+) & BaseAxisConfiguration
+
 export type ConfigurableNumAxis = {
-  drawOrigin: boolean,
   domain: number[],
   tick: TickConfig<number>,
-  log: boolean,
-} & BaseAxisConfiguration
+} & ConfigurableNumAxisOptions
 
 export type ConfigurableCatAxis = {
   innerPadding: number,

@@ -64,8 +64,22 @@ describe("MakeChartArgs", () => {
     } ? keyof Options : never;
 
     expectTypeOf<OptionKeys>().toEqualTypeOf<
-      "show" | "label" | "translate" | "drawOrigin"
+      "show" | "label" | "translate" | "drawOrigin" | "log"
     >();
+  });
+
+  test("numerical axes must not accept drawOrigin as true when log is true", () => {
+    type Chart = {
+      x: { start: ["numerical"], end: [] },
+      y: { start: [], end: [] },
+    };
+
+    type Options = NonNullable<NonNullable<AxesArgs<Chart>["x"]>["start"]>[0];
+
+    expectTypeOf<{ log: true, drawOrigin: true }>().not.toExtend<Options>();
+    expectTypeOf<{ log: true, drawOrigin: false }>().toExtend<Options>();
+    expectTypeOf<{ log: false, drawOrigin: true }>().toExtend<Options>();
+    expectTypeOf<{ log: false, drawOrigin: false }>().toExtend<Options>();
   });
 
   test("categorical axes must not accept numerical drawOrigin", () => {

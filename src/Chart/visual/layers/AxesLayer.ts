@@ -110,9 +110,11 @@ export class AxesLayer extends Layer {
           .attr("transform-origin", `${otherAxisTr} ${inner.y.center}`)
       }
 
-      if (scaleIsNumerical(scale) && (currAxisCfg as ConfigurableNumAxis).drawOrigin) {
-        // TODO: Skip drawing an origin line if the scale is a log scale.
-        this.drawOrigin(scale, axis, addZoom);
+      if (scaleIsNumerical(scale)) {
+        const numCfg = (currAxisCfg as ConfigurableNumAxis);
+        if (numCfg.log === false && numCfg.drawOrigin) {
+          this.drawOrigin(scale, axis, addZoom);
+        }
       }
 
       if (scaleIsCategorical(scale)) {
