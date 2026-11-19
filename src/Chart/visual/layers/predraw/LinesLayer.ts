@@ -51,16 +51,16 @@ export class LinesLayer extends PredrawLayer {
     const linesSC = this.linesDC.map(lDC => {
       const axisNameX = lDC.axisName?.x || "xBottom";
       const { position: xPos } = userAxisToAxPos(axisNameX);
-      const configX = this.prevOutput.chartCfg["x"][xPos];
+      const configX = this.prevOutput.chart["x"][xPos];
       const scaleX = this.scalesLayer.scale("x", xPos, ...configX.map(c => c.type));
 
       const axisNameY = lDC.axisName?.y || "yLeft";
       const { position: yPos } = userAxisToAxPos(axisNameY);
-      const configY = this.prevOutput.chartCfg["y"][yPos];
+      const configY = this.prevOutput.chart["y"][yPos];
       const scaleY = this.scalesLayer.scale("y", yPos, ...configY.map(c => c.type));
       return {
         axisNames: { x: axisNameX, y: axisNameY },
-        points: lDC.points.map(p => ({ x: scaleX(p.x).coord, y: scaleY(p.y).coord })),
+        points: lDC.points.map(p => ({ x: scaleX(p.x).SC, y: scaleY(p.y).SC })),
       };
     });
 

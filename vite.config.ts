@@ -36,6 +36,12 @@ export default defineConfig({
     globals: true,
     environment: "jsdom",
     exclude: ["tests/e2e/**", "node_modules"],
+    typecheck: { // required for expectTypeOf to do anything
+      enabled: true,
+      include: ["tests/unit/**/*.test.ts"],
+      ignoreSourceErrors: true,
+      tsconfig: "tsconfig.test.json"
+    },
     coverage: {
       provider: "v8",
       reporter: "text",

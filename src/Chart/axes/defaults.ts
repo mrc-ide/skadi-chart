@@ -4,7 +4,7 @@ import { AxisConfiguration, BaseAxisConfiguration, TickConfig } from "./types";
 const baseAxisConfiguration: BaseAxisConfiguration = {
   show: true,
   label: { text: "", translate: 0 },
-  translate: 0
+  translate: 0,
 };
 
 const defTickCfg = {
@@ -32,17 +32,18 @@ export const defNumAxis: AxisConfiguration = {
   log: false,
   tick: defNumTickCfg,
   ...baseAxisConfiguration,
-};
+}
 
-export const defCatAxis = {
+export const defCatAxis: AxisConfiguration = {
   type: "categorical" as const,
   domain: [],
   innerPadding: 0,
   tick: defCatTickCfg,
+  borders: { strokeWidth: 0 },
   ...baseAxisConfiguration,
 };
 
-export const chartCfgDefs = {
+export const chartDefs = {
   numerical: defNumAxis,
   categorical: defCatAxis,
 }

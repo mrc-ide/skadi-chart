@@ -1,7 +1,7 @@
 import { DeepPartialRecord, Prettify, XorY } from "@/types"
 import { Config } from "./Config"
 import { CurrFlags as PrevFlags, CurrOutput as PrevOutput } from "../data/types"
-import { AxisConfiguration, AxisType, BaseAxisConfiguration, ChartType, ConfigurableCatAxis, ConfigurableNumAxis, StartOrEnd } from "../axes/types"
+import { AxisConfiguration, AxisType, BaseAxisConfiguration, ChartType, ConfigurableCatAxis, ConfigurableNumAxis, ConfigurableNumAxisOptions, StartEnd, StartOrEnd } from "../axes/types"
 
 
 
@@ -79,11 +79,9 @@ export type PartialMakeChartArgs<
 
 
 type AxesFunc = IsAxesFunc<{
-  numerical: DeepPartialRecord<
-    Pick<ConfigurableNumAxis, keyof BaseAxisConfiguration | "drawOrigin" | "log">
-  >,
+  numerical: DeepPartialRecord<ConfigurableNumAxisOptions>,
   categorical: DeepPartialRecord<
-    Pick<ConfigurableCatAxis, keyof BaseAxisConfiguration | "innerPadding">
+    Omit<ConfigurableCatAxis, "domain" | "tick">
   >,
 }>
 export type AxesArgs<T extends ChartType> = PartialMakeChartArgs<T, AxesFunc>
@@ -91,16 +89,16 @@ export type AxesArgs<T extends ChartType> = PartialMakeChartArgs<T, AxesFunc>
 
 
 type DomainFunc = IsAxesFunc<{
-  numerical: Pick<ConfigurableNumAxis, "domain">,
-  categorical: Pick<ConfigurableCatAxis, "domain">,
+  numerical: ConfigurableNumAxis["domain"],
+  categorical: ConfigurableCatAxis["domain"],
 }>
 export type DomainArgs<T extends ChartType> = MakeChartArgs<T, DomainFunc>
 
 
 
 type TicksFunc = IsAxesFunc<{
-  numerical: DeepPartialRecord<Pick<ConfigurableNumAxis, "tick">>,
-  categorical: DeepPartialRecord<Pick<ConfigurableCatAxis, "tick">>,
+  numerical: DeepPartialRecord<ConfigurableNumAxis["tick"]>,
+  categorical: DeepPartialRecord<ConfigurableCatAxis["tick"]>,
 }>
 export type TicksArgs<T extends ChartType> = PartialMakeChartArgs<T, TicksFunc>
 

@@ -56,7 +56,7 @@ export class ZoomLayer extends Layer {
     const svg = coreLayers[CoreLayer.Svg];
     const baseLayer = coreLayers[CoreLayer.BaseLayer];
     
-    // brushX allows the user to click and draw a rectangle that will
+    // brush allows the user to click and draw a rectangle that will
     // select a particular x interval and it will then fire an end event
     const d3Brush = d3.brush<Point>()
       .extent([[xInner.start, yInner.start], [xInner.end, yInner.end]]);
@@ -122,7 +122,7 @@ export class ZoomLayer extends Layer {
 
     // Respond to double click event by fully zooming out
     const zoomBounds = makeObjXYStartEnd((ax, pos) => {
-      const cfgArr = this.prevOutput.chartCfg[ax][pos];
+      const cfgArr = this.prevOutput.chart[ax][pos];
       if (cfgArr.length === 1 && cfgArr[0].type === "numerical") {
         return cfgArr[0].domain as [number, number];
       } else {
@@ -235,7 +235,7 @@ export class ZoomLayer extends Layer {
     };
 
     const zoomBounds = makeObjXYStartEnd((ax, pos) => {
-      const cfgArr = this.prevOutput.chartCfg[ax][pos];
+      const cfgArr = this.prevOutput.chart[ax][pos];
       if (cfgArr.length === 1 && cfgArr[0].type === "numerical") {
         const scale = scales[ax][pos].scale as ScaleNumeric;
         return selectionBounds[ax][pos].map(scale.invert) as [number, number];
