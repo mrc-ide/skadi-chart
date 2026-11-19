@@ -1,7 +1,7 @@
 import { StartEnd, StartOrEnd } from "./Chart/axes/types";
 import { ScatterLayer } from "./layers/ScatterLayer";
 import { TracesLayer } from "./layers/TracesLayer";
-import { LayerArgs, ScaleNumeric, XY, Point, Scales, AxisType, D3Selection, PointWithMetadata, XorY } from "./types";
+import { LayerArgs, ScaleNumeric, XY, Point, AxisType, D3Selection, PointWithMetadata, XorY } from "./types";
 
 const round = (num: number) => Math.floor(num * 10) / 10;
 
@@ -67,7 +67,7 @@ export const getXYMinMax = <Metadata>(
   traceLayers: TracesLayer<Metadata>[],
   scatterLayers: ScatterLayer<Metadata>[],
 ) => {
-  const minMax: Scales = {
+  const minMax = {
     x: { start: Infinity, end: -Infinity },
     y: { start: Infinity, end: -Infinity }
   };
@@ -207,6 +207,7 @@ export class AxisUtil {
   sign = () => this.axis === "x" ? 1 : -1;
   negSign = () => -1 * this.sign();
   pick = <T>(arg: XY<T>): T => arg[this.axis];
+  pickOther = <T>(arg: XY<T>): T => arg[this.other()];
 }
 
 export class PositionUtil {

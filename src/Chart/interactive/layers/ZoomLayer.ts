@@ -92,7 +92,7 @@ export class ZoomLayer extends Layer {
 
     // Respond to double click event by fully zooming out
     const zoomBounds = makeObjXYStartEnd((ax, pos) => {
-      const cfgArr = this.prevOutput.chartCfg[ax][pos];
+      const cfgArr = this.prevOutput.chart[ax][pos];
       if (cfgArr.length === 1 && cfgArr[0].type === "numerical") {
         return cfgArr[0].domain as [number, number];
       } else {
@@ -211,7 +211,7 @@ export class ZoomLayer extends Layer {
     };
 
     const zoomBounds = makeObjXYStartEnd((ax, pos) => {
-      const cfgArr = this.prevOutput.chartCfg[ax][pos];
+      const cfgArr = this.prevOutput.chart[ax][pos];
       if (cfgArr.length === 1 && cfgArr[0].type === "numerical") {
         const scale = scales[ax][pos].scale as ScaleNumeric;
         return selectionBounds[ax][pos].map(scale.invert) as [number, number];

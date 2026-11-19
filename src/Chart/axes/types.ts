@@ -74,6 +74,7 @@ export type ConfigurableCatAxis = {
   innerPadding: number,
   domain: string[],
   tick: TickConfig<string>,
+  borders: { strokeWidth: number },
 } & BaseAxisConfiguration
 
 export type AxisConfiguration = 
@@ -91,7 +92,7 @@ export type StartEnd<T> = Record<StartOrEnd, T>
 
 export type AxesLevels = AxisConfiguration[]
 export type ChartType = XY<StartEnd<AxisType[]>>
-export type ChartConfig = XY<StartEnd<AxesLevels>>
+export type ChartSettings = XY<StartEnd<AxesLevels>>
 export type DefaultChartType = Prettify<XY<StartEnd<[]>>>
 
 
@@ -145,5 +146,5 @@ export type NumericalOn<
 
 
 export type CurrOutput = {
-  chartCfg: ChartConfig
+  chart: ChartSettings
 }

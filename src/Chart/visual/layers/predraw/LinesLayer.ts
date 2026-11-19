@@ -2,7 +2,7 @@ import { AxisNames, Lines } from "@/Chart/data/types";
 import { CurrOutput as PrevOutput } from "@/Chart/config/types";
 import { PredrawLayer, ZoomProperties } from "./PredrawLayer";
 import { ScalesLayer } from "./ScalesLayer";
-import { ChartConfig, StartEnd } from "@/Chart/axes/types";
+import { ChartSettings, StartEnd } from "@/Chart/axes/types";
 import { userAxisToAxPos } from "@/Chart/axes/utils";
 import { Point, ScaleNumeric, XY } from "@/types";
 import { CurrState as PrevState } from "@/Chart/config/types";
@@ -45,15 +45,15 @@ export class LinesLayer extends PredrawLayer {
     private scalesLayer: ScalesLayer,
   ) {
     super();
-    const { dataState, chartCfg } = this.prevOutput;
-    this.lines = this.filterLines(dataState.lines, chartCfg);
+    const { dataState, chart } = this.prevOutput;
+    this.lines = this.filterLines(dataState.lines, chart);
     this.updateLowResLinesSC();
   };
 
   // Filter lines to exclude points with values <= 0 on a log axis.
   // If there are points in the line with values <= 0 then we split up the line into
   // segments, missing out the points with values <= 0.
-  private filterLines = (lines: Lines, chart: ChartConfig) => {
+  private filterLines = (lines: Lines, chart: ChartSettings) => {
     // TODO need to refactor once log has been added to options
     return lines;
     // let filteredLines = lines;
@@ -113,12 +113,12 @@ export class LinesLayer extends PredrawLayer {
       // scales layer
       const axisNameX = lDC.axisName?.x || "xBottom";
       const { position: xPos } = userAxisToAxPos(axisNameX);
-      const configX = this.prevOutput.chartCfg["x"][xPos];
+      const configX = this.prevOutput.chart["x"][xPos];
       const scaleX = this.scalesLayer.scale("x", xPos, ...configX.map(c => c.type));
 
       const axisNameY = lDC.axisName?.y || "yLeft";
       const { position: yPos } = userAxisToAxPos(axisNameY);
-      const configY = this.prevOutput.chartCfg["y"][yPos];
+      const configY = this.prevOutput.chart["y"][yPos];
       const scaleY = this.scalesLayer.scale("y", yPos, ...configY.map(c => c.type));
       return {
         axisNames: { x: axisNameX, y: axisNameY },
