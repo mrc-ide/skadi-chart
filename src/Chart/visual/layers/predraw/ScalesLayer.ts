@@ -11,9 +11,9 @@ export type Scales =
   | {
     scale: ScaleCategorical,
     categories: Record<string, Scales>
-  } | Record<string, never>
+  } | Record<string, never> // to match the actual structure of this.scales, which can contain empty objects
   
-export type CatScales = Extract<Scales, { scale: ScaleCategorical }>
+export type CatScales = Extract<Scales, { scale: ScaleCategorical, categories: Record<string, Scales> }>
 export type NumScales = Extract<Scales, { scale: ScaleNumeric }>
 
 export class ScalesLayer extends PredrawLayer {

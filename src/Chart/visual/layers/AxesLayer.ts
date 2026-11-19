@@ -5,11 +5,11 @@ import { CurrOutput as PrevOutput } from "@/Chart/config/types";
 import { CoreLayer, CoreLayers, PredrawLayer, PredrawLayers, VisualLayer } from "../types";
 import { getInner } from "@/Chart/html/utils";
 import { AxisUtil, doXYStartEnd, makeObjXY, PositionUtil } from "@/helpers";
-import { Scales } from "./predraw/ScalesLayer";
-import { AxisConfiguration, ConfigurableCatAxis } from "@/Chart/axes/types";
+import { CatScales, Scales } from "./predraw/ScalesLayer";
+import { AxisConfiguration, ConfigurableCatAxis, ConfigurableNumAxis } from "@/Chart/axes/types";
 import { ZoomProperties } from "./predraw/PredrawLayer";
 import { animationDuration } from "@/Chart/interactive/constants";
-import { scaleIsNumerical, noDescendantIsNumerical, deepestCategoricalScale, scaleIsCategorical } from "./helpers/scales";
+import { scaleIsNumerical, scaleIsCategorical, scaleIsNestedCategorical } from "./helpers/scales";
 
 // TODO perpendicular lines with categorical borders and draw origins
 // TODO remove when adding mathjax and zoom layer
@@ -109,16 +109,13 @@ export class AxesLayer extends Layer {
           .attr("transform-origin", `${otherAxisTr} ${inner.y.center}`)
       }
 
-      if (currAxisCfg.type === "numerical" && currAxisCfg.drawOrigin) {
+      if (scaleIsNumerical(scale) && (currAxisCfg as ConfigurableNumAxis).drawOrigin) {
         // TODO: Skip drawing an origin line if the scale is a log scale.
-        this.drawOrigin(scale.scale as ScaleNumeric, axis);
+        this.drawPerpendicularLine(scale.scale(0), scale.scale, axis, 0.5)
       }
 
       if (scaleIsCategorical(scale)) {
-        const { borders } = currAxisCfg as ConfigurableCatAxis
-        if (borders.strokeWidth) {
-          this.drawBordersOfBands(scale, axis, borders.strokeWidth);
-        }
+        this.drawBordersOfBands(scale, axis, currAxisCfg as ConfigurableCatAxis);
 
         if (restAxisCfg.length) {
           Object.entries(scale.categories).forEach(([k, s]) => {
@@ -151,21 +148,12 @@ export class AxesLayer extends Layer {
     });
   };
 
-  private drawOrigin = (scale: ScaleNumeric, axis: AxisUtil) => {
-    this.drawPerpendicularLine(scale(0), scale, axis, 0.5);
-  };
-
-  private drawBordersOfBands = (
-    scales: Extract<Scales, { scale: ScaleCategorical, categories: Record<string, Scales> }>,
-    axis: AxisUtil,
-    strokeWidth: number,
-  ) => {
-    Object.keys(scales.categories).forEach((k) => {
-      // If the leaf scale is categorical then scale.categories is an empty object,
-      // so we calculate the band start and width from its parent scale.
-      const parentScale = scales.scale;
+  private drawBordersOfBands = ({ scale }: CatScales, axis: AxisUtil, { domain, borders: { strokeWidth } }: ConfigurableCatAxis) => {
+    if (!strokeWidth) return;
+    domain.forEach((cat) => {
+      const parentScale = scale;
       const bandwidth = parentScale.bandwidth();
-      const bandMin = parentScale(k);
+      const bandMin = parentScale(cat);
       if (bandMin === undefined) return;
       const bandMax = bandMin + bandwidth;
       this.drawPerpendicularLine(bandMax, parentScale, axis, strokeWidth)
@@ -175,38 +163,45 @@ export class AxesLayer extends Layer {
     });
   };
 
-  // Draw a line perpendicular to the specified axis at the given value in screen coordinates.
-  // This line will be made up of 1 or more segments, since in some cases,
-  // inter-segment gaps are required for skipping over the padding of the categorical bands.
-  // This depends on the scale types on the opposite x/y axis.
-  // These cover all cases (but opposite positions can have different cases):
-  // 1) The scale on the opposite axis is numerical, so the scales tree immediately stops
-  // 2) The scale on the opposite axis is categorical, but at depth 1 it's numerical (and tree stops).
-  // 3) The scale on the opposite axis is categorical, and contains further nested categorical scales.
+/*
+  Draw a line perpendicular to the specified axis at the given value in screen coordinates.
+  This line will be made up of 1 or more segments, since in some cases,
+  inter-segment gaps are required for skipping over the padding of the categorical bands.
+  This depends on the scale types on the opposite x/y axis.
+
+  These cover all cases (for a single position):
+  1) The scale on the opposite axis is numerical, so the scales tree immediately stops.
+  => Draw an unbroken line.
+  2) The scale on the opposite axis is categorical, but at depth 1 it's numerical (and tree stops).
+  => Draw a broken line skipping the inter-segment gaps of the root scale on the opposite axis.
+  3) The scale on the opposite axis is categorical, and contains further nested categorical scales.
+  => This is probably a bar chart or similar, so draw an unbroken line.
+
+  If the opposite axis has a categorical scale on both positions, we can't trivially determine
+  whether both sets of bands and their gaps line up, so we draw an unbroken line. If it has exactly
+  one categorical scale (and one numerical), it's not clear whether the gaps should be skipped,
+  particularly for drawing an origin line, so we don't.
+*/
   private drawPerpendicularLine = (
     valueSC: number,
-    scale: Scales["scale"],
+    d3Scale: Scales["scale"],
     axis: AxisUtil,
     strokeWidthPx: number = 1,
     color: string = "black",
   ) => {
     // If outside of range, don't draw the line. Otherwise we might draw a line onto another band.
-    const [minSC, maxSC] = scale.range().sort((a, b) => a - b);
+    const [minSC, maxSC] = d3Scale.range().sort((a, b) => a - b);
     if (valueSC < minSC || valueSC > maxSC) return;
 
-    const otherAxisRootScales = Object.values(axis.pickOther(this.scalesLayer()!.scales))
-      .filter(({ scale }) => !!scale); // include start and end, dropping any omitted position
+    const oppositeAxisRootScales = axis.pickOther(this.scalesLayer()!.scales);
+    const oppScales = Object.values(oppositeAxisRootScales).filter(s => Object.values(s).length > 0);
 
-    // TODO: consider cases where positions on the opposite axis differ: currently
-    // we skip padding by looking at only one position.
-    // Simple idea: if each position has a categorical scale, don't do segmenting at all, do the continuous line.
-    const useSegmentsToSkipInnerPadding = !otherAxisRootScales.every(scaleIsNumerical)
-      && !otherAxisRootScales.every(noDescendantIsNumerical);
-
-    if (useSegmentsToSkipInnerPadding) {
-      Object.values(
-        deepestCategoricalScale(otherAxisRootScales[0])?.categories ?? {}
-      ).forEach(({ scale }) => {
+    if (oppScales.length === 1 // There is only one position on the opposite axis for us to consider
+      && !scaleIsNumerical(oppScales[0])
+      && !scaleIsNestedCategorical(oppScales[0])
+    ) {
+      // Draw a broken line over the opposite axis's root categorical scale
+      Object.values(oppScales[0].categories).forEach(({ scale }) => {
         this.coreLayers[CoreLayer.BaseLayer].append("g").append("line")
           .attr(`${axis.curr()}1`, valueSC)
           .attr(`${axis.curr()}2`, valueSC)
@@ -216,11 +211,12 @@ export class AxesLayer extends Layer {
       });
     } else {
       // No inter-segment gaps are required, so we can draw a single continuous line.
+      // Since the line is unbroken, it doesn't matter which position we use, as long as it has a scale.
       this.coreLayers[CoreLayer.BaseLayer].append("g").append("line")
         .attr(`${axis.curr()}1`, valueSC)
         .attr(`${axis.curr()}2`, valueSC)
-        .attr(`${axis.other()}1`, otherAxisRootScales[0].scale.range()[0])
-        .attr(`${axis.other()}2`, otherAxisRootScales[0].scale.range()[1])
+        .attr(`${axis.other()}1`, oppScales[0].scale.range()[0])
+        .attr(`${axis.other()}2`, oppScales[0].scale.range()[1])
         .style("stroke", color).style("stroke-width", strokeWidthPx);
     }
   };
