@@ -9,13 +9,8 @@
         placeholder="Select chart types"
       />
     </div>
-    <!-- Toggle log scale for each axis -->
     <div v-for="axis in ['x', 'y']" :key="axis">
       <h3>{{ axis.toUpperCase() }}-axis config</h3>
-      <label>
-        <input type="checkbox" v-model="logScale[axis]" />
-        Log scale
-      </label>
       <label>
         <input type="checkbox" v-model="drawOrigin[axis]" />
         Draw origin
@@ -42,6 +37,10 @@
     <div v-if="selectedChartTypes.includes(ChartType.CategoricalY)">
       <h2>Categorical y-axis</h2>
       <div class="chart" ref="categoricalYChart" id="categoricalYChart"></div>
+    </div>
+    <div v-if="selectedChartTypes.includes(ChartType.CategoricalYLog)">
+      <h2>Categorical y-axis with log numerical</h2>
+      <div class="chart" ref="categoricalYLogChart" id="categoricalYLogChart"></div>
     </div>
     <div v-if="selectedChartTypes.includes(ChartType.CategoricalLine)">
       <h2>Categorical x-axis, two numerical y-axes</h2>
@@ -95,12 +94,14 @@ import type { Option } from "vue3-select-component";
 import VueSelect from "vue3-select-component";
 import { onMounted, ref, watch } from "vue";
 import { Axes as ChartNew } from "../Chart/axes/Axes";
+import { XorY } from "@/types";
 
 const numericalChart = ref<HTMLDivElement | null>(null);
 const numericalDoubledChart = ref<HTMLDivElement | null>(null);
 const categoricalXYChart = ref<HTMLDivElement | null>(null);
 const categoricalXChart = ref<HTMLDivElement | null>(null);
 const categoricalYChart = ref<HTMLDivElement | null>(null);
+const categoricalYLogChart = ref<HTMLDivElement | null>(null);
 const categoricalLineChart = ref<HTMLDivElement | null>(null);
 const barchartXChart = ref<HTMLDivElement | null>(null);
 const barchartYChart = ref<HTMLDivElement | null>(null);
@@ -109,7 +110,6 @@ const barchartXDoubleBarChart = ref<HTMLDivElement | null>(null);
 const mathJaxChart = ref<HTMLDivElement | null>(null);
 const stressTestChart = ref<HTMLDivElement | null>(null);
 
-const logScale = ref({ x: false, y: false });
 const drawOrigin = ref({ x: true, y: true });
 
 enum ChartType {
@@ -117,6 +117,7 @@ enum ChartType {
   NumericalDoubled = "numericalDoubled",
   CategoricalX = "categoricalX",
   CategoricalY = "categoricalY",
+  CategoricalYLog = "categoricalYLog",
   CategoricalXY = "categoricalXY",
   CategoricalLine = "categoricalLine",
   BarchartX = "barchartX",
@@ -129,6 +130,7 @@ const chartTypes: Record<ChartType, string> = {
   [ChartType.NumericalDoubled]: "4 numerical axes",
   [ChartType.CategoricalX]: "Categorical x-axis", // 1 cat (w/ nested num), 1 num
   [ChartType.CategoricalY]: "Categorical y-axis", // 1 num, 1 cat (w/ nested num)
+  [ChartType.CategoricalYLog]: "Categorical y-axis with log numerical",
   [ChartType.CategoricalXY]: "X and Y categorical axes", // 2 cats (each w/ nested num)
   [ChartType.CategoricalLine]: "Categorical x-axis, two numerical y-axes", // 1 cat (w/ nested num), 2 nums. For the bar chart + categorical line type of case.
   [ChartType.BarchartX]: "Double nested and single nested x axes, 1 numerical y",
@@ -146,6 +148,7 @@ const chartContainers: Record<ChartType, typeof numericalChart> = {
   [ChartType.NumericalDoubled]: numericalDoubledChart,
   [ChartType.CategoricalX]: categoricalXChart,
   [ChartType.CategoricalY]: categoricalYChart,
+  [ChartType.CategoricalYLog]: categoricalYLogChart,
   [ChartType.CategoricalXY]: categoricalXYChart,
   [ChartType.CategoricalLine]: categoricalLineChart,
   [ChartType.BarchartX]: barchartXChart,
@@ -329,7 +332,6 @@ const renderChart = (chartType: ChartType) => {
       .addAxes()
       .addTraces()
       .startInteractive()
-      .addZoom()
       .end();
     break;
   case ChartType.CategoricalX:
@@ -410,6 +412,48 @@ const renderChart = (chartType: ChartType) => {
         y: { start: [
           { formatter: (v) => v.toUpperCase(), translate: 30 },
           { count: 3 }
+        ] },
+      })
+      .startVisual()
+      .addAxes()
+      .addTraces()
+      .startInteractive()
+      .addZoom()
+      .end();
+    break;
+  case ChartType.CategoricalYLog:
+    lines.forEach((l, i) => {
+      l.points = l.points.map((p) => ({
+        ...p,
+        y: [yCategories[i % yCategories.length], Math.abs(p.y[0] as number) + 0.1],
+      }));
+    });
+
+    ChartNew.start()
+      .xBottom().numerical()
+      .yLeft().categorical().numerical()
+      .startHtml()
+      .addElement(container)
+      .startData()
+      .registerLines(lines)
+      .startConfig()
+      .configureAxes({
+        x: { start: [
+          { label: { text: "X numerical label", translate: 20 } },
+        ] },
+        y: { start: [
+          { label: { text: "Y category", translate: 25 }, innerPadding: 0.25 },
+          { label: { text: "Y numerical label", translate: 5 }, log: true }
+        ] },
+      })
+      .configureDomain({
+        x: { start: [[extents.x.lower, extents.x.upper]] },
+        y: { start: [yCategories, [0.1, extents.y.upper]] }
+      })
+      .configureTicks({
+        x: { start: [{ count: 3 }] },
+        y: { start: [
+          { formatter: (v) => v.toUpperCase(), translate: 40 }, {}
         ] },
       })
       .startVisual()
@@ -649,7 +693,7 @@ watch(selectedChartTypes, (newChartTypes) => {
   flush: "post", // Ensure v-if container refs update before we attempt to render charts
 });
 
-watch([logScale, drawOrigin], () => {
+watch(drawOrigin, () => {
   // renderMathJaxChart();
   selectedChartTypes.value.forEach(renderChart);
 }, { deep: true });

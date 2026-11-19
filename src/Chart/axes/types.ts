@@ -68,6 +68,7 @@ export type ConfigurableNumAxis = {
   drawOrigin: boolean,
   domain: number[],
   tick: TickConfig<number>,
+  log: boolean,
 } & BaseAxisConfiguration
 
 export type ConfigurableCatAxis = {
