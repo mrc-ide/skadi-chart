@@ -15,9 +15,10 @@ export type Scales =
   
 export type CatScales = Extract<Scales, { scale: ScaleCategorical, categories: Record<string, Scales> }>
 export type NumScales = Extract<Scales, { scale: ScaleNumeric }>
+export type AllScales = XY<StartEnd<Scales>>;
 
 export class ScalesLayer extends PredrawLayer {
-  scales: XY<StartEnd<Scales>>;
+  scales: AllScales;
 
   constructor(private prevOutput: PrevOutput) {
     super();

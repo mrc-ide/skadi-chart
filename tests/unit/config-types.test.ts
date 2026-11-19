@@ -53,7 +53,7 @@ describe("MakeChartArgs", () => {
     }>();
   });
 
-  test("numerical axes must not accept categorical innerPadding", () => {
+  test("numerical axes must not accept categorical innerPadding or borders", () => {
     type Chart = {
       x: { start: ["numerical"], end: [] },
       y: { start: [], end: [] },
